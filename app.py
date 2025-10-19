@@ -189,81 +189,10 @@ else:
 # 2) 유틸리티: OCR 추출, 이름 추출, 다음 순번 계산 등
 ########################################################################
 
-st.sidebar.markdown("---")
-st.sidebar.header("전일(기준) 입력 — 꼭 채워주세요")
-prev_key = st.sidebar.text_input("전일 열쇠", value="")
-prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value="")
-prev_sudong = st.sidebar.text_input("전일 1종수동", value="")
-
-st.sidebar.markdown("---")
-st.sidebar.header("옵션")
-sudong_count = st.sidebar.radio("1종 수동 인원수 (기본)", [1, 2], index=0)
-has_computer = st.sidebar.checkbox("전산병행 있음 (교양 제외 처리)", value=False)
-repair_cars = st.sidebar.text_input("정비중 차량 (쉼표로 구분, 예: 12호,6호)", value="")
-
-# OCR 텍스트 -> 이름 추출 (한글 이름 패턴)
-name_regex = re.compile(r'[가-힣]{2,3}')
-
-def extract_text_from_image(uploaded_file):
-    try:
-        img = Image.open(uploaded_file).convert("RGB")
-    except Exception as e:
-        return ""
-    # pytesseract OCR (한국어)
-    try:
-        text = pytesseract.image_to_string(img, lang='kor')
-    except Exception:
-        # fallback to default lang
-        text = pytesseract.image_to_string(img)
-    return text
-
-def extract_names(text):
-    # find all korean name-like tokens, preserve order
-    found = name_regex.findall(text)
-    # dedupe while preserving order
-    seen = set()
-    ordered = []
-    for f in found:
-        if f not in seen:
-            seen.add(f)
-            ordered.append(f)
-    return ordered
-
-def next_in_cycle(current, cycle_list):
-    if not cycle_list:
-        return None
-    if current not in cycle_list:
-        return cycle_list[0]
-    idx = cycle_list.index(current)
-    return cycle_list[(idx + 1) % len(cycle_list)]
-
-# skip absent: given cycle_list and present_set, return first after 'current' that is in present_set
-def next_valid_after(current, cycle_list, present_set):
-    if not cycle_list:
-        return None
-    if current not in cycle_list:
-        # start from first element
-        start_idx = 0
-    else:
-        start_idx = (cycle_list.index(current) + 1) % len(cycle_list)
-    # iterate up to len(cycle_list) times
-    for i in range(len(cycle_list)):
-        idx = (start_idx + i) % len(cycle_list)
-        cand = cycle_list[idx]
-        if cand in present_set:
-            return cand
-    return None
-
 ########################################################################
 # 3) 업로드 UI: 오전, 오후 이미지
 ########################################################################
 
-st.markdown("## ① 오전/오후 근무표 이미지 업로드")
-col1, col2 = st.columns(2)
-with col1:
-    morning_file = st.file_uploader("오전 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="morning")
-with col2:
-    afternoon_file = st.file_uploader("오후 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="afternoon")
 
 st.markdown("옵션을 확인한 뒤 **분석 시작** 버튼을 눌러주세요.")
 if st.button("분석 시작"):
