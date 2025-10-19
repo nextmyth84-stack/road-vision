@@ -157,34 +157,7 @@ repair_cars = st.sidebar.text_input("정비중 차량 (쉼표로 구분)", value
 # 5) 오전/오후 이미지 업로드 및 분석
 ########################################################################
 
-st.markdown("## ① 오전/오후 근무표 이미지 업로드")
-col1, col2 = st.columns(2)
-with col1:
-    morning_file = st.file_uploader("오전 근무표 이미지 업로드", type=["png", "jpg", "jpeg"], key="morning")
-with col2:
-    afternoon_file = st.file_uploader("오후 근무표 이미지 업로드", type=["png", "jpg", "jpeg"], key="afternoon")
 
-if st.button("분석 시작"):
-    st.markdown("### ⏳ Google Vision API로 OCR 중... 잠시만 기다려주세요.")
-
-    morning_text = extract_text_from_image(morning_file)
-    afternoon_text = extract_text_from_image(afternoon_file)
-
-    morning_names = extract_names(morning_text)
-    afternoon_names = extract_names(afternoon_text)
-
-    st.markdown("### OCR 추출 결과 (오전)")
-    st.text_area("오전 OCR 텍스트", morning_text, height=180)
-    st.markdown("이름 추출: " + ", ".join(morning_names))
-
-    st.markdown("### OCR 추출 결과 (오후)")
-    st.text_area("오후 OCR 텍스트", afternoon_text, height=180)
-    st.markdown("이름 추출: " + ", ".join(afternoon_names))
-
-    # 이후 근무자 자동 배정 로직은 기존 코드와 동일하게 유지
-    st.success("✅ OCR 완료! 다음 단계에서 근무자 자동 배정이 가능합니다.")
-else:
-    st.info("이미지를 업로드한 후 '분석 시작' 버튼을 눌러주세요.")
 
 # 2) 유틸리티: OCR 추출, 이름 추출, 다음 순번 계산 등
 ########################################################################
