@@ -4,30 +4,33 @@ from google.cloud import vision
 from google.oauth2 import service_account
 import re
 import json
-from PIL import Image
-from io import BytesIO
+import os # 추가
+from io import BytesIO # 추가
 
 st.set_page_config(page_title="근무표 자동 배정 (한글 OCR 버전)", layout="wide")
 
-st.title("🚦 근무표 자동 배정 — (Google Vision OCR + 한글 텍스트 출력)")
+st.title("🚦 근무표 자동 배정 (Google Vision OCR + 한글 텍스트 출력)")
 
 ########################################################################
 # 1) Google Vision API 인증 설정
 ########################################################################
 try:
+    # st.secrets에서 JSON 문자열을 로드
     cred_data = json.loads(st.secrets["general"]["GOOGLE_APPLICATION_CREDENTIALS"])
     creds = service_account.Credentials.from_service_account_info(cred_data)
     client = vision.ImageAnnotatorClient(credentials=creds)
 except Exception as e:
-    st.error("⚠️ Google Vision API 인증 실패: Secrets 설정을 다시 확인하세요.")
+    st.error(f"⚠️ Google Vision API 인증 실패: {e}")
+    st.error("Streamlit Secrets의 'GOOGLE_APPLICATION_CREDENTIALS' 키에 서비스 계정 JSON 파일의 '내용 전체'를 복사해 붙여넣었는지 확인하세요.")
     st.stop()
 
 ########################################################################
-# 2) 순번표 및 차량 매핑 설정
+# 2) 순번표 및 차량 매핑 설정 (사이드바)
 ########################################################################
 
 st.sidebar.header("초기 데이터 입력 (필요 시 수정)")
 
+# 기본값 정의 (기존과 동일)
 default_key_order = """권한솔
 김남균
 김면정
@@ -59,7 +62,6 @@ default_sudong_order = """권한솔
 안유미
 이호석
 조정래"""
-
 default_cha1 = """2호 조정래
 5호 권한솔
 7호 김남균
@@ -102,6 +104,7 @@ def parse_vehicle_map(text):
             m[name] = car
     return m
 
+# 순번표 및 차량 맵 파싱
 key_order = parse_list(key_order_text)
 gyoyang_order = parse_list(gyoyang_order_text)
 sudong_order = parse_list(sudong_order_text)
@@ -109,270 +112,223 @@ veh1 = parse_vehicle_map(cha1_text)
 veh2 = parse_vehicle_map(cha2_text)
 
 ########################################################################
-# 3) Vision API OCR 함수
+# 3) [수정됨] Vision API OCR 함수 (고급 - document_text_detection)
 ########################################################################
 
-def extract_text_from_image(uploaded_file):
-    if not uploaded_file:
-        return ""
+def get_text_bounds(all_texts, text_description):
+    """특정 텍스트의 경계 상자(bounding box)를 찾는 헬퍼 함수"""
+    for text in all_texts[1:]:  # [0]은 전체 텍스트라 건너뜁니다.
+        if text.description == text_description:
+            return text.bounding_poly
+    return None
+
+def extract_doro_juhaeng_workers(file_content):
+    """
+    [새 함수] Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)를 사용해
+    이미지에서 '도로주행' 근무자 목록만 정확히 추출합니다.
+    """
+    if not file_content:
+        return [], ""
+
     try:
-        image = vision.Image(content=uploaded_file.read())
-        response = client.text_detection(image=image)
-        texts = response.text_annotations
+        image = vision.Image(content=file_content)
+        # [수정] text_detection -> document_text_detection로 변경 (표 분석에 강력함)
+        response = client.document_text_detection(image=image)
+        
         if response.error.message:
             st.error(f"Vision API 오류: {response.error.message}")
-            return ""
-        return texts[0].description if texts else ""
+            return [], ""
+
+        all_texts = response.text_annotations
+        if not all_texts:
+            st.warning("이미지에서 텍스트를 감지할 수 없습니다.")
+            return [], ""
+
+        full_text = all_texts[0].description
+        page = response.full_text_annotation.pages[0]
+
+        # 4. 기준점(Anchor)이 될 텍스트의 경계 상자 찾기
+        # [수정] '도로주행'과 '성명' 헤더를 기준으로 삼습니다.
+        doro_box = get_text_bounds(all_texts, "도로주행")
+        name_header_box = get_text_bounds(all_texts, "성명")
+
+        if not doro_box or not name_header_box:
+            st.error("오류: 이미지에서 '도로주행' 또는 '성명' 헤더 텍스트를 찾지 못했습니다. OCR이 정확히 동작하지 않을 수 있습니다.")
+            # 실패 시 기존 정규식 방식(부정확)으로 대체할 수 있으나, 여기서는 빈 리스트 반환
+            return [], full_text
+
+        # 5. '도로주행' 근무자 이름이 위치할 영역(Zone) 정의
+        doro_y_start = doro_box.vertices[0].y
+        doro_y_end = doro_box.vertices[3].y
+        name_col_x_start = name_header_box.vertices[0].x - 10 # X축 여유분
+        name_col_x_end = name_header_box.vertices[1].x + 10 # X축 여유분
+
+        workers = []
+
+        # 6. 감지된 모든 '단락(Paragraph)'을 순회하며 영역(Zone) 내 텍스트 추출
+        for block in page.blocks:
+            for paragraph in block.paragraphs:
+                para_box = paragraph.bounding_box
+                
+                # 단락의 세로 중심점이 '도로주행' 셀 범위 안에 있는지 확인
+                para_y_center = (para_box.vertices[0].y + para_box.vertices[3].y) / 2
+                is_in_doro_rows = (para_y_center > doro_y_start) and (para_y_center < doro_y_end)
+                
+                # 단락의 가로 중심점이 '성명' 컬럼 범위 안에 있는지 확인
+                para_x_center = (para_box.vertices[0].x + para_box.vertices[1].x) / 2
+                is_in_name_column = (para_x_center > name_col_x_start) and (para_x_center < name_col_x_end)
+
+                # 7. 두 조건을 모두 만족하면 근무자 목록에 추가
+                if is_in_doro_rows and is_in_name_column:
+                    para_text = "".join(
+                        [symbol.text for word in paragraph.words for symbol in word.symbols]
+                    )
+                    # "성명" 헤더 자체는 제외
+                    if para_text != "성명":
+                        workers.append(para_text)
+
+        return workers, full_text
+
     except Exception as e:
-        st.error(f"OCR 중 오류 발생: {e}")
-        return ""
-
-name_regex = re.compile(r'[가-힣]{2,3}')
-
-def extract_names(text):
-    found = name_regex.findall(text)
-    seen, ordered = set(), []
-    for f in found:
-        if f not in seen:
-            seen.add(f)
-            ordered.append(f)
-    return ordered
+        st.error(f"OCR 처리 중 예외 발생: {e}")
+        return [], ""
 
 ########################################################################
-# 4) 사용자 입력: 전일 근무자, 정비차량 등
+# 4) [신규] 유틸리티 함수: 순번 계산, JSON 로드
 ########################################################################
+
+def next_in_cycle(current_item, item_list):
+    """ [신규] 리스트에서 다음 순번 아이템을 찾습니다. (순환) """
+    if not item_list:
+        return None
+    try:
+        idx = item_list.index(current_item)
+        return item_list[(idx + 1) % len(item_list)]
+    except ValueError:
+        # 현재 아이템이 리스트에 없으면 첫 번째 아이템 반환
+        return item_list[0]
+
+def next_valid_after(start_item, item_list, valid_set):
+    """ [신규] 리스트에서 start_item 다음이면서 valid_set에 포함된 첫 아이템을 찾습니다. """
+    if not item_list or not valid_set:
+        return None
+    
+    start_idx = 0
+    if start_item in item_list:
+        start_idx = item_list.index(start_item)
+    
+    # 다음 인덱스부터 순회 시작
+    for i in range(1, len(item_list) + 1):
+        next_item = item_list[(start_idx + i) % len(item_list)]
+        if next_item in valid_set:
+            return next_item
+    return None # 유효한 다음 근무자 없음
+
+PREV_DAY_FILE = "전일근무.json"
+
+def load_previous_day_data():
+    """ [신규] 전일근무.json 파일이 있으면 데이터를 로드합니다. """
+    if os.path.exists(PREV_DAY_FILE):
+        try:
+            with open(PREV_DAY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            st.sidebar.error(f"{PREV_DAY_FILE} 로드 실패: {e}")
+    return {}
+
+########################################################################
+# 5) [수정] 사용자 입력: 전일 근무자, 정비차량 등 (사이드바)
+########################################################################
+
+# [수정] 앱 시작 시 전일 데이터 로드
+prev_data = load_previous_day_data()
 
 st.sidebar.markdown("---")
-st.sidebar.header("전일(기준) 입력 — 꼭 채워주세요")
-prev_key = st.sidebar.text_input("전일 열쇠", value="")
-prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value="")
-prev_sudong = st.sidebar.text_input("전일 1종수동", value="")
+st.sidebar.header("날짜 및 옵션")
+selected_date = st.sidebar.date_input("근무 날짜 선택")
+# 날짜 포맷팅 (예: 2025/10/17(금))
+st.session_state.date_str = selected_date.strftime("%Y/%m/%d") + f"({['월','화','수','목','금','토','일'][selected_date.weekday()]})"
+
+
+st.sidebar.markdown("---")
+st.sidebar.header("전일(기준) 입력 — (자동 로드됨)")
+# [수정] value에 로드한 데이터 사용
+prev_key = st.sidebar.text_input("전일 열쇠", value=prev_data.get("열쇠", ""))
+prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value=prev_data.get("교양_5교시", ""))
+prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_data.get("1종수동", ""))
 
 st.sidebar.markdown("---")
 st.sidebar.header("옵션")
 sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 repair_cars = st.sidebar.text_input("정비중 차량 (쉼표로 구분)", value="")
 
-########################################################################
-# 5) 오전/오후 이미지 업로드 및 분석
-########################################################################
+# [수정] 전산병행 입력을 사이드바로 이동
+computer_names_input = st.sidebar.text_input("전산병행자 이름 (쉼표로 구분)", value="")
+computer_names = [n.strip() for n in computer_names_input.split(",") if n.strip()]
 
 
-
-# 2) 유틸리티: OCR 추출, 이름 추출, 다음 순번 계산 등
+########################################################################
+# 6) [수정] 메인 UI: 2단계 (분석 -> 확인 및 배정)
 ########################################################################
 
-########################################################################
-# 3) 업로드 UI: 오전, 오후 이미지
-########################################################################
 st.markdown("## ① 오전/오후 근무표 이미지 업로드")
+st.info("이미지 업로드 후 **[① 이미지 분석]** 버튼을 누르세요. OCR이 '도로주행' 근무자만 추출합니다.")
+
 col1, col2 = st.columns(2)
 with col1:
     morning_file = st.file_uploader("오전 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="morning")
 with col2:
     afternoon_file = st.file_uploader("오후 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="afternoon")
 
-st.markdown("옵션을 확인한 뒤 **분석 시작** 버튼을 눌러주세요.")
-if st.button("분석 시작"):
-    # OCR
-    morning_text = extract_text_from_image(morning_file) if morning_file else ""
-    afternoon_text = extract_text_from_image(afternoon_file) if afternoon_file else ""
+# --- 1단계: OCR 분석 ---
+if st.button("① 이미지 분석 및 근무자 추출", type="primary"):
+    with st.spinner("Google Vision API로 이미지를 분석 중입니다..."):
+        if morning_file:
+            morning_content = morning_file.getvalue()
+            m_workers, m_text = extract_doro_juhaeng_workers(morning_content)
+            st.session_state.morning_workers = m_workers
+            st.session_state.morning_raw_text = m_text
+        else:
+            st.session_state.morning_workers = []
+            st.session_state.morning_raw_text = "(오전 이미지 없음)"
 
-    # extract names from images
-    morning_names = extract_names(morning_text)
-    afternoon_names = extract_names(afternoon_text)
+        if afternoon_file:
+            afternoon_content = afternoon_file.getvalue()
+            a_workers, a_text = extract_doro_juhaeng_workers(afternoon_content)
+            st.session_state.afternoon_workers = a_workers
+            st.session_state.afternoon_raw_text = a_text
+        else:
+            st.session_state.afternoon_workers = []
+            st.session_state.afternoon_raw_text = "(오후 이미지 없음)"
+    
+    st.success("✅ OCR 분석 완료. 아래 '② 근무자 목록 확인'에서 추출된 이름을 확인/수정하세요.")
 
-    # 양식: present_set is union of morning_names (if morning) or afternoon_names
-    # we treat morning analysis (오전 전용) and afternoon separately
-    present_morning = set(morning_names)
-    present_afternoon = set(afternoon_names)
+st.markdown("---")
 
-    # If 전산병행 체크되어 있으면 exclude them from 교양 assignment
-    # But we need to detect which names are 전산병행 from OCR: we'll ask user to mark if any
-    # For now, if has_computer True: show a small input to list names that are 전산병행
-    st.markdown("### OCR 추출된 이름 (오전 이미지에서 발견)")
-    st.text_area("오전 OCR 원문", morning_text, height=180)
-    st.markdown("추출된 이름(오전 순서대로): " + ", ".join(morning_names))
+# --- 2단계: 근무자 확인 및 배정 생성 ---
+if 'morning_workers' in st.session_state:
+    st.markdown("## ② 근무자 목록 확인 및 최종 배정")
+    st.warning("OCR 결과가 100% 정확하지 않을 수 있습니다. '도로주행' 근무자만 포함되도록 아래 목록을 직접 수정/확인해주세요.")
 
-    st.markdown("### OCR 추출된 이름 (오후 이미지에서 발견)")
-    st.text_area("오후 OCR 원문", afternoon_text, height=180)
-    st.markdown("추출된 이름(오후 순서대로): " + ", ".join(afternoon_names))
+    col3, col4 = st.columns(2)
+    with col3:
+        st.markdown("#### ❮오전❯ 근무자 (확정)")
+        morning_list_str = st.text_area(
+            "오전 근무자 (한 줄에 하나씩)", 
+            value="\n".join(st.session_state.morning_workers), 
+            height=250,
+            key="morning_list_final"
+        )
+        with st.expander("오전 OCR 원문 보기 (참고용)"):
+            st.text_area("오전 OCR 원문", st.session_state.morning_raw_text, height=180)
 
-    # 사용자에게 전산병행자 직접 입력(콤마 구분)
-    computer_names_input = st.text_input("전산병행자 이름(콤마 구분, 빈칸 가능) — OCR 인식 후 정확히 입력하세요", value="")
-    computer_names = [n.strip() for n in computer_names_input.split(",") if n.strip()]
-
-    # 선택: 이미지에서 도로주행 근무자 컬럼만 쓰는 경우 사용자 확인
-    st.markdown("**주의**: OCR은 완벽하지 않습니다. 위 추출 결과를 확인하고, '도로주행 근무자'만 포함되도록 아래 입력란에 근무자 리스트를 수정해주세요.")
-    morning_list_str = st.text_area("오전 근무자(확정 — 한 줄에 하나씩 입력)", value="\n".join(morning_names), height=160)
-    afternoon_list_str = st.text_area("오후 근무자(확정 — 한 줄에 하나씩 입력)", value="\n".join(afternoon_names), height=160)
-    morning_list = [x.strip() for x in morning_list_str.splitlines() if x.strip()]
-    afternoon_list = [x.strip() for x in afternoon_list_str.splitlines() if x.strip()]
-
-    # parse repair cars
-    repair_list = [x.strip() for x in repair_cars.split(",") if x.strip()]
-
-    # compute morning assignment based on rules:
-    # - 열쇠: next of prev_key in key_order
-    # - 교양(오전1,2): start from next after prev_gyoyang5 in gyoyang_order, take two in present_morning excluding 전산병행
-    # - 1종수동 (오전): next after prev_sudong in sudong_order, but must be present_morning; default sudong_count persons if available
-    # - 2종 자동: present_morning MINUS assigned 1종 persons; map to veh2 (if missing, leave blank); exclude repair cars from mapping
-    present_set_morning = set(morning_list)
-    present_set_afternoon = set(afternoon_list)
-
-    # 열쇠
-    today_key = next_in_cycle(prev_key, key_order) if prev_key else next_in_cycle(key_order[0], key_order)
-
-    # 교양 오전 (2명)
-    gy_start = next_in_cycle(prev_gyoyang5, gyoyang_order) if prev_gyoyang5 else gyoyang_order[0]
-    # find two valid (exclude 전산병행)
-    gy_candidates = []
-    idx = gyoyang_order.index(gy_start) if gy_start in gyoyang_order else 0
-    i = 0
-    while len(gy_candidates) < 2 and i < len(gyoyang_order):
-        cand = gyoyang_order[(idx + i) % len(gyoyang_order)]
-        if cand in present_set_morning and cand not in computer_names:
-            gy_candidates.append(cand)
-        i += 1
-    gy1 = gy_candidates[0] if len(gy_candidates) >= 1 else None
-    gy2 = gy_candidates[1] if len(gy_candidates) >= 2 else None
-
-    # 1종 수동 오전: choose sudong_count people by next_valid_after from prev_sudong
-    sudong_assigned = []
-    cur = prev_sudong if prev_sudong else sudong_order[0]
-    i = 0
-    while len(sudong_assigned) < sudong_count and i < len(sudong_order):
-        cand = next_in_cycle(cur, sudong_order)
-        cur = cand  # move forward
-        if cand in present_set_morning:
-            if cand not in sudong_assigned:
-                sudong_assigned.append(cand)
-        i += 1
-    # If none found, leave empty
-
-    # 2종자동 morning: all present minus sudong_assigned and minus computer-only? (전산병행은 2종으로만 배정 가능)
-    morning_2jong = [p for p in morning_list if p not in sudong_assigned]
-    # map vehicles: use veh2 where possible; skip repair cars mapping
-    morning_2jong_map = []
-    for name in morning_2jong:
-        car = veh2.get(name, "")
-        # if car in repair_list, mark (정비중) next to it
-        note = ""
-        if car and car in repair_list:
-            note = "(정비중)"
-        morning_2jong_map.append((name, car, note))
-
-    # Build morning result text
-    morning_lines = []
-    morning_lines.append(f"📅 {st.session_state.get('date', '')} 오전 근무 배정 결과")
-    morning_lines.append(f"열쇠: {today_key}")
-    if gy1 or gy2:
-        morning_lines.append("교양 (오전)")
-        morning_lines.append(f"  1교시: {gy1 if gy1 else '-'}")
-        morning_lines.append(f"  2교시: {gy2 if gy2 else '-'}")
-    else:
-        morning_lines.append("교양 (오전): 지정 불가(근무자 부족)")
-
-    if sudong_assigned:
-        for idx, name in enumerate(sudong_assigned, start=1):
-            car = veh1.get(name, "")
-            morning_lines.append(f"1종 수동 #{idx}: {name}" + (f" ({car})" if car else ""))
-    else:
-        morning_lines.append("1종 수동: 배정 불가")
-
-    morning_lines.append("2종 자동 (도로주행 근무자 — 1종 담당자 제외)")
-    for name, car, note in morning_2jong_map:
-        morning_lines.append(f"  {name} → {car if car else '-'} {note}")
-
-    # Now compute afternoon results following rules:
-    # - 열쇠 same as morning_key
-    # - 교양 afternoon starts from next after morning's last gy candidate (i.e., gy2) and continues, skipping non-present and those excluded by 전산병행.
-    # - 1종 afternoon: next after last assigned 1종 (we used sudong_assigned[-1]) in sudong_order, find 1 person present in afternoon_list
-    # - 2종 afternoon: afternoon_list minus 1종 assigned
-    # Determine last gy in morning: the last 교양 assigned in morning is gy2 if present else gy1
-    last_gy = gy2 if gy2 else gy1
-
-    # afternoon key same as morning
-    afternoon_key = today_key
-
-    # afternoon 교양: start from next after last_gy
-    aft_gy_candidates = []
-    if last_gy:
-        start_gy = next_in_cycle(last_gy, gyoyang_order)
-    else:
-        start_gy = gyoyang_order[0]
-    idx = gyoyang_order.index(start_gy) if start_gy in gyoyang_order else 0
-    i = 0
-    # want up to 3 교시 (3,4,5) but consider 5교시 skipping rule: if candidate not present or 16:00 퇴근, skip to next
-    aft_needed = 3
-    while len(aft_gy_candidates) < aft_needed and i < len(gyoyang_order):
-        cand = gyoyang_order[(idx + i) % len(gyoyang_order)]
-        # skip 전산병행 for 교양
-        if cand in present_set_afternoon and cand not in computer_names:
-            aft_gy_candidates.append(cand)
-        i += 1
-    # apply 5교시 rule: if 5교시 candidate is person who cannot do 5교시 (we don't have explicit 16:00 flag, ask user)
-    # we will display and allow user to correct after seeing text.
-
-    # afternoon 1종: next after last morning 1종 assigned (last_sudong)
-    last_sudong = sudong_assigned[-1] if sudong_assigned else prev_sudong
-    aft_sudong = None
-    if last_sudong:
-        # find next valid present in afternoon_set
-        aft_sudong = next_valid_after(last_sudong, sudong_order, present_set_afternoon)
-    # if none found, leave None
-
-    # afternoon 2종 mapping
-    aft_2jong = [p for p in afternoon_list if p != aft_sudong]
-    aft_2jong_map = []
-    for name in aft_2jong:
-        car = veh2.get(name, "")
-        note = ""
-        if car and car in repair_list:
-            note = "(정비중)"
-        aft_2jong_map.append((name, car, note))
-
-    # Build afternoon result text
-    afternoon_lines = []
-    afternoon_lines.append(f"📅 {st.session_state.get('date', '')} 오후 근무 배정 결과")
-    afternoon_lines.append(f"열쇠: {afternoon_key}")
-    if aft_gy_candidates:
-        afternoon_lines.append("교양 (오후)")
-        # only show up to 3 교시
-        for i, c in enumerate(aft_gy_candidates[:3], start=3):
-            afternoon_lines.append(f"  {i}교시: {c}")
-    else:
-        afternoon_lines.append("교양 (오후): 지정 불가")
-
-    if aft_sudong:
-        car = veh1.get(aft_sudong, "")
-        afternoon_lines.append(f"1종 수동 (오후): {aft_sudong}" + (f" ({car})" if car else ""))
-    else:
-        afternoon_lines.append("1종 수동 (오후): 배정 불가")
-
-    afternoon_lines.append("2종 자동 (도로주행 근무자 — 1종 담당자 제외)")
-    for name, car, note in aft_2jong_map:
-        afternoon_lines.append(f"  {name} → {car if car else '-'} {note}")
-
-    # Final: show text outputs
-    st.markdown("## 결과 (한글 텍스트 출력)")
-    st.text_area("오전 결과 (텍스트)", "\n".join(morning_lines), height=300)
-    st.text_area("오후 결과 (텍스트)", "\n".join(afternoon_lines), height=300)
-
-    # Offer download as .txt
-    all_text = "== 오전 ==\n" + "\n".join(morning_lines) + "\n\n== 오후 ==\n" + "\n".join(afternoon_lines)
-    st.download_button("결과 텍스트 다운로드 (.txt)", data=all_text, file_name="근무배정결과.txt", mime="text/plain")
-
-    # Save '오늘' as 전일근무.json if user confirms
-    if st.checkbox("이 결과를 '전일 기준'으로 저장 (전일근무.json 덮어쓰기)", value=False):
-        today_record = {
-            "열쇠": afternoon_key,
-            "교양_5교시": aft_gy_candidates[2] if len(aft_gy_candidates) >= 3 else (aft_gy_candidates[-1] if aft_gy_candidates else ""),
-            "1종수동": aft_sudong if aft_sudong else ""
-        }
-        with open("전일근무.json", "w", encoding="utf-8") as f:
-            json.dump(today_record, f, ensure_ascii=False, indent=2)
-        st.success("전일근무.json에 저장했습니다.")
-
-else:
-    st.info("이미지 업로드 후 '분석 시작' 버튼을 눌러주세요. OCR 결과를 확인하고 근무자 목록을 보정한 뒤 최종 결과를 생성합니다.")
+    with col4:
+        st.markdown("#### ❮오후❯ 근무자 (확정)")
+        afternoon_list_str = st.text_area(
+            "오후 근무자 (한 줄에 하나씩)", 
+            value="\n".join(st.session_state.afternoon_workers), 
+            height=250,
+            key="afternoon_list_final"
+        )
+        with st.expander("오후 OCR 원문 보기 (참고용)"):
+            st.text_area("오후 OCR 원문",
