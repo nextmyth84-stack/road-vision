@@ -165,7 +165,12 @@ repair_cars = st.sidebar.text_input("정비중 차량 (쉼표로 구분)", value
 ########################################################################
 # 3) 업로드 UI: 오전, 오후 이미지
 ########################################################################
-
+st.markdown("## ① 오전/오후 근무표 이미지 업로드")
+col1, col2 = st.columns(2)
+with col1:
+    morning_file = st.file_uploader("오전 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="morning")
+with col2:
+    afternoon_file = st.file_uploader("오후 근무표 이미지 업로드", type=["png","jpg","jpeg"], key="afternoon")
 
 st.markdown("옵션을 확인한 뒤 **분석 시작** 버튼을 눌러주세요.")
 if st.button("분석 시작"):
