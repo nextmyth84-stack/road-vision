@@ -4,6 +4,13 @@ import re
 import json
 from io import BytesIO
 from google.cloud import vision
+from google.oauth2 import service_account
+
+# --- Google Vision 인증 ---
+service_account_info = json.loads(st.secrets["general"]["GOOGLE_APPLICATION_CREDENTIALS"])
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
+client = vision.ImageAnnotatorClient(credentials=credentials)
+
 
 st.set_page_config(page_title="근무표 자동 배정 (Google Vision OCR 버전)", layout="wide")
 st.title("🚦 근무표 자동 배정 — (Google Vision OCR 기반 한글 텍스트 출력)")
