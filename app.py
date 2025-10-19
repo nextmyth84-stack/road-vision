@@ -6,17 +6,22 @@ from io import BytesIO
 from google.cloud import vision
 from google.oauth2 import service_account
 
-# --- Google Vision 인증 ---
-service_account_info = json.loads(st.secrets["general"]["GOOGLE_APPLICATION_CREDENTIALS"])
-credentials = service_account.Credentials.from_service_account_info(service_account_info)
-client = vision.ImageAnnotatorClient(credentials=credentials)
-
+########################################################################
+# 1) Google Vision API 인증 설정
+########################################################################
+try:
+    cred_data = json.loads(st.secrets["general"]["GOOGLE_APPLICATION_CREDENTIALS"])
+    creds = service_account.Credentials.from_service_account_info(cred_data)
+    client = vision.ImageAnnotatorClient(credentials=creds)
+except Exception as e:
+    st.error("⚠️ Google Vision API 인증 실패: Secrets 설정을 다시 확인하세요.")
+    st.stop()
 
 st.set_page_config(page_title="근무표 자동 배정 (Google Vision OCR 버전)", layout="wide")
 st.title("🚦 근무표 자동 배정 — (Google Vision OCR 기반 한글 텍스트 출력)")
 
 ########################################################################
-# 1) 설정: 기본 순번표 / 차량 매핑
+# 2) 설정: 기본 순번표 / 차량 매핑
 ########################################################################
 st.sidebar.header("초기 데이터 입력 (필요 시 수정)")
 
@@ -96,7 +101,38 @@ veh1 = parse_vehicle_map(cha1_text)
 veh2 = parse_vehicle_map(cha2_text)
 
 ########################################################################
-# 2) 유틸리티: OCR, 이름 추출, 순번 계산
+# 3) Vision API OCR 함수
+########################################################################
+
+def extract_text_from_image(uploaded_file):
+    if not uploaded_file:
+        return ""
+    try:
+        image = vision.Image(content=uploaded_file.read())
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+        if response.error.message:
+            st.error(f"Vision API 오류: {response.error.message}")
+            return ""
+        return texts[0].description if texts else ""
+    except Exception as e:
+        st.error(f"OCR 중 오류 발생: {e}")
+        return ""
+
+name_regex = re.compile(r'[가-힣]{2,3}')
+
+def extract_names(text):
+    found = name_regex.findall(text)
+    seen, ordered = set(), []
+    for f in found:
+        if f not in seen:
+            seen.add(f)
+            ordered.append(f)
+    return ordered
+
+
+########################################################################
+# 4) 유틸리티: OCR, 이름 추출, 순번 계산
 ########################################################################
 st.sidebar.markdown("---")
 st.sidebar.header("전일(기준) 입력 — 꼭 채워주세요")
