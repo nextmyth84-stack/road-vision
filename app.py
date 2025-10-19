@@ -331,4 +331,192 @@ if 'morning_workers' in st.session_state:
             key="afternoon_list_final"
         )
         with st.expander("오후 OCR 원문 보기 (참고용)"):
-            st.text_area("오후 OCR 원문",
+            st.text_area("오후 OCR 원문", st.session_state.afternoon_raw_text, height=180)
+
+    st.markdown("---")
+    
+    # --- 2-2. 최종 배정 생성 버튼 ---
+    if st.button("② 최종 근무 배정 생성", type="primary"):
+        with st.spinner("배정 로직을 계산 중입니다..."):
+            
+            # 확정된 리스트 파싱
+            morning_list = parse_list(morning_list_str)
+            afternoon_list = parse_list(afternoon_list_str)
+            present_set_morning = set(morning_list)
+            present_set_afternoon = set(afternoon_list)
+            
+            # 정비 차량 파싱
+            repair_list = [x.strip() for x in repair_cars.split(",") if x.strip()]
+
+            # --- 오전 배정 로직 ---
+            
+            # 열쇠
+            today_key = next_in_cycle(prev_key, key_order)
+
+            # 교양 오전 (2명)
+            gy_start = next_in_cycle(prev_gyoyang5, gyoyang_order)
+            gy_candidates = []
+            
+            current_gy = gy_start
+            for _ in range(len(gyoyang_order)):
+                if current_gy in present_set_morning and current_gy not in computer_names:
+                    if current_gy not in gy_candidates:
+                         gy_candidates.append(current_gy)
+                if len(gy_candidates) >= 2:
+                    break
+                current_gy = next_in_cycle(current_gy, gyoyang_order)
+            
+            gy1 = gy_candidates[0] if len(gy_candidates) >= 1 else None
+            gy2 = gy_candidates[1] if len(gy_candidates) >= 2 else None
+
+            # 1종 수동 오전
+            sudong_assigned = []
+            current_sudong = prev_sudong
+            
+            for _ in range(len(sudong_order)):
+                # [수정] next_valid_after 대신 순차적으로 찾아야 함
+                next_cand = next_in_cycle(current_sudong, sudong_order)
+                current_sudong = next_cand # 다음 검색을 위해 현재 위치 업데이트
+                
+                if next_cand in present_set_morning:
+                    if next_cand not in sudong_assigned:
+                        sudong_assigned.append(next_cand)
+                
+                if len(sudong_assigned) >= sudong_count:
+                    break
+
+            # 2종 자동 오전
+            morning_2jong = [p for p in morning_list if p not in sudong_assigned]
+            morning_2jong_map = []
+            for name in morning_2jong:
+                car = veh2.get(name, "")
+                note = "(정비중)" if car and car in repair_list else ""
+                morning_2jong_map.append((name, car, note))
+
+            # 오전 결과 텍스트 생성
+            morning_lines = []
+            morning_lines.append(f"📅 {st.session_state.date_str} 오전 근무 배정 결과")
+            morning_lines.append("="*30)
+            morning_lines.append(f"🔑 열쇠: {today_key}")
+            morning_lines.append("\n🎓 교양 (오전)")
+            morning_lines.append(f"  - 1교시: {gy1 if gy1 else '-'}")
+            morning_lines.append(f"  - 2교시: {gy2 if gy2 else '-'}")
+
+            morning_lines.append("\n🚛 1종 수동 (오전)")
+            if sudong_assigned:
+                for idx, name in enumerate(sudong_assigned, start=1):
+                    car = veh1.get(name, "")
+                    morning_lines.append(f"  - 1종#{idx}: {name}" + (f" ({car})" if car else ""))
+            else:
+                morning_lines.append("  - (배정자 없음)")
+
+            morning_lines.append("\n🚗 2종 자동 (오전)")
+            for name, car, note in morning_2jong_map:
+                morning_lines.append(f"  - {name} → {car if car else '-'} {note}")
+
+            # --- 오후 배정 로직 ---
+            
+            # 오후 열쇠 (오전과 동일)
+            afternoon_key = today_key
+            last_gy = gy2 if gy2 else (gy1 if gy1 else prev_gyoyang5)
+            last_sudong = sudong_assigned[-1] if sudong_assigned else prev_sudong
+
+            # 오후 교양 (3, 4, 5교시)
+            aft_gy_candidates = []
+            current_gy = last_gy
+            
+            for _ in range(len(gyoyang_order)):
+                next_cand = next_in_cycle(current_gy, gyoyang_order)
+                current_gy = next_cand
+
+                if next_cand in present_set_afternoon and next_cand not in computer_names:
+                     if next_cand not in aft_gy_candidates:
+                        aft_gy_candidates.append(next_cand)
+                
+                if len(aft_gy_candidates) >= 3: # 3, 4, 5교시
+                    break
+            
+            gy3 = aft_gy_candidates[0] if len(aft_gy_candidates) >= 1 else None
+            gy4 = aft_gy_candidates[1] if len(aft_gy_candidates) >= 2 else None
+            gy5 = aft_gy_candidates[2] if len(aft_gy_candidates) >= 3 else None
+
+            # 오후 1종 (1명)
+            aft_sudong = None
+            current_sudong = last_sudong
+            for _ in range(len(sudong_order)):
+                next_cand = next_in_cycle(current_sudong, sudong_order)
+                current_sudong = next_cand
+                if next_cand in present_set_afternoon:
+                    aft_sudong = next_cand
+                    break # 1명만 찾으면 종료
+
+            # 오후 2종
+            aft_2jong = [p for p in afternoon_list if p != aft_sudong]
+            aft_2jong_map = []
+            for name in aft_2jong:
+                car = veh2.get(name, "")
+                note = "(정비중)" if car and car in repair_list else ""
+                aft_2jong_map.append((name, car, note))
+
+            # 오후 결과 텍스트 생성
+            afternoon_lines = []
+            afternoon_lines.append(f"📅 {st.session_state.date_str} 오후 근무 배정 결과")
+            afternoon_lines.append("="*30)
+            afternoon_lines.append(f"🔑 열쇠: {afternoon_key}")
+            afternoon_lines.append("\n🎓 교양 (오후)")
+            afternoon_lines.append(f"  - 3교시: {gy3 if gy3 else '-'}")
+            afternoon_lines.append(f"  - 4교시: {gy4 if gy4 else '-'}")
+            afternoon_lines.append(f"  - 5교시: {gy5 if gy5 else '-'}")
+            
+            afternoon_lines.append("\n🚛 1종 수동 (오후)")
+            if aft_sudong:
+                car = veh1.get(aft_sudong, "")
+                afternoon_lines.append(f"  - 1종: {aft_sudong}" + (f" ({car})" if car else ""))
+            else:
+                afternoon_lines.append("  - (배정자 없음)")
+
+            afternoon_lines.append("\n🚗 2종 자동 (오후)")
+            for name, car, note in aft_2jong_map:
+                afternoon_lines.append(f"  - {name} → {car if car else '-'} {note}")
+
+            # --- 최종 결과 표시 ---
+            st.markdown("---")
+            st.markdown("## 🏁 최종 배정 결과 (텍스트)")
+            
+            res_col1, res_col2 = st.columns(2)
+            with res_col1:
+                morning_result_text = "\n".join(morning_lines)
+                st.text_area("오전 결과", morning_result_text, height=400)
+            
+            with res_col2:
+                afternoon_result_text = "\n".join(afternoon_lines)
+                st.text_area("오후 결과", afternoon_result_text, height=400)
+
+            # 다운로드 버튼
+            all_text = f"== {st.session_state.date_str} 오전 ==\n" + morning_result_text + \
+                       f"\n\n== {st.session_state.date_str} 오후 ==\n" + afternoon_result_text
+            
+            st.download_button(
+                "결과 텍스트 다운로드 (.txt)", 
+                data=all_text.encode('utf-8-sig'), # 한글 깨짐 방지
+                file_name=f"근무배정결과_{selected_date.strftime('%Y%m%d')}.txt", 
+                mime="text/plain"
+            )
+
+            # 전일 근무자 정보 저장
+            st.markdown("---")
+            if st.checkbox("이 결과를 '전일 기준'으로 저장 (다음 실행 시 자동 로드)", value=True):
+                today_record = {
+                    "열쇠": afternoon_key,
+                    "교양_5교시": gy5 if gy5 else (gy4 if gy4 else (gy3 if gy3 else prev_gyoyang5)),
+                    "1종수동": aft_sudong if aft_sudong else last_sudong
+                }
+                try:
+                    with open(PREV_DAY_FILE, "w", encoding="utf-8") as f:
+                        json.dump(today_record, f, ensure_ascii=False, indent=2)
+                    st.success(f"`{PREV_DAY_FILE}`에 저장했습니다. 다음 실행 시 자동으로 로드됩니다.")
+                except Exception as e:
+                    st.error(f"파일 저장 실패: {e}")
+
+else:
+    st.info("⬆️ 상단에서 오전/오후 근무표 이미지를 업로드한 뒤 '① 이미지 분석' 버튼을 눌러주세요.")
