@@ -1,3 +1,6 @@
 streamlit
 google-cloud-vision
 google-auth
+fuzzywuzzy
+python-Levenshtein
+Pillow
