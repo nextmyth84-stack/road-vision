@@ -148,9 +148,6 @@ def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
     return best_match_box
 
 def extract_doro_juhaeng_workers(file_content):
-    """
-    Google Cloud Vision API를 사용해 이미지에서 '도로주행' 근무자 이름만 추출.
-    """
     if not file_content:
         return [], "", "업로드된 파일이 없습니다."
 
@@ -167,31 +164,32 @@ def extract_doro_juhaeng_workers(file_content):
 
         full_text = all_texts[0].description
 
-        # 🔹 '도로주행' 이후의 텍스트 부분만 추출
+        # 🔹 '도로주행' 이후 텍스트만 추출
         match = re.search(r"도로\s*주행(.*)", full_text, re.DOTALL)
         if not match:
             return [], full_text, "OCR 원문에서 '도로주행' 텍스트를 찾을 수 없습니다."
 
         after_text = match.group(1)
 
-        # 🔹 한글 이름 (2~4자) 전부 찾기
+        # 🔹 전체 이름 후보 추출
         all_names = re.findall(r"[가-힣]{2,4}", after_text)
+        all_names = [n for n in all_names if 2 <= len(n) <= 4]
+        all_names = list(dict.fromkeys(all_names))
 
-        # 🔹 불필요한 단어 제거 (예: '성명', '교육', '차량' 등)
-        remove_words = ["성명", "교육", "차량", "시간", "오전", "오후", "도로주행", "정비"]
-        workers = [name for name in all_names if name not in remove_words]
+        if not all_names:
+            return [], full_text, "OCR에서 이름을 찾지 못했습니다."
 
-        # 🔹 중복 제거 + 2자 이하, 5자 이상 제거
-        workers = [w for w in workers if 2 <= len(w) <= 4]
-        workers = list(dict.fromkeys(workers))  # 순서 유지한 중복 제거
+        # 🔹 사용자 선택 기반 구간 추출
+        selected_workers = select_worker_range(all_names)
 
-        if not workers:
-            return [], full_text, "도로주행 근무자 이름을 인식하지 못했습니다. OCR 원문을 확인해 주세요."
+        if not selected_workers:
+            return [], full_text, "선택된 근무자가 없습니다."
 
-        return workers, full_text, None
+        return selected_workers, full_text, None
 
     except Exception as e:
         return [], "", f"OCR 처리 중 예외 발생: {e}"
+
 
 def select_worker_range(workers_all):
     """
