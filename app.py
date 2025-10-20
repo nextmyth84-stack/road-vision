@@ -116,46 +116,10 @@ veh2 = parse_vehicle_map(cha2_text)
 # 3) [수정됨] Vision API OCR 함수 (고급 - document_text_detection)
 ########################################################################
 
-def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
-    """
-    [수정] 특정 텍스트의 경계 상자(bounding box)를 유사도(fuzzy matching)를 사용하여 찾습니다.
-    threshold: 0-100 사이의 유사도 임계값
-    """
-    best_match_score = -1
-    best_match_text = None
-    best_match_box = None
-
-    # all_texts[0]은 전체 텍스트이므로 건너뛰고, 개별 인식된 텍스트들을 확인
-    for text_annotation in all_texts[1:]: 
-        detected_text = text_annotation.description
-        
-        # 부분 문자열 매칭 및 유사도 계산
-        # ratio: 단순 문자열 유사도 (두 문자열의 길이 차이에 민감)
-        # partial_ratio: 부분 문자열 포함 유사도 (긴 문자열 안에 짧은 문자열이 포함될 때 유용)
-        # token_sort_ratio: 토큰 정렬 후 유사도 (단어 순서가 바뀌어도 잘 찾음)
-        # token_set_ratio: 토큰 집합 유사도 (중복 단어, 없는 단어를 잘 처리)
-        
-        # 여기서는 전체 일치에 가까우면서 약간의 오타를 허용하는 ratio와 partial_ratio 조합을 사용
-        score_ratio = fuzz.ratio(detected_text, target_description)
-        score_partial = fuzz.partial_ratio(detected_text, target_description)
-        
-        # 두 점수 중 높은 값을 사용하거나, 가중 평균을 사용할 수 있음
-        current_score = max(score_ratio, score_partial)
-
-        if current_score > best_match_score and current_score >= threshold:
-            best_match_score = current_score
-            best_match_text = detected_text
-            best_match_box = text_annotation.bounding_poly
-            
-    # 디버깅을 위해 찾은 내용 출력
-    if best_match_box:
-        st.info(f"'{target_description}'에 대해 '{best_match_text}'(유사도: {best_match_score})를 찾았습니다.")
-    return best_match_box # 찾은 경계 상자 반환
-
 def extract_doro_juhaeng_workers(file_content):
     """
     Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)를 사용해
-    이미지에서 '도로주행' 근무자 목록만 정확히 추출합니다.
+    이미지에서 '도로주행' 근무자 목록을 추출합니다.
     """
     if not file_content:
         return [], "", "업로드된 파일이 없습니다."
@@ -165,7 +129,7 @@ def extract_doro_juhaeng_workers(file_content):
 
         image = vision.Image(content=file_content)
         response = client.document_text_detection(image=image)
-        
+
         if response.error.message:
             return [], "", f"Vision API 오류: {response.error.message}"
 
@@ -176,46 +140,52 @@ def extract_doro_juhaeng_workers(file_content):
         full_text = all_texts[0].description
         page = response.full_text_annotation.pages[0]
 
-        # 4. 기준점(Anchor)이 될 텍스트의 경계 상자 찾기 (유사도 검색 사용)
-        doro_box = get_text_bounds_fuzzy(all_texts, "도로주행", threshold=75) # 임계값 조정
-        name_header_box = get_text_bounds_fuzzy(all_texts, "성명", threshold=85) # 임계값 조정
+      # 1️⃣ 기준점찾기(도로주행+성명)
+        doro_box = get_text_bounds_fuzzy(all_texts, "도로주행", threshold=75)
+        name_header_box = get_text_bounds_fuzzy(all_texts, "성명", threshold=85)
 
         if not doro_box or not name_header_box:
-            error_msg = "오류: 이미지에서 '도로주행' 또는 '성명' 헤더 텍스트를 찾지 못했습니다. OCR이 정확히 동작하지 않을 수 있습니다. OCR 원문을 확인하고 수동으로 근무자를 입력해주세요."
+            error_msg = "오류: '도로주행' 또는 '성명' 위치를 찾지 못했습니다."
             st.error(error_msg)
             return [], full_text, error_msg
 
-        # 5. '도로주행' 근무자 이름이 위치할 영역(Zone) 정의
-        doro_y_start = doro_box.vertices[0].y
+        # 2️⃣이름이 위치할 예상 영역 계산
         doro_y_end = doro_box.vertices[3].y
-        name_col_x_start = name_header_box.vertices[0].x - 20 # X축 여유분 더 확대
-        name_col_x_end = name_header_box.vertices[1].x + 20 # X축 여유분 더 확대
+        # 도로주행 아래 600px까지를 근무자 이름 영역으로 확장 (필요시 조정)
+        doro_y_limit = doro_y_end + 600
+
+        name_col_x_start = name_header_box.vertices[0].x - 30
+        name_col_x_end = name_header_box.vertices[1].x + 150
 
         workers = []
 
-        # 6. 감지된 모든 '단락(Paragraph)'을 순회하며 영역(Zone) 내 텍스트 추출
+        # 3️⃣ 페이지 내 모든 문단(Paragraph) 순회
         for block in page.blocks:
             for paragraph in block.paragraphs:
                 para_box = paragraph.bounding_box
-                
-                # 단락의 세로 중심점이 '도로주행' 셀 범위 안에 있는지 확인
                 para_y_center = (para_box.vertices[0].y + para_box.vertices[3].y) / 2
-                is_in_doro_rows = (para_y_center >= doro_y_start) and (para_y_center <= doro_y_end) # 등호 추가
-                
-                # 단락의 가로 중심점이 '성명' 컬럼 범위 안에 있는지 확인
                 para_x_center = (para_box.vertices[0].x + para_box.vertices[1].x) / 2
-                is_in_name_column = (para_x_center >= name_col_x_start) and (para_x_center <= name_col_x_end) # 등호 추가
 
-                # 7. 두 조건을 모두 만족하면 근무자 목록에 추가
+                # ‘도로주행’ 아래 + 일정 범위 내, ‘성명’ 컬럼 근처
+                is_in_doro_rows = (para_y_center >= doro_y_end) and (para_y_center <= doro_y_limit)
+                is_in_name_column = (para_x_center >= name_col_x_start) and (para_x_center <= name_col_x_end)
+
                 if is_in_doro_rows and is_in_name_column:
                     para_text = "".join(
                         [symbol.text for word in paragraph.words for symbol in word.symbols]
                     )
-                    # "성명" 헤더 자체는 제외
-                    if para_text and para_text != "성명" and fuzz.ratio(para_text, "성명") < threshold: # 유사 '성명'도 제외
+
+                    # “성명” 혹은 공백 제외
+                    if para_text and para_text != "성명" and fuzz.ratio(para_text, "성명") < threshold:
                         workers.append(para_text)
 
-        return workers, full_text, None # 오류 없음을 반환
+        # 중복 제거 및 정렬
+        workers = sorted(set(workers))
+
+        if not workers:
+            st.warning("⚠️ 도로주행 근무자 이름을 인식하지 못했습니다. OCR 원문을 확인해 주세요.")
+
+        return workers, full_text, None
 
     except Exception as e:
         error_msg = f"OCR 처리 중 예외 발생: {e}"
