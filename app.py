@@ -147,80 +147,99 @@ def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
 
     return best_match_box
 
-def extract_doro_juhaeng_workers(file_content):
+
+
+# --- OCR 처리 후 "라인 보존 방식"으로 이름 후보 리스트 생성 ---
+def extract_names_preserve_order(full_text):
+    """
+    full_text: OCR이 반환한 전체 문자열 (줄바꿈 보존)
+    반환: 표의 위->아래, 왼쪽->오른쪽 순서로 추출된 이름 리스트 (중복 제거, 순서 유지)
+    """
+    if not full_text:
+        return []
+
+    # 먼저 '도로주행' 이후 텍스트만 사용 (없으면 전체 사용)
+    m = re.search(r"도로\s*주행(.*)", full_text, re.DOTALL)
+    target_text = m.group(1) if m else full_text
+
+    lines = [ln.strip() for ln in target_text.splitlines() if ln.strip()]
+    all_names = []
+    name_pattern = re.compile(r"[가-힣]{2,4}")
+
+    for line in lines:
+        # 같은 줄에서 여러 이름이 붙어 있을 수 있으니 순서대로 찾는다.
+        found = name_pattern.findall(line)
+        for name in found:
+            # 필터링: 불필요 단어는 걸러냄
+            if name in ("성명","교육","차량","오전","오후","정비","합","불"):
+                continue
+            all_names.append(name)
+
+    # 중복 제거(순서 유지)
+    seen = set()
+    ordered = []
+    for n in all_names:
+        if n not in seen:
+            seen.add(n)
+            ordered.append(n)
+    return ordered
+
+# --- OCR 호출 함수(단순화 예시) ---
+def ocr_get_fulltext(file_content):
     if not file_content:
-        return [], "", "업로드된 파일이 없습니다."
+        return ""
+    image = vision.Image(content=file_content)
+    response = client.text_detection(image=image)
+    if response.error.message:
+        raise Exception(response.error.message)
+    return response.text_annotations[0].description if response.text_annotations else ""
 
-    try:
-        image = vision.Image(content=file_content)
-        response = client.text_detection(image=image)
+# === 사용 예시: OCR 수행 후 '선택 폼'으로 범위 지정 ===
+# (이 코드는 앱의 이미지 분석 후 표시되는 부분에 넣으세요)
 
-        if response.error.message:
-            return [], "", f"Vision API 오류: {response.error.message}"
+full_text = ""  # OCR 전체 원문 (예: morning_raw_text)
+try:
+    full_text = ocr_get_fulltext(morning_file.getvalue()) if morning_file else ""
+except Exception as e:
+    st.error(f"OCR 오류: {e}")
+    full_text = ""
 
-        all_texts = response.text_annotations
-        if not all_texts:
-            return [], "", "이미지에서 텍스트를 감지할 수 없습니다."
+all_names = extract_names_preserve_order(full_text)
 
-        full_text = all_texts[0].description
+st.expander("OCR 원문 보기 (참고)", expanded=False)
+with st.expander("OCR 원문 보기 (참고)"):
+    st.text_area("OCR 원문", full_text, height=200)
 
-        # 🔹 '도로주행' 이후 텍스트만 추출
-        match = re.search(r"도로\s*주행(.*)", full_text, re.DOTALL)
-        if not match:
-            return [], full_text, "OCR 원문에서 '도로주행' 텍스트를 찾을 수 없습니다."
+if not all_names:
+    st.warning("OCR에서 이름 후보를 찾지 못했습니다. OCR 원문을 확인하거나 수동으로 입력하세요.")
+else:
+    st.markdown("### 추출된 이름 후보 (표의 위→아래 순서로 나열됨)")
+    # 인덱스와 함께 보여주기
+    numbered = [f"{i+1}. {n}" for i, n in enumerate(all_names)]
+    st.text_area("이름 후보 (순서)", "\n".join(numbered), height=200)
 
-        after_text = match.group(1)
+    # --- 폼으로 시작/끝 선택 및 제출(동시에 처리) ---
+    with st.form(key="select_range_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            start_choice = st.selectbox("시작 이름 (첫번째)", options=all_names, index=0, key="start_select")
+        with col2:
+            end_choice = st.selectbox("끝 이름 (마지막)", options=all_names, index=len(all_names)-1, key="end_select")
+        submit_btn = st.form_submit_button("구간 선택 적용")
 
-        # 🔹 전체 이름 후보 추출
-        all_names = re.findall(r"[가-힣]{2,4}", after_text)
-        all_names = [n for n in all_names if 2 <= len(n) <= 4]
-        all_names = list(dict.fromkeys(all_names))
+    if submit_btn:
+        start_idx = all_names.index(start_choice)
+        end_idx = all_names.index(end_choice)
+        if start_idx > end_idx:
+            st.error("시작이 끝보다 뒤에 있습니다. 올바른 순서를 선택하세요.")
+            selected_workers = []
+        else:
+            selected_workers = all_names[start_idx:end_idx+1]
+            st.success(f"선택된 구간: {start_choice} → {end_choice} ({len(selected_workers)}명)")
+            st.write(selected_workers)
+            # selected_workers를 이후 배정 로직에 사용 (예: morning_list_final에 채우기)
+            # 예: st.session_state['morning_workers_selected'] = selected_workers
 
-        if not all_names:
-            return [], full_text, "OCR에서 이름을 찾지 못했습니다."
-
-        # 🔹 사용자 선택 기반 구간 추출
-        selected_workers = select_worker_range(all_names)
-
-        if not selected_workers:
-            return [], full_text, "선택된 근무자가 없습니다."
-
-        return selected_workers, full_text, None
-
-    except Exception as e:
-        return [], "", f"OCR 처리 중 예외 발생: {e}"
-
-
-def select_worker_range(workers_all):
-    """
-    OCR로 감지된 전체 이름 목록에서 시작/끝 이름을 선택해 구간 추출
-    """
-    if not workers_all:
-        st.warning("인식된 이름이 없습니다.")
-        return []
-
-    st.subheader("👥 도로주행 근무자 범위 선택")
-    col1, col2 = st.columns(2)
-    with col1:
-        start_name = st.selectbox("첫 번째 근무자 선택", workers_all, key="start_name")
-    with col2:
-        end_name = st.selectbox("마지막 근무자 선택", workers_all, key="end_name")
-
-    # 순서 확인
-    try:
-        start_idx = workers_all.index(start_name)
-        end_idx = workers_all.index(end_name)
-    except ValueError:
-        st.error("선택된 이름을 찾을 수 없습니다.")
-        return []
-
-    if start_idx > end_idx:
-        st.error("시작 이름이 끝 이름보다 뒤에 있습니다. 순서를 다시 선택하세요.")
-        return []
-
-    selected_workers = workers_all[start_idx:end_idx + 1]
-    st.success(f"✅ 선택된 구간: {start_name} → {end_name} ({len(selected_workers)}명)")
-    return selected_workers
 
 
 
