@@ -115,6 +115,37 @@ veh2 = parse_vehicle_map(cha2_text)
 ########################################################################
 # 3) [수정됨] Vision API OCR 함수 (고급 - document_text_detection)
 ########################################################################
+def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
+    """
+    OCR 결과 리스트(all_texts)에서 특정 텍스트를 fuzzy matching으로 찾아서
+    그 텍스트의 bounding box(위치 정보)를 반환합니다.
+    """
+    best_match_score = -1
+    best_match_text = None
+    best_match_box = None
+
+    # all_texts[0]은 전체 텍스트이므로, 개별 단어들(all_texts[1:])만 탐색
+    for text_annotation in all_texts[1:]:
+        detected_text = text_annotation.description
+
+        # 문자열 유사도 계산
+        score_ratio = fuzz.ratio(detected_text, target_description)
+        score_partial = fuzz.partial_ratio(detected_text, target_description)
+        current_score = max(score_ratio, score_partial)
+
+        # threshold 이상인 가장 유사한 텍스트 선택
+        if current_score > best_match_score and current_score >= threshold:
+            best_match_score = current_score
+            best_match_text = detected_text
+            best_match_box = text_annotation.bounding_poly
+
+    # 디버깅용 정보 출력
+    if best_match_box:
+        st.info(f"'{target_description}'와 가장 유사한 텍스트 '{best_match_text}' (유사도: {best_match_score}) 를 찾았습니다.")
+    else:
+        st.warning(f"'{target_description}'와 유사한 텍스트를 찾지 못했습니다. (임계값: {threshold})")
+
+    return best_match_box
 
 def extract_doro_juhaeng_workers(file_content):
     """
