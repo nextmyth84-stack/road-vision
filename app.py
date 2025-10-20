@@ -161,6 +161,8 @@ def extract_doro_juhaeng_workers(file_content):
         return [], "", "업로드된 파일이 없습니다."
 
     try:
+        threshold = 80  # fuzzy matching 기준 유사도 (0~100)
+
         image = vision.Image(content=file_content)
         response = client.document_text_detection(image=image)
         
