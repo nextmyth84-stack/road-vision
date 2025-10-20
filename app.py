@@ -145,7 +145,7 @@ def extract_doro_juhaeng_workers(file_content):
         name_header_box = get_text_bounds_fuzzy(all_texts, "성명", threshold=85)
 
         if not doro_box or not name_header_box:
-            error_msg = "오류: '도로주행' 또는 '성명' 위치를 찾지 못했습니다."
+            error_msg ="오류: '도로주행' 또는 '성명' 위치를 찾지 못했습니다."
             st.error(error_msg)
             return [], full_text, error_msg
 
