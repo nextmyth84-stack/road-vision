@@ -149,17 +149,15 @@ def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
 
 def extract_doro_juhaeng_workers(file_content):
     """
-    Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)를 사용해
-    이미지에서 '도로주행' 근무자 목록을 추출합니다.
+    Google Cloud Vision API로 이미지에서 '도로주행' 근무자 이름을 추출합니다.
     """
     if not file_content:
         return [], "", "업로드된 파일이 없습니다."
 
     try:
-        threshold = 80  # fuzzy matching 기준 유사도 (0~100)
-
         image = vision.Image(content=file_content)
-        response = client.document_text_detection(image=image)
+        # 🔹 일반 OCR로 변경 (한글 표에서도 더 잘 동작함)
+        response = client.text_detection(image=image)
 
         if response.error.message:
             return [], "", f"Vision API 오류: {response.error.message}"
@@ -169,59 +167,41 @@ def extract_doro_juhaeng_workers(file_content):
             return [], "", "이미지에서 텍스트를 감지할 수 없습니다."
 
         full_text = all_texts[0].description
-        page = response.full_text_annotation.pages[0]
+        texts = full_text.split("\n")
 
-      # 1️⃣ 기준점찾기(도로주행+성명)
-        doro_box = get_text_bounds_fuzzy(all_texts, "도로주행", threshold=75)
-        name_header_box = get_text_bounds_fuzzy(all_texts, "성명", threshold=85)
+        # 🔹 OCR 원문에서 '도로주행' 줄 찾기 (유사도 포함)
+        doro_index = -1
+        for i, line in enumerate(texts):
+            if fuzz.partial_ratio(line, "도로주행") >= 70:
+                doro_index = i
+                break
 
-        if not doro_box or not name_header_box:
-            error_msg ="오류: '도로주행' 또는 '성명' 위치를 찾지 못했습니다."
-            st.error(error_msg)
-            return [], full_text, error_msg
+        if doro_index == -1:
+            return [], full_text, "OCR 원문에서 '도로주행' 텍스트를 찾을 수 없습니다."
 
-        # 2️⃣이름이 위치할 예상 영역 계산
-        doro_y_end = doro_box.vertices[3].y
-        # 도로주행 아래 600px까지를 근무자 이름 영역으로 확장 (필요시 조정)
-        doro_y_limit = doro_y_end + 600
+        # 🔹 도로주행 이후 줄부터 근무자 이름 후보로 판단
+        worker_candidates = []
+        for line in texts[doro_index+1:]:
+            clean_line = re.sub(r"[^가-힣\s]", "", line).strip()
+            # 한글 이름 2~4글자만 추출
+            if re.fullmatch(r"[가-힣]{2,4}", clean_line):
+                worker_candidates.append(clean_line)
+            # “성명” 같은 머리글 만나면 종료
+            if fuzz.partial_ratio(line, "성명") > 70:
+                continue
 
-        name_col_x_start = name_header_box.vertices[0].x - 30
-        name_col_x_end = name_header_box.vertices[1].x + 150
-
-        workers = []
-
-        # 3️⃣ 페이지 내 모든 문단(Paragraph) 순회
-        for block in page.blocks:
-            for paragraph in block.paragraphs:
-                para_box = paragraph.bounding_box
-                para_y_center = (para_box.vertices[0].y + para_box.vertices[3].y) / 2
-                para_x_center = (para_box.vertices[0].x + para_box.vertices[1].x) / 2
-
-                # ‘도로주행’ 아래 + 일정 범위 내, ‘성명’ 컬럼 근처
-                is_in_doro_rows = (para_y_center >= doro_y_end) and (para_y_center <= doro_y_limit)
-                is_in_name_column = (para_x_center >= name_col_x_start) and (para_x_center <= name_col_x_end)
-
-                if is_in_doro_rows and is_in_name_column:
-                    para_text = "".join(
-                        [symbol.text for word in paragraph.words for symbol in word.symbols]
-                    )
-
-                    # “성명” 혹은 공백 제외
-                    if para_text and para_text != "성명" and fuzz.ratio(para_text, "성명") < threshold:
-                        workers.append(para_text)
-
-        # 중복 제거 및 정렬
-        workers = sorted(set(workers))
+        # 🔹 중복 제거 + 5명 이상 안 넘게 필터링
+        workers = list(dict.fromkeys(worker_candidates))[:10]
 
         if not workers:
-            st.warning("⚠️ 도로주행 근무자 이름을 인식하지 못했습니다. OCR 원문을 확인해 주세요.")
+            return [], full_text, "도로주행 근무자 이름을 인식하지 못했습니다. OCR 원문을 확인해 주세요."
 
         return workers, full_text, None
 
     except Exception as e:
         error_msg = f"OCR 처리 중 예외 발생: {e}"
-        st.error(error_msg)
         return [], "", error_msg
+
 
 ########################################################################
 # 4) 유틸리티 함수: 순번 계산, JSON 로드
