@@ -193,6 +193,37 @@ def extract_doro_juhaeng_workers(file_content):
     except Exception as e:
         return [], "", f"OCR 처리 중 예외 발생: {e}"
 
+def select_worker_range(workers_all):
+    """
+    OCR로 감지된 전체 이름 목록에서 시작/끝 이름을 선택해 구간 추출
+    """
+    if not workers_all:
+        st.warning("인식된 이름이 없습니다.")
+        return []
+
+    st.subheader("👥 도로주행 근무자 범위 선택")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_name = st.selectbox("첫 번째 근무자 선택", workers_all, key="start_name")
+    with col2:
+        end_name = st.selectbox("마지막 근무자 선택", workers_all, key="end_name")
+
+    # 순서 확인
+    try:
+        start_idx = workers_all.index(start_name)
+        end_idx = workers_all.index(end_name)
+    except ValueError:
+        st.error("선택된 이름을 찾을 수 없습니다.")
+        return []
+
+    if start_idx > end_idx:
+        st.error("시작 이름이 끝 이름보다 뒤에 있습니다. 순서를 다시 선택하세요.")
+        return []
+
+    selected_workers = workers_all[start_idx:end_idx + 1]
+    st.success(f"✅ 선택된 구간: {start_name} → {end_name} ({len(selected_workers)}명)")
+    return selected_workers
+
 
 
 
