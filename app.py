@@ -150,6 +150,69 @@ def get_text_bounds_fuzzy(all_texts, target_description, threshold=80):
 
 
 # --- OCR 처리 후 "라인 보존 방식"으로 이름 후보 리스트 생성 ---
+########################################################################
+# 도로주행 OCR 처리 함수 (오전/오후 공용)
+########################################################################
+
+def extract_doro_juhaeng_workers(file_content):
+    """
+    도로주행 표 이미지 파일(binary)을 받아 OCR 처리 후
+    이름 후보를 추출하고, 사용자가 시작~끝 이름을 선택해 확정하는 함수.
+    반환: (근무자리스트, OCR원문, 오류메시지)
+    """
+    try:
+        # OCR 수행
+        full_text = ocr_get_fulltext(file_content)
+        if not full_text:
+            return [], "(OCR 결과 없음)", None
+    except Exception as e:
+        return [], "", str(e)
+
+    # OCR 결과에서 이름 후보 추출 (줄 순서 보존)
+    all_names = extract_names_preserve_order(full_text)
+
+    # OCR 원문 보기
+    with st.expander("📄 OCR 원문 보기", expanded=False):
+        st.text_area("OCR 원문", full_text, height=200)
+
+    if not all_names:
+        st.warning("OCR에서 이름 후보를 찾지 못했습니다. 수동 입력이 필요할 수 있습니다.")
+        return [], full_text, None
+
+    st.markdown("### 🔍 추출된 이름 후보 (위→아래 순서)")
+    numbered = [f"{i+1}. {n}" for i, n in enumerate(all_names)]
+    st.text_area("이름 후보", "\n".join(numbered), height=180)
+
+    # --- 이름 범위 선택 ---
+    with st.form(key=f"select_range_form_{hash(file_content)}"):
+        c1, c2 = st.columns(2)
+        with c1:
+            start_choice = st.selectbox("시작 이름", options=all_names, index=0)
+        with c2:
+            end_choice = st.selectbox("끝 이름", options=all_names, index=len(all_names)-1)
+        ok = st.form_submit_button("이 구간만 확정")
+
+    selected_workers = []
+    if ok:
+        try:
+            s_idx = all_names.index(start_choice)
+            e_idx = all_names.index(end_choice)
+            if s_idx > e_idx:
+                st.error("⚠️ 시작이 끝보다 뒤에 있습니다.")
+            else:
+                selected_workers = all_names[s_idx:e_idx+1]
+                st.success(f"✅ 선택 구간: {start_choice} → {end_choice} ({len(selected_workers)}명)")
+                st.write(selected_workers)
+        except Exception as e:
+            st.error(f"선택 오류: {e}")
+
+    # 선택된 게 없으면 기본 전체 반환
+    if not selected_workers:
+        selected_workers = all_names
+
+    return selected_workers, full_text, None
+
+
 def extract_names_preserve_order(full_text):
     """
     full_text: OCR이 반환한 전체 문자열 (줄바꿈 보존)
