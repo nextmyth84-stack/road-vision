@@ -2,7 +2,7 @@
 import streamlit as st
 from google.cloud import vision
 from google.oauth2 import service_account
-from PIL import Image
+# from PIL import Image # [참고] 원본 코드에 있었으나 실제 사용되지 않음
 import json
 import re
 import os
@@ -55,7 +55,7 @@ def clean_ocr_text(text):
     """괄호 제거, 영어/숫자/특수 제거, 공백 정리"""
     if not text:
         return ""
-    text = re.sub(r"[\(\[\{].*?[\)\]\}]", " ", text)   # 괄호 안 내용 제거
+    text = re.sub(r"[\(\[\{].*?[\)\]\}]", " ", text)    # 괄호 안 내용 제거
     text = re.sub(r"[A-Za-z0-9\-\=\+\*\/\\:;,.·••]+", " ", text)  # 영어/숫자/특수
     text = re.sub(r"\s+", " ", text)
     return text.strip()
@@ -76,7 +76,7 @@ def extract_korean_names_from_text(text, min_len=2, max_len=5):
     ordered = []
     seen = set()
     for w in candidates:
-        if w in exclude: 
+        if w in exclude:  
             continue
         if w not in seen:
             seen.add(w)
@@ -84,23 +84,30 @@ def extract_korean_names_from_text(text, min_len=2, max_len=5):
     return ordered
 
 def next_in_cycle(current, cycle_list):
+    """리스트에서 current 다음 아이템을 순환하며 찾음"""
     if not cycle_list:
         return None
-    if not current:
+    if not current: # current가 비어있으면 목록의 첫 번째 반환
         return cycle_list[0]
     try:
         idx = cycle_list.index(current)
         return cycle_list[(idx + 1) % len(cycle_list)]
-    except ValueError:
+    except ValueError: # current가 리스트에 없으면 첫 번째 반환
         return cycle_list[0]
 
 def next_valid_after(start_item, item_list, valid_set):
+    """
+    item_list에서 start_item *다음*부터 시작하여
+    valid_set에 포함된 첫 번째 아이템을 찾음
+    """
     if not item_list:
         return None
+    
     if start_item in item_list:
         start_idx = item_list.index(start_item)
     else:
-        start_idx = -1
+        start_idx = -1 # start_item이 없으면 -1 (다음은 0번째)
+        
     for i in range(1, len(item_list)+1):
         cand = item_list[(start_idx + i) % len(item_list)]
         if cand in valid_set:
@@ -128,6 +135,7 @@ def parse_vehicle_map(text):
 # -----------------------------
 st.sidebar.header("초기 데이터 입력 (필요 시 수정)")
 
+# --- 기본값 ---
 default_key_order = """권한솔
 김남균
 김면정
@@ -185,7 +193,7 @@ st.sidebar.markdown("**차량 매핑 (한 줄에 `호수 이름`)**")
 cha1_text = st.sidebar.text_area("1종 수동 차량표", default_cha1, height=140)
 cha2_text = st.sidebar.text_area("2종 자동 차량표", default_cha2, height=200)
 
-# 전일 자동 로드
+# --- 전일 자동 로드 ---
 def load_previous_day_data():
     if os.path.exists(PREV_DAY_FILE):
         try:
@@ -196,6 +204,14 @@ def load_previous_day_data():
     return {}
 
 prev_data = load_previous_day_data()
+
+# --- [수정] 날짜 선택 (누락된 UI 추가) ---
+st.sidebar.markdown("---")
+st.sidebar.header("날짜 선택")
+selected_date = st.sidebar.date_input("근무 날짜 선택")
+# st.session_state.date에 날짜 문자열 저장 (최종 결과에 사용됨)
+st.session_state.date = selected_date.strftime("%Y/%m/%d") + f"({['월','화','수','목','금','토','일'][selected_date.weekday()]})"
+
 
 st.sidebar.markdown("---")
 st.sidebar.header("전일(기준) 입력 — 자동/수동")
@@ -284,7 +300,9 @@ if st.button("① 이미지 분석 및 근무자 추출"):
         for k in ["selected_morning","selected_afternoon"]:
             if k in st.session_state:
                 del st.session_state[k]
-        st.experimental_rerun()
+        
+        # [수정] st.experimental_rerun() -> st.rerun()
+        st.rerun()
 
 # -----------------------------
 # ② 선택 UI: 인식 후보 -> 시작/끝 선택(구간)
@@ -304,19 +322,25 @@ def selection_ui_for_list(names, label):
     with col2:
         end = st.selectbox(f"{label} 끝 이름 선택", options=["(선택)"] + names, key=f"end_{label}")
     with col3:
-        if st.button(f"{label} 구간 적용", key=f"apply_{label}"):
+        # 버튼 스타일 적용
+        st.markdown('<div class="big-button">', unsafe_allow_html=True)
+        if st.button(f"{label} 구간 적용", key=f"apply_{label}", use_container_width=True):
             if start == "(선택)" or end == "(선택)":
                 st.warning("시작/끝 모두 선택해야 합니다.")
+                st.markdown('</div>', unsafe_allow_html=True) # 닫는 태그
                 return []
             s_idx = names.index(start)
             e_idx = names.index(end)
             if s_idx <= e_idx:
                 sel = names[s_idx:e_idx+1]
-            else:
+            else: # 순서가 바뀌어도 허용
                 sel = names[e_idx:s_idx+1]
             st.success(f"{label} 구간 선택: {sel[0]} → {sel[-1]} ({len(sel)}명)")
+            st.markdown('</div>', unsafe_allow_html=True) # 닫는 태그
             return sel
-    # if not applied, return empty list (user can manually copy from text area if needed)
+        st.markdown('</div>', unsafe_allow_html=True) # 닫는 태그
+        
+    # if not applied, return empty list
     return []
 
 st.markdown("---")
@@ -329,6 +353,7 @@ if st.session_state.get("morning_names") is not None:
     morning_selected = selection_ui_for_list(st.session_state.get("morning_names", []), "오전")
     if morning_selected:
         st.session_state.selected_morning = morning_selected
+        st.rerun() # 선택 적용 시 수동 편집란에 즉시 반영하기 위해 rerun
 
 # afternoon selection UI
 afternoon_selected = []
@@ -337,6 +362,7 @@ if st.session_state.get("afternoon_names") is not None:
     afternoon_selected = selection_ui_for_list(st.session_state.get("afternoon_names", []), "오후")
     if afternoon_selected:
         st.session_state.selected_afternoon = afternoon_selected
+        st.rerun() # 선택 적용 시 수동 편집란에 즉시 반영하기 위해 rerun
 
 # allow manual edits if needed
 st.markdown("---")
@@ -356,7 +382,8 @@ afternoon_list = [x.strip() for x in afternoon_manual.splitlines() if x.strip()]
 # -----------------------------
 st.markdown("---")
 st.markdown("## ③ 최종 근무 배정 생성")
-if st.button("② 최종 근무 배정 생성", type="primary", key="generate_assignment_button"):
+st.markdown('<div class="big-button">', unsafe_allow_html=True)
+if st.button("② 최종 근무 배정 생성", type="primary", key="generate_assignment_button", use_container_width=True):
     with st.spinner("배정 로직을 계산 중입니다..."):
         # present sets
         present_set_morning = set(morning_list)
@@ -366,7 +393,7 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
         # --- 오전 배정 ---
         today_key = next_in_cycle(prev_key, key_order)
 
-        # 교양 오전 (2명) — start from next after prev_gyoyang5
+        # 교양 오전 (2명) — (올바른 로직)
         gy_start = next_in_cycle(prev_gyoyang5, gyoyang_order)
         gy_candidates = []
         cur = gy_start
@@ -376,21 +403,21 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
                     gy_candidates.append(cur)
             if len(gy_candidates) >= 2:
                 break
-            cur = next_in_cycle(cur, gyoyang_order)
+            cur = next_in_cycle(cur, gyoyang_order) # 다음 후보
         gy1 = gy_candidates[0] if len(gy_candidates) >=1 else None
         gy2 = gy_candidates[1] if len(gy_candidates) >=2 else None
 
-        # 1종 수동 오전 (sudong_count people) starting after prev_sudong
+        # --- [수정] 1종 수동 오전 (오전 교양 로직과 동일하게 수정) ---
         sudong_assigned = []
-        cur_s = prev_sudong if prev_sudong else sudong_order[0]
-        # iterate and pick next present(s)
+        # prev_sudong의 *다음* 사람부터 시작
+        cur_s = next_in_cycle(prev_sudong, sudong_order) 
+        
         for _ in range(len(sudong_order) * 2):
-            cand = next_in_cycle(cur_s, sudong_order)
-            cur_s = cand
-            if cand in present_set_morning and cand not in sudong_assigned:
-                sudong_assigned.append(cand)
+            if cur_s in present_set_morning and cur_s not in sudong_assigned:
+                sudong_assigned.append(cur_s)
             if len(sudong_assigned) >= sudong_count:
                 break
+            cur_s = next_in_cycle(cur_s, sudong_order) # 다음 후보
 
         # morning 2종 automatic list (present minus sudong_assigned)
         morning_2jong = [p for p in morning_list if p not in sudong_assigned]
@@ -402,7 +429,8 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
 
         # Build morning output
         morning_lines = []
-        morning_lines.append(f"📅 {st.session_state.get('date', '') if 'date' in st.session_state else ''} 오전 근무 배정 결과")
+        # [수정] st.session_state.date 사용 (사이드바에서 설정됨)
+        morning_lines.append(f"📅 {st.session_state.date} 오전 근무 배정 결과")
         morning_lines.append("="*30)
         morning_lines.append(f"🔑 열쇠: {today_key}")
         morning_lines.append("\n🎓 교양 (오전)")
@@ -424,29 +452,32 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
         last_gy = gy2 if gy2 else (gy1 if gy1 else prev_gyoyang5)
         last_sudong = sudong_assigned[-1] if sudong_assigned else prev_sudong
 
-        # afternoon 교양 3,4,5 (start after last_gy)
+        # --- [수정] 오후 교양 3,4,5 (오전 교양 로직과 동일하게 수정) ---
         aft_gy_candidates = []
-        cur_g = last_gy if last_gy else gyoyang_order[0]
+        # last_gy의 *다음* 사람부터 시작
+        cur_g = next_in_cycle(last_gy, gyoyang_order) 
+        
         for _ in range(len(gyoyang_order)*2):
-            cur_g = next_in_cycle(cur_g, gyoyang_order)
             if cur_g in present_set_afternoon and cur_g not in computer_names:
                 if cur_g not in aft_gy_candidates:
                     aft_gy_candidates.append(cur_g)
             if len(aft_gy_candidates) >= 3:
                 break
+            cur_g = next_in_cycle(cur_g, gyoyang_order) # 다음 후보
         gy3 = aft_gy_candidates[0] if len(aft_gy_candidates) >=1 else None
         gy4 = aft_gy_candidates[1] if len(aft_gy_candidates) >=2 else None
         gy5 = aft_gy_candidates[2] if len(aft_gy_candidates) >=3 else None
 
-        # afternoon 1종 (single)
+        # --- [수정] 오후 1종 (오전 교양 로직과 동일하게 수정) ---
         aft_sudong = None
-        cur_s2 = last_sudong if last_sudong else sudong_order[0]
+        # last_sudong의 *다음* 사람부터 시작
+        cur_s2 = next_in_cycle(last_sudong, sudong_order)
+        
         for _ in range(len(sudong_order)*2):
-            cand = next_in_cycle(cur_s2, sudong_order)
-            cur_s2 = cand
-            if cand in present_set_afternoon:
-                aft_sudong = cand
+            if cur_s2 in present_set_afternoon:
+                aft_sudong = cur_s2
                 break
+            cur_s2 = next_in_cycle(cur_s2, sudong_order) # 다음 후보
 
         # afternoon 2종
         aft_2jong = [p for p in afternoon_list if p != aft_sudong]
@@ -458,7 +489,8 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
 
         # Build afternoon output
         afternoon_lines = []
-        afternoon_lines.append(f"📅 {st.session_state.get('date', '') if 'date' in st.session_state else ''} 오후 근무 배정 결과")
+        # [수정] st.session_state.date 사용 (사이드바에서 설정됨)
+        afternoon_lines.append(f"📅 {st.session_state.date} 오후 근무 배정 결과")
         afternoon_lines.append("="*30)
         afternoon_lines.append(f"🔑 열쇠: {afternoon_key}")
         afternoon_lines.append("\n🎓 교양 (오후)")
@@ -486,34 +518,4 @@ if st.button("② 최종 근무 배정 생성", type="primary", key="generate_as
         with res_col1:
             st.text_area("오전 결과", morning_result_text, height=420)
         with res_col2:
-            st.text_area("오후 결과", afternoon_result_text, height=420)
-
-        all_text = f"== 오전 ==\n{morning_result_text}\n\n== 오후 ==\n{afternoon_result_text}"
-        st.download_button("결과 텍스트 다운로드 (.txt)", data=all_text.encode('utf-8-sig'),
-                           file_name=f"근무배정결과.txt", mime="text/plain")
-
-        # 저장(전일 기준)
-        if st.checkbox("이 결과를 '전일 기준'으로 저장 (다음 실행 시 자동 로드)", value=True):
-            today_record = {
-                "열쇠": afternoon_key,
-                "교양_5교시": gy5 if gy5 else (gy4 if gy4 else (gy3 if gy3 else prev_gyoyang5)),
-                "1종수동": aft_sudong if aft_sudong else last_sudong
-            }
-            try:
-                with open(PREV_DAY_FILE, "w", encoding="utf-8") as f:
-                    json.dump(today_record, f, ensure_ascii=False, indent=2)
-                st.success(f"`{PREV_DAY_FILE}`에 저장했습니다. 다음 실행 시 자동 로드됩니다.")
-            except Exception as e:
-                st.error("전일 저장 실패: " + str(e))
-
-# -----------------------------
-# 하단 도움말
-# -----------------------------
-st.markdown("---")
-st.info("사용법 요약:\n\n"
-        "1) 오전/오후 근무표 이미지를 각각 업로드\n"
-        "2) '이미지 분석 및 근무자 추출' 버튼 클릭 → 인식 후보 확인\n"
-        "3) 각 후보에서 시작/끝을 선택하고 '구간 적용' 클릭 → 도로주행 근무자 목록 확정\n"
-        "4) 필요 시 수동 편집 후 '최종 근무 배정 생성' 클릭하여 배정 결과 확인 및 저장\n\n"
-        "옵션: 전산병행자, 정비중 차량, 1종수동 인원수 등을 사이드바에서 설정하세요.")
-
+            st
