@@ -201,7 +201,7 @@ if st.button("이미지로부터 이름 추출 (GPT)"):
                 st.success(f"오후 인식: {len(a_names)}명")
             else:
                 st.session_state.a_names = []
-        st.experimental_rerun()
+        st.rerun()
 
 # 디버그: 원문 보기 (접근 가능하면)
 if st.session_state.get("m_raw_m"):
