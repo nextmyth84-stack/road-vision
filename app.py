@@ -47,11 +47,8 @@ default_gyoyang_order = """권한솔
 조정래"""
 default_sudong_order = """권한솔
 김남균
-김면정
 김성연
 김주현
-김지은
-안유미
 이호석
 조정래"""
 default_cha1 = """2호 조정래
