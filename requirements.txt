@@ -1,6 +1,4 @@
 streamlit
-google-cloud-vision
-google-auth
-fuzzywuzzy
-python-Levenshtein
-Pillow
+openai>=1.6.0
+pillow
+requests
