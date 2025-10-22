@@ -1,4 +1,4 @@
-# app.py — 도로주행 근무자동배정 (GPT OCR + 순번/차량 통합, 오전·오후 분리)
+# app.py — 도로주행 근무자동배정 (GPT OCR + 순번/차량 통합, 완전개선)
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os
@@ -10,13 +10,15 @@ st.set_page_config(page_title="도로주행 근무자동배정", layout="wide")
 st.title("🚗 도로주행 근무자동배정 (GPT OCR + 순번/차량 통합 개선버전)")
 
 # -------------------------
-# OpenAI 초기화
+# OpenAI 초기화 (모델 고정: GPT-4o)
 # -------------------------
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
 except Exception as e:
     st.error("⚠️ OPENAI_API_KEY가 없거나 접근 불가합니다.")
     st.stop()
+
+MODEL_NAME = "gpt-4o"
 
 # -------------------------
 # 사이드바
@@ -77,8 +79,7 @@ st.sidebar.text_area("2종 자동 차량표", default_cha2, key="cha2", height=2
 prev_key = st.sidebar.text_input("전일 열쇠", value="")
 prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value="")
 prev_sudong = st.sidebar.text_input("전일 1종수동", value="")
-sudong_count = st.sidebar.radio("1종 수동 인원수", [1,2], index=0)
-model_name = st.sidebar.selectbox("GPT 모델", ["gpt-4o-mini", "gpt-4o"], index=0)
+sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 
 # -------------------------
 # 파싱 함수
@@ -121,7 +122,7 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행"):
 
     try:
         resp = client.chat.completions.create(
-            model=model_name,
+            model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": [
@@ -142,10 +143,11 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행"):
         names = js.get("names", [])
         clean = []
         for n in names:
-            if not isinstance(n, str): continue
+            if not isinstance(n, str):
+                continue
             n2 = re.sub(r"[^가-힣A-Za-z0-9\-\(\)]", "", n).strip()
-            # '지원' 또는 '인턴' 제외
-            if re.search(r"(지원|인턴)", n2):
+            # '지원', '인턴', '연수' 제외
+            if re.search(r"(지원|인턴|연수)", n2):
                 continue
             if 2 <= len(re.sub(r"[^가-힣]", "", n2)) <= 5:
                 clean.append(n2)
@@ -200,9 +202,11 @@ afternoon_list = [x.strip() for x in afternoon_final.splitlines() if x.strip()]
 # 순번 계산
 # -------------------------
 def next_in_cycle(current, cycle):
-    if not cycle: return None
-    if current not in cycle: return cycle[0]
-    return cycle[(cycle.index(current)+1) % len(cycle)]
+    if not cycle:
+        return None
+    if current not in cycle:
+        return cycle[0]
+    return cycle[(cycle.index(current) + 1) % len(cycle)]
 
 # -------------------------
 # 오전 배정 버튼
@@ -219,9 +223,11 @@ if st.button("📋 오전 근무 배정 생성"):
 
         gy_candidates = []
         cur = gy_start
-        for _ in range(len(gyoyang_order)*2):
-            if cur in morning_list: gy_candidates.append(cur)
-            if len(gy_candidates) >= 2: break
+        for _ in range(len(gyoyang_order) * 2):
+            if cur in morning_list:
+                gy_candidates.append(cur)
+            if len(gy_candidates) >= 2:
+                break
             cur = next_in_cycle(cur, gyoyang_order)
 
         gy1 = gy_candidates[0] if gy_candidates else "-"
@@ -229,16 +235,17 @@ if st.button("📋 오전 근무 배정 생성"):
 
         sudong_assigned = []
         cur_s = prev_sudong if prev_sudong else sudong_order[0]
-        for _ in range(len(sudong_order)*2):
+        for _ in range(len(sudong_order) * 2):
             cand = next_in_cycle(cur_s, sudong_order)
             cur_s = cand
             if cand in morning_list:
                 sudong_assigned.append(cand)
-            if len(sudong_assigned) >= sudong_count: break
+            if len(sudong_assigned) >= sudong_count:
+                break
 
         morning_2jong = [p for p in morning_list if p not in sudong_assigned]
 
-        morning_lines = [
+        lines = [
             f"📅 오전 배정",
             f"열쇠: {today_key}",
             f"교양 1교시: {gy1}",
@@ -246,14 +253,14 @@ if st.button("📋 오전 근무 배정 생성"):
         ]
         for i, nm in enumerate(sudong_assigned, start=1):
             car = veh1.get(nm, "-")
-            morning_lines.append(f"1종수동 #{i}: {nm} → {car}")
-        morning_lines.append("2종 자동:")
+            lines.append(f"1종수동 #{i}: {nm} → {car}")
+        lines.append("2종 자동:")
         for nm in morning_2jong:
             car = veh2.get(nm, "-")
-            morning_lines.append(f" - {nm} → {car}")
+            lines.append(f" - {nm} → {car}")
 
-        result = "\n".join(morning_lines)
-        st.text_area("오전 배정 결과", result, height=300)
+        result = "\n".join(lines)
+        st.code(result, language="text")
         st.download_button("📥 오전 결과 다운로드", data=result.encode("utf-8-sig"),
                            file_name="오전근무배정.txt", mime="text/plain")
 
@@ -273,17 +280,20 @@ if st.button("📋 오후 근무 배정 생성"):
 
         aft_gy_candidates = []
         curg = last_gy if last_gy else gyoyang_order[0]
-        for _ in range(len(gyoyang_order)*2):
+        for _ in range(len(gyoyang_order) * 2):
             curg = next_in_cycle(curg, gyoyang_order)
-            if curg in afternoon_list: aft_gy_candidates.append(curg)
-            if len(aft_gy_candidates) >= 3: break
+            if curg in afternoon_list:
+                aft_gy_candidates.append(curg)
+            if len(aft_gy_candidates) >= 3:
+                break
+
         gy3 = aft_gy_candidates[0] if aft_gy_candidates else "-"
         gy4 = aft_gy_candidates[1] if len(aft_gy_candidates) >= 2 else "-"
         gy5 = aft_gy_candidates[2] if len(aft_gy_candidates) >= 3 else "-"
 
         aft_sudong = None
         curs2 = last_sudong if last_sudong else sudong_order[0]
-        for _ in range(len(sudong_order)*2):
+        for _ in range(len(sudong_order) * 2):
             cand = next_in_cycle(curs2, sudong_order)
             curs2 = cand
             if cand in afternoon_list:
@@ -292,7 +302,7 @@ if st.button("📋 오후 근무 배정 생성"):
 
         aft_2jong = [p for p in afternoon_list if p != aft_sudong]
 
-        afternoon_lines = [
+        lines = [
             f"📅 오후 배정",
             f"열쇠: {today_key}",
             f"교양 3교시: {gy3}",
@@ -301,16 +311,16 @@ if st.button("📋 오후 근무 배정 생성"):
         ]
         if aft_sudong:
             car = veh1.get(aft_sudong, "-")
-            afternoon_lines.append(f"1종수동 (오후): {aft_sudong} → {car}")
+            lines.append(f"1종수동 (오후): {aft_sudong} → {car}")
         else:
-            afternoon_lines.append("1종수동 (오후): -")
+            lines.append("1종수동 (오후): -")
 
-        afternoon_lines.append("2종 자동:")
+        lines.append("2종 자동:")
         for nm in aft_2jong:
             car = veh2.get(nm, "-")
-            afternoon_lines.append(f" - {nm} → {car}")
+            lines.append(f" - {nm} → {car}")
 
-        result = "\n".join(afternoon_lines)
-        st.text_area("오후 배정 결과", result, height=300)
+        result = "\n".join(lines)
+        st.code(result, language="text")
         st.download_button("📥 오후 결과 다운로드", data=result.encode("utf-8-sig"),
                            file_name="오후근무배정.txt", mime="text/plain")
