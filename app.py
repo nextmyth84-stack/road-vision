@@ -12,7 +12,7 @@ st.markdown(
 )
 
 # -------------------------
-# OpenAI 초기화 (모델 고정: GPT-4o)
+# OpenAI 초기화 (GPT-4o 고정)
 # -------------------------
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
@@ -105,12 +105,14 @@ def parse_vehicle_map(text):
     return m
 
 def get_vehicle(name, veh_map):
-    """괄호 포함된 이름도 차량표 매칭 가능하게"""
-    if name in veh_map:
-        return veh_map[name]
-    base = re.sub(r"\(.*?\)", "", name).strip()
+    """괄호 포함, 공백 포함 이름 대응"""
+    name_clean = re.sub(r"\s+", "", name)
+    if name_clean in veh_map:
+        return veh_map[name_clean]
+    base = re.sub(r"\(.*?\)", "", name_clean).strip()
     for key, val in veh_map.items():
-        if key == base:
+        key_clean = re.sub(r"\s+", "", key)
+        if key_clean == base:
             return val
     return ""
 
@@ -176,6 +178,7 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행"):
             if not isinstance(n, str):
                 continue
             n2 = re.sub(r"-", "", n)
+            n2 = re.sub(r"\s+", "", n2)  # 공백 제거
             n2 = re.sub(r"[^가-힣A-Za-z0-9\(\)]", "", n2)
             if re.search(r"(지원|인턴|연수)", n2):
                 continue
@@ -282,6 +285,7 @@ if st.button("📋 오전 근무 배정 생성"):
     result = "\n".join([ln for ln in lines if ln.strip()])
     st.code(result, language="text")
     st.download_button("📥 오전 결과 다운로드", data=result.encode("utf-8-sig"), file_name="오전근무배정.txt")
+
 
 # -------------------------
 # 4️⃣ 오후 근무 배정 생성
