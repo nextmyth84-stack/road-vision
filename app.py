@@ -60,12 +60,12 @@ default_cha1 = """2호 조정래
 7호 김남균
 8호 이호석
 9호 김주현
-10호 김성연"""
+10호 김성연
+14호 김면정"""
 default_cha2 = """4호 김남균
 5호 김병욱
 6호 김지은
 12호 안유미
-14호 김면정
 15호 이호석
 17호 김성연
 18호 권한솔
@@ -103,6 +103,16 @@ def parse_vehicle_map(text):
             name = " ".join(parts[1:])
             m[name] = car
     return m
+
+def get_vehicle(name, veh_map):
+    """괄호 포함된 이름도 차량표 매칭 가능하게"""
+    if name in veh_map:
+        return veh_map[name]
+    base = re.sub(r"\(.*?\)", "", name).strip()
+    for key, val in veh_map.items():
+        if key == base:
+            return val
+    return ""
 
 key_order = parse_list(st.session_state.key_order)
 gyoyang_order = parse_list(st.session_state.gyoyang_order)
@@ -257,12 +267,12 @@ if st.button("📋 오전 근무 배정 생성"):
         f"교양 2교시: {gy2}",
     ]
     for nm in sudong_assigned:
-        car = veh1.get(nm, "")
+        car = get_vehicle(nm, veh1)
         mark = " (정비)" if car and car in repair_cars else ""
         lines.append(f"1종수동: {nm}{(' ' + car) if car else ''}{mark}")
     lines.append("2종 자동:")
     for nm in morning_2jong:
-        car = veh2.get(nm, "")
+        car = get_vehicle(nm, veh2)
         mark = " (정비)" if car and car in repair_cars else ""
         lines.append(f" - {nm}{(' ' + car) if car else ''}{mark}")
 
@@ -315,20 +325,19 @@ if st.button("📋 오후 근무 배정 생성"):
         f"교양 5교시: {gy5}",
     ]
     if aft_sudong:
-        car = veh1.get(aft_sudong, "")
+        car = get_vehicle(aft_sudong, veh1)
         mark = " (정비)" if car and car in repair_cars else ""
         lines.append(f"1종수동 (오후): {aft_sudong}{(' ' + car) if car else ''}{mark}")
     lines.append("2종 자동:")
     aft_used_cars = set()
     for nm in aft_2jong:
-        car = veh2.get(nm, "")
+        car = get_vehicle(nm, veh2)
         if car: aft_used_cars.add(car)
         mark = " (정비)" if car and car in repair_cars else ""
         lines.append(f" - {nm}{(' ' + car) if car else ''}{mark}")
 
     # 비교/점검
-    morning_assigned = st.session_state.get("morning_assigned_set", set())
-    morning_veh2_used = st.session_state.get("morning_veh2_used", set())
+    morning_list_prev = st.session_state.get("morning_assigned_set", set())
     newbies = set(afternoon_list) - set(morning_list)
     missing = set(morning_list) - set(afternoon_list)
     all_veh2_cars = set(veh2.values())
