@@ -220,4 +220,129 @@ afternoon_list = [x.strip() for x in afternoon_final.splitlines() if x.strip()]
 # 3️⃣ 오전 근무 배정 생성
 # -------------------------
 st.markdown("<h4 style='font-size:18px; margin-top:10px;'>3️⃣ 오전 근무 배정 생성</h4>", unsafe_allow_html=True)
-# (이하 동일)
+
+if st.button("📋 오전 근무 배정 생성"):
+    present_m = set(morning_list) - excluded_set
+    all_allowed = set(key_order) - excluded_set
+    today_key = next_valid_after(prev_key, key_order, all_allowed) if prev_key else next_valid_after(None, key_order, all_allowed) or key_order[0]
+
+    gy_start = next_in_cycle(prev_gyoyang5, gyoyang_order) if prev_gyoyang5 else gyoyang_order[0]
+    gy_candidates = []
+    cur = gy_start
+    for _ in range(len(gyoyang_order)*2):
+        if cur in present_m:
+            gy_candidates.append(cur)
+        if len(gy_candidates) >= 2:
+            break
+        cur = next_in_cycle(cur, gyoyang_order)
+    gy1 = gy_candidates[0] if len(gy_candidates) >= 1 else ""
+    gy2 = gy_candidates[1] if len(gy_candidates) >= 2 else ""
+
+    sudong_assigned = []
+    cur_s = prev_sudong if prev_sudong else sudong_order[0]
+    for _ in range(len(sudong_order)*2):
+        cand = next_in_cycle(cur_s, sudong_order)
+        cur_s = cand
+        if cand in present_m and cand not in sudong_assigned:
+            sudong_assigned.append(cand)
+        if len(sudong_assigned) >= sudong_count:
+            break
+
+    morning_2jong = [p for p in morning_list if p in present_m and p not in sudong_assigned]
+
+    lines = [
+        f"📅 오전 배정",
+        f"열쇠: {today_key}",
+        f"교양 1교시: {gy1}",
+        f"교양 2교시: {gy2}",
+    ]
+    for nm in sudong_assigned:
+        car = veh1.get(nm, "")
+        mark = " (정비)" if car and car in repair_cars else ""
+        lines.append(f"1종수동: {nm}{(' ' + car) if car else ''}{mark}")
+    lines.append("2종 자동:")
+    for nm in morning_2jong:
+        car = veh2.get(nm, "")
+        mark = " (정비)" if car and car in repair_cars else ""
+        lines.append(f" - {nm}{(' ' + car) if car else ''}{mark}")
+
+    st.session_state.morning_assigned_set = set(morning_list)
+    st.session_state.morning_veh2_used = set([veh2.get(n, "") for n in morning_2jong if veh2.get(n, "")])
+
+    result = "\n".join([ln for ln in lines if ln.strip()])
+    st.code(result, language="text")
+    st.download_button("📥 오전 결과 다운로드", data=result.encode("utf-8-sig"), file_name="오전근무배정.txt")
+
+# -------------------------
+# 4️⃣ 오후 근무 배정 생성
+# -------------------------
+st.markdown("<h4 style='font-size:18px; margin-top:10px;'>4️⃣ 오후 근무 배정 생성</h4>", unsafe_allow_html=True)
+
+if st.button("📋 오후 근무 배정 생성"):
+    present_a = set(afternoon_list) - excluded_set
+    all_allowed = set(key_order) - excluded_set
+    today_key = next_valid_after(prev_key, key_order, all_allowed) if prev_key else next_valid_after(None, key_order, all_allowed) or key_order[0]
+
+    last_gy = prev_gyoyang5
+    aft_gy_candidates = []
+    curg = last_gy if last_gy else gyoyang_order[0]
+    for _ in range(len(gyoyang_order)*2):
+        curg = next_in_cycle(curg, gyoyang_order)
+        if curg in present_a and curg not in aft_gy_candidates:
+            aft_gy_candidates.append(curg)
+        if len(aft_gy_candidates) >= 3:
+            break
+    gy3 = aft_gy_candidates[0] if len(aft_gy_candidates) >= 1 else ""
+    gy4 = aft_gy_candidates[1] if len(aft_gy_candidates) >= 2 else ""
+    gy5 = aft_gy_candidates[2] if len(aft_gy_candidates) >= 3 else ""
+
+    aft_sudong = None
+    curs2 = prev_sudong if prev_sudong else sudong_order[0]
+    for _ in range(len(sudong_order)*2):
+        cand = next_in_cycle(curs2, sudong_order)
+        curs2 = cand
+        if cand in present_a:
+            aft_sudong = cand
+            break
+
+    aft_2jong = [p for p in afternoon_list if p in present_a and p != aft_sudong]
+
+    lines = [
+        f"📅 오후 배정",
+        f"열쇠: {today_key}",
+        f"교양 3교시: {gy3}",
+        f"교양 4교시: {gy4}",
+        f"교양 5교시: {gy5}",
+    ]
+    if aft_sudong:
+        car = veh1.get(aft_sudong, "")
+        mark = " (정비)" if car and car in repair_cars else ""
+        lines.append(f"1종수동 (오후): {aft_sudong}{(' ' + car) if car else ''}{mark}")
+    lines.append("2종 자동:")
+    aft_used_cars = set()
+    for nm in aft_2jong:
+        car = veh2.get(nm, "")
+        if car: aft_used_cars.add(car)
+        mark = " (정비)" if car and car in repair_cars else ""
+        lines.append(f" - {nm}{(' ' + car) if car else ''}{mark}")
+
+    # 비교/점검
+    morning_assigned = st.session_state.get("morning_assigned_set", set())
+    morning_veh2_used = st.session_state.get("morning_veh2_used", set())
+    newbies = set(afternoon_list) - set(morning_list)
+    missing = set(morning_list) - set(afternoon_list)
+    all_veh2_cars = set(veh2.values())
+    unassigned_cars = all_veh2_cars - aft_used_cars
+
+    lines.append("\n🔎 비교/점검")
+    if newbies: lines.append("• 신규 인원: " + ", ".join(sorted(newbies)))
+    if missing: lines.append("• 누락 인원: " + ", ".join(sorted(missing)))
+    if unassigned_cars:
+        closed = sorted([c for c in unassigned_cars if c in repair_cars])
+        free = sorted([c for c in unassigned_cars if c not in repair_cars])
+        if free: lines.append("• 미배정 2종 차량: " + ", ".join(free))
+        if closed: lines.append("• 정비 차량: " + ", ".join(closed))
+
+    result = "\n".join([ln for ln in lines if ln.strip()])
+    st.code(result, language="text")
+    st.download_button("📥 오후 결과 다운로드", data=result.encode("utf-8-sig"), file_name="오후근무배정.txt")
