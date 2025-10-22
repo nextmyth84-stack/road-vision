@@ -117,15 +117,20 @@ def get_vehicle(name, veh_map):
     return ""
 
 def format_name_with_car(name, veh_map):
-    """이름 + 차량호수 + 괄호내용(A합 등)"""
+    """이름 + 차량호수 + 괄호내용 (A합 등)"""
     car = get_vehicle(name, veh_map)
     mark = " (정비)" if car and car in repair_cars else ""
     note = ""
     m = re.search(r"\((.*?)\)", name)
     if m:
-        note = m.group(1)
+        note = m.group(1).replace("-", "").strip()
     base = re.sub(r"\(.*?\)", "", name).strip()
-    return f"{base}{(' ' + car) if car else ''}{(' ' + note) if note else ''}{mark}"
+    # 출력 순서: 이름 차량호수 (괄호내용)
+    if note:
+        return f"{base}{(' ' + car) if car else ''} ({note}){mark}"
+    else:
+        return f"{base}{(' ' + car) if car else ''}{mark}"
+
 
 key_order = parse_list(st.session_state.key_order)
 gyoyang_order = parse_list(st.session_state.gyoyang_order)
