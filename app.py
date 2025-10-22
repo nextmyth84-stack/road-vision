@@ -116,6 +116,17 @@ def get_vehicle(name, veh_map):
             return val
     return ""
 
+def format_name_with_car(name, veh_map):
+    """이름 + 차량호수 + 괄호내용(A합 등)"""
+    car = get_vehicle(name, veh_map)
+    mark = " (정비)" if car and car in repair_cars else ""
+    note = ""
+    m = re.search(r"\((.*?)\)", name)
+    if m:
+        note = m.group(1)
+    base = re.sub(r"\(.*?\)", "", name).strip()
+    return f"{base}{(' ' + car) if car else ''}{(' ' + note) if note else ''}{mark}"
+
 key_order = parse_list(st.session_state.key_order)
 gyoyang_order = parse_list(st.session_state.gyoyang_order)
 sudong_order = parse_list(st.session_state.sudong_order)
@@ -178,7 +189,7 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행"):
             if not isinstance(n, str):
                 continue
             n2 = re.sub(r"-", "", n)
-            n2 = re.sub(r"\s+", "", n2)  # 공백 제거
+            n2 = re.sub(r"\s+", "", n2)
             n2 = re.sub(r"[^가-힣A-Za-z0-9\(\)]", "", n2)
             if re.search(r"(지원|인턴|연수)", n2):
                 continue
@@ -270,19 +281,15 @@ if st.button("📋 오전 근무 배정 생성"):
         f"교양 2교시: {gy2}",
     ]
     for nm in sudong_assigned:
-    lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
-
+        lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
     lines.append("2종 자동:")
     for nm in morning_2jong:
-    lines.append(f" - {format_name_with_car(nm, veh2)}")
-
-
-    st.session_state.morning_assigned_set = set(morning_list)
-    st.session_state.morning_veh2_used = set([veh2.get(n, "") for n in morning_2jong if veh2.get(n, "")])
+        lines.append(f" - {format_name_with_car(nm, veh2)}")
 
     result = "\n".join([ln for ln in lines if ln.strip()])
     st.code(result, language="text")
     st.download_button("📥 오전 결과 다운로드", data=result.encode("utf-8-sig"), file_name="오전근무배정.txt")
+
 
 
 # -------------------------
