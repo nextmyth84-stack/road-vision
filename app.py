@@ -270,14 +270,12 @@ if st.button("📋 오전 근무 배정 생성"):
         f"교양 2교시: {gy2}",
     ]
     for nm in sudong_assigned:
-        car = get_vehicle(nm, veh1)
-        mark = " (정비)" if car and car in repair_cars else ""
-        lines.append(f"1종수동: {nm}{(' ' + car) if car else ''}{mark}")
+    lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
+
     lines.append("2종 자동:")
     for nm in morning_2jong:
-        car = get_vehicle(nm, veh2)
-        mark = " (정비)" if car and car in repair_cars else ""
-        lines.append(f" - {nm}{(' ' + car) if car else ''}{mark}")
+    lines.append(f" - {format_name_with_car(nm, veh2)}")
+
 
     st.session_state.morning_assigned_set = set(morning_list)
     st.session_state.morning_veh2_used = set([veh2.get(n, "") for n in morning_2jong if veh2.get(n, "")])
