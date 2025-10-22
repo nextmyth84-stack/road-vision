@@ -137,7 +137,8 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행 근무자"):
     user = (
         f"이미지에서 '{hint}' (예: '오전 도로주행', '오후 도로주행') 섹션에 있는 "
         f"**모든 근무자 이름**을 순서대로 추출하세요.\n"
-        "이름 외 괄호, 숫자, 영문 등은 제거하고 한글 이름(2~5자)만 추출하세요.\n"
+        "표에서 맨 왼쪽에 '도로주행' 내용이 있으면 그 칸에 해당하는 오른쪽에 있는 이름을 추출합니다.\n"
+        "이름 숫자, 영문 등은 제거하고 한글 이름만 추출하세요.(괄호안의 내용은 포함, '예:A-합')\n"
         "반드시 다음 JSON 형식으로만 응답하세요. 'names' 리스트에 찾은 *모든* 이름을 포함시키세요:\n"
         '{"names": ["홍길동", "김철수", "이영희", "박순자"], "notes": []}'
     )
@@ -167,12 +168,11 @@ def gpt_extract_names_from_image(image_bytes, hint="도로주행 근무자"):
             return [], f"모델 반환 형식 오류: {raw}"
         js = json.loads(m.group(0))
         names = js.get("names", []) if isinstance(js, dict) else []
-        # 정제: 괄호/비한글 제거, 2~5글자 필터
+        # 정제: 비한글 제거, 2~5글자 필터
         clean = []
         for n in names:
             if not isinstance(n, str): 
                 continue
-            n2 = re.sub(r"[\(\)\[\]\{\}]", "", n)
             n2 = re.sub(r"[^가-힣]", "", n2).strip()
             if 2 <= len(n2) <= 5:
                 clean.append(n2)
