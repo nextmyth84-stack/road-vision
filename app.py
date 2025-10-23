@@ -265,9 +265,9 @@ c3, c4 = st.columns(2)
 morning_txt = "\n".join(st.session_state.get("m_names_raw", []))
 afternoon_txt = "\n".join(st.session_state.get("a_names_raw", []))
 with c3:
-    m_edit = st.text_area("오전 근무자 (괄호 포함)", value=morning_txt, height=150)
+    m_edit = st.text_area("오전 근무자", value=morning_txt, height=150)
 with c4:
-    a_edit = st.text_area("오후 근무자 (괄호 포함)", value=afternoon_txt, height=150)
+    a_edit = st.text_area("오후 근무자", value=afternoon_txt, height=150)
 morning_list_raw = [x.strip() for x in m_edit.splitlines() if x.strip()]
 afternoon_list_raw = [x.strip() for x in a_edit.splitlines() if x.strip()]
 early_leave_list = st.session_state.get("early_leave", [])
