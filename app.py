@@ -176,14 +176,37 @@ def clipboard_copy_button(text: str, label="📋 결과 복사"):
     st.markdown(clipboard_script, unsafe_allow_html=True)
 
 # =====================================
-# 1️⃣ 이미지 업로드
+# 1) 이미지 업로드 & OCR
 # =====================================
-st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드</h4>", unsafe_allow_html=True)
+st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
-with col1:
-    m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
-with col2:
-    a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
+with col1: m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
+with col2: a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
+
+b1, b2 = st.columns(2)
+with b1:
+    if st.button("🧠 오전 GPT 인식"):
+        if not m_file:
+            st.warning("오전 이미지를 업로드하세요.")
+        else:
+            with st.spinner("오전 GPT 분석 중..."):
+                m_names, _, late = gpt_extract(m_file.read(), want_late=True)
+                st.session_state.m_names_raw = m_names
+                st.session_state.late_start = late
+                st.success(f"오전 인식: {len(m_names)}명, 외출 {len(late)}명")
+            st.rerun()
+with b2:
+    if st.button("🧠 오후 GPT 인식"):
+        if not a_file:
+            st.warning("오후 이미지를 업로드하세요.")
+        else:
+            with st.spinner("오후 GPT 분석 중..."):
+                a_names, early, _ = gpt_extract(a_file.read(), want_early=True)
+                st.session_state.a_names_raw = a_names
+                st.session_state.early_leave = early
+                st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
+            st.rerun()
+
 
 # =====================================
 # 2️⃣ 인식 결과 입력 (수동 또는 GPT 후 수정)
