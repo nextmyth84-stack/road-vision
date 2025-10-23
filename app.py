@@ -1,4 +1,4 @@
-# app.py — 도로주행 근무자동배정 v7.12 완전본
+# app.py — 도로주행 근무자동배정 v7.12.1 (완전본)
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os
@@ -31,7 +31,7 @@ if os.path.exists(PREV_FILE):
         prev_key = js.get("열쇠", "")
         prev_gyoyang5 = js.get("교양_5교시", "")
         prev_sudong = js.get("1종수동", "")
-        st.info(f"전일 불러옴 → 열쇠:{prev_key or '-'}, 5교시:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
+        st.info(f"전일 불러옴 → 열쇠:{prev_key or '-'}, 교양5:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
     except Exception as e:
         st.warning(f"전일근무.json 불러오기 실패: {e}")
 
@@ -108,20 +108,12 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 excluded = {x.strip() for x in st.sidebar.text_area("휴가/교육자 (한 줄당 한 명)", height=100).splitlines() if x.strip()}
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 
-
-# 전일값 수정/저장 (사이드바)
+# 전일 근무자 표시 (복원)
 st.sidebar.markdown("---")
-st.sidebar.subheader("🗓 전일값 확인/수정")
-prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
-prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
-if st.sidebar.button("💾 전일값 저장"):
-    try:
-        with open(PREV_FILE, "w", encoding="utf-8") as f:
-            json.dump({"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong}, f, ensure_ascii=False, indent=2)
-        st.sidebar.success("저장 완료")
-    except Exception as e:
-        st.sidebar.error(f"저장 실패: {e}")
+st.sidebar.subheader("전일 근무자 확인")
+st.sidebar.write(f"🔑 열쇠: {prev_key or '-'}")
+st.sidebar.write(f"🧑‍🏫 교양(5교시): {prev_gyoyang5 or '-'}")
+st.sidebar.write(f"⚙️ 1종 수동: {prev_sudong or '-'}")
 
 # =====================================
 # 유틸 함수
@@ -148,14 +140,39 @@ def mark_car(car):
     return f"{car}{' (정비)' if car in repair_cars else ''}" if car else ""
 
 def get_vehicle(name, veh_map):
+    """정규화 키로 차량 검색"""
     nkey = normalize_name(name)
     for k, v in veh_map.items():
         if normalize_name(k) == nkey:
             return v
     return ""
 
+def can_attend_period_morning(name_pure: str, period:int, late_list):
+    """오전 교양: 1=9:00~10:30, 2=10:30~12:00. 10시 이후 출근자는 1교시 불가."""
+    tmap = {1: 9.0, 2: 10.5}
+    for e in late_list:
+        if normalize_name(e.get("name","")) == normalize_name(name_pure):
+            try:
+                t = float(e.get("time", 99))
+            except:
+                t = 99
+            return t <= tmap[period]
+    return True
+
+def can_attend_period(name_pure: str, period:int, early_list):
+    """오후 교양: 3=13:00, 4=14:30, 5=16:00. 해당 시각 이전 조퇴면 해당 교시 불가."""
+    tmap = {3: 13.0, 4: 14.5, 5: 16.0}
+    for e in early_list:
+        if normalize_name(e.get("name","")) == normalize_name(name_pure):
+            try:
+                t = float(e.get("time", 99))
+            except:
+                t = 99
+            return t > tmap[period]
+    return True
+
 # =====================================
-# GPT OCR (요약)
+# GPT OCR
 # =====================================
 def gpt_extract(img_bytes, want_early=False, want_late=False):
     b64 = base64.b64encode(img_bytes).decode()
@@ -192,7 +209,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False):
         return [], [], []
 
 # =====================================
-# 1️⃣ 이미지 업로드 & OCR
+# 1) 이미지 업로드 & OCR
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
@@ -224,7 +241,7 @@ with b2:
             st.rerun()
 
 # =====================================
-# 2️⃣ 인식 결과 확인/수정
+# 2) 인식 결과 확인/수정
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>2️⃣ 인식 결과 확인/수정</h4>", unsafe_allow_html=True)
 c3, c4 = st.columns(2)
@@ -242,7 +259,7 @@ m_norms = {normalize_name(x) for x in m_list} - {normalize_name(x) for x in excl
 a_norms = {normalize_name(x) for x in a_list} - {normalize_name(x) for x in excluded}
 
 # =====================================
-# 3️⃣ 오전 근무 배정
+# 3) 오전 근무 배정
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정</h4>", unsafe_allow_html=True)
 if st.button("📋 오전 배정 생성"):
@@ -256,7 +273,8 @@ if st.button("📋 오전 배정 생성"):
         gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
         if gy1 and not can_attend_period_morning(gy1, 1, late_start):
             gy1 = pick_next_from_cycle(gyoyang_order, gy1, m_norms)
-        gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - {normalize_name(gy1)})
+        gy1_norm = normalize_name(gy1) if gy1 else None
+        gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - ({gy1_norm} if gy1_norm else set()))
         st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
 
         # 🔧 1종 수동 (인원수 반영)
@@ -299,7 +317,7 @@ if st.button("📋 오전 배정 생성"):
         st.error(f"오전 오류: {e}")
 
 # =====================================
-# 4️⃣ 오후 근무 배정
+# 4) 오후 근무 배정
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>4️⃣ 오후 근무 배정</h4>", unsafe_allow_html=True)
 save_check = st.checkbox("이 결과를 '전일 기준'으로 저장 (전일근무.json 덮어쓰기)", value=True)
@@ -332,11 +350,13 @@ if st.button("📋 오후 배정 생성"):
         base_raw = st.session_state.get("sudong_base_for_pm", None) or prev_sudong
         last = base_raw
         for _ in range(sudong_count):
-            pick = pick_next_from_cycle(sudong_order, last, a_norms)  # used 제외하지 않음
-            if not pick: break
+            pick = pick_next_from_cycle(sudong_order, last, a_norms)  # 교양 배정자도 허용
+            if not pick:
+                continue
             sud_a_list.append(pick)
             last = pick
-            used.add(normalize_name(pick))
+        # (원하면 오후 1종을 used에 포함시켜 2종에서 제외하려면 다음 줄 유지)
+        used.update(normalize_name(x) for x in sud_a_list)
 
         # 🚗 2종 자동(오후): 1종 제외(교양 포함)
         sud_a_norms = {normalize_name(x) for x in sud_a_list}
@@ -400,7 +420,7 @@ if st.button("📋 오후 배정 생성"):
             data = {
                 "열쇠": today_key,
                 "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
-                "1종수동": sud_a_list[-1] if sud_a_list else prev_sudong
+                "1종수동": (sud_a_list[-1] if sud_a_list else prev_sudong)
             }
             try:
                 with open(PREV_FILE, "w", encoding="utf-8") as f:
