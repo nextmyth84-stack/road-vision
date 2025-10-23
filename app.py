@@ -291,6 +291,13 @@ afternoon_list=[x.strip() for x in afternoon_final.splitlines() if x.strip()]
 early_leave_list=st.session_state.get("early_leave",[])
 
 if st.button("📋 오전 근무 배정 생성"):
+    # NameError 방지용 기본값 (초기화)
+    today_key = "-"
+    gy1 = "-"
+    gy2 = "-"
+    sud_list = []
+    two_auto = []
+
     # 기본값 초기화 (NameError 방지)
     today_key = "-"
     gy1 = "-"
