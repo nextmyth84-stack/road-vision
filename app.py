@@ -243,16 +243,23 @@ with b2:
                 st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
             st.rerun()
 # =====================================
-# 2️⃣ 인식 결과 입력 (수동 또는 GPT 후 수정)
+# 2) 인식 결과 확인/수정
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>2️⃣ 인식 결과 확인/수정</h4>", unsafe_allow_html=True)
 c3, c4 = st.columns(2)
 with c3:
-    morning = st.text_area("오전 근무자", "", height=150)
+    morning = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=150)
 with c4:
-    afternoon = st.text_area("오후 근무자", "", height=150)
+    afternoon = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=150)
+
 m_list = [x.strip() for x in morning.splitlines() if x.strip()]
 a_list = [x.strip() for x in afternoon.splitlines() if x.strip()]
+early_leave = st.session_state.get("early_leave", [])
+late_start = st.session_state.get("late_start", [])
+
+m_norms = {normalize_name(x) for x in m_list} - {normalize_name(x) for x in excluded}
+a_norms = {normalize_name(x) for x in a_list} - {normalize_name(x) for x in excluded}
+
 
 # =====================================
 # 3️⃣ 오전 근무 배정
