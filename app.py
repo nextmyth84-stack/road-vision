@@ -343,7 +343,7 @@ if st.button("📋 오전 근무 배정 생성"):
     # 오후 교양 순번 계산용으로 저장 (오전 2교시 교양자)
     st.session_state.gy2 = gy2 if gy2 != "-" else ""
 
-    # 출력
+# 출력
 gy1_clean = re.sub(r"\(.*?\)", "", gy1).strip() if gy1 != "-" else "-"
 gy2_clean = re.sub(r"\(.*?\)", "", gy2).strip() if gy2 != "-" else "-"
 
@@ -354,17 +354,18 @@ lines = [
     f"교양 2교시: {gy2_clean}",
 ]
 
-    if sud_list:
-        for nm in sud_list:
-            lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
-    else:
-        lines.append("1종수동: (배정자 없음)")
+if sud_list:
+    for nm in sud_list:
+        lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
+else:
+    lines.append("1종수동: (배정자 없음)")
 
-    lines.append("2종 자동:")
-    for nm in two_auto:
-        lines.append(f" - {format_name_with_car(nm, veh2)}")
+lines.append("2종 자동:")
+for nm in two_auto:
+    lines.append(f" - {format_name_with_car(nm, veh2)}")
 
-    st.code("\n".join(lines), language="text")
+st.code("\n".join(lines), language="text")
+
 
 
 # -------------------------
