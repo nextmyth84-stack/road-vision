@@ -321,3 +321,4 @@ if st.button("📋 오후 근무 배정 생성"):
         "열쇠": afternoon_key,
         "교양_5교시": gy5 if gy5 else (gy4 if gy4 else (gy3 if gy3 else prev_gyoyang5)),
         "1종수동": aft_sudong if aft_sudong else prev_sudong
+    }
