@@ -1,4 +1,4 @@
-# app.py — 도로주행 근무자동배정 v7.5 완전본
+# app.py — 도로주행 근무자동배정 v7.6 완전본
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os
@@ -106,16 +106,6 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 excluded = {x.strip() for x in st.sidebar.text_area("휴가/교육자 (한 줄당 한 명)", height=100).splitlines() if x.strip()}
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("🗓 전일값 확인/수정")
-prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
-prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
-if st.sidebar.button("💾 전일값 저장"):
-    with open(PREV_FILE, "w", encoding="utf-8") as f:
-        json.dump({"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong}, f, ensure_ascii=False, indent=2)
-    st.sidebar.success("저장 완료")
-
 # =====================================
 # 유틸 함수
 # =====================================
@@ -172,33 +162,35 @@ def gpt_extract(img_bytes, want_early=False):
         return [], []
 
 # =====================================
-# 1️⃣ 이미지 업로드 & OCR 버튼
+# 1️⃣ 이미지 업로드 + OCR 버튼
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1: m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
 with col2: a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
 
-# 오전 전용
-if st.button("🧠 오전 GPT 인식"):
-    if not m_file: st.warning("오전 이미지를 업로드하세요.")
-    else:
-        with st.spinner("오전 GPT 분석 중..."):
-            m_names, _ = gpt_extract(m_file.read())
-            st.session_state.m_names_raw = m_names
-            st.success(f"오전 인식: {len(m_names)}명")
-        st.rerun()
+# 버튼을 한 줄에 배치
+btn1, btn2 = st.columns(2)
+with btn1:
+    if st.button("🧠 오전 GPT 인식"):
+        if not m_file: st.warning("오전 이미지를 업로드하세요.")
+        else:
+            with st.spinner("오전 GPT 분석 중..."):
+                m_names, _ = gpt_extract(m_file.read())
+                st.session_state.m_names_raw = m_names
+                st.success(f"오전 인식: {len(m_names)}명")
+            st.rerun()
 
-# 오후 전용
-if st.button("🧠 오후 GPT 인식"):
-    if not a_file: st.warning("오후 이미지를 업로드하세요.")
-    else:
-        with st.spinner("오후 GPT 분석 중..."):
-            a_names, early = gpt_extract(a_file.read(), want_early=True)
-            st.session_state.a_names_raw = a_names
-            st.session_state.early_leave = early
-            st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
-        st.rerun()
+with btn2:
+    if st.button("🧠 오후 GPT 인식"):
+        if not a_file: st.warning("오후 이미지를 업로드하세요.")
+        else:
+            with st.spinner("오후 GPT 분석 중..."):
+                a_names, early = gpt_extract(a_file.read(), want_early=True)
+                st.session_state.a_names_raw = a_names
+                st.session_state.early_leave = early
+                st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
+            st.rerun()
 
 # =====================================
 # 2️⃣ 인식 결과 확인/수정
@@ -227,6 +219,9 @@ if st.button("📋 오전 배정 생성"):
         # 교양
         gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
         gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - {normalize_name(gy1)})
+
+        # 오후 교양 시작 포인터 저장
+        st.session_state["gyoyang_base_for_pm"] = gy2
 
         # 1종 수동
         sud_m, last = [], prev_sudong
@@ -258,18 +253,20 @@ if st.button("📋 오전 배정 생성"):
     except Exception as e: st.error(f"오전 오류: {e}")
 
 # =====================================
-# 4️⃣ 오후 배정
+# 4️⃣ 오후 배정 + 저장 버튼
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>4️⃣ 오후 근무 배정</h4>", unsafe_allow_html=True)
 if st.button("📋 오후 배정 생성"):
     try:
         today_key = st.session_state.get("today_key", prev_key)
         base_sud = st.session_state.get("sudong_base_for_pm", prev_sudong)
-        gy_start = gyoyang_order[0] if not prev_gyoyang5 else prev_gyoyang5
+        gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5)
+
         # 교양
         gy3 = pick_next_from_cycle(gyoyang_order, gy_start, a_norms)
         gy4 = pick_next_from_cycle(gyoyang_order, gy3, a_norms - {normalize_name(gy3)})
         gy5 = pick_next_from_cycle(gyoyang_order, gy4, a_norms - {normalize_name(gy3), normalize_name(gy4)})
+
         # 1종
         sud_a = pick_next_from_cycle(sudong_order, base_sud, a_norms)
         sud_norms = {normalize_name(sud_a)} if sud_a else set()
@@ -295,5 +292,20 @@ if st.button("📋 오후 배정 생성"):
                 out.append(f" • {e['name']}({e['time']}시~)")
 
         st.code("\n".join(out))
+
+        # 💾 결과값 저장 버튼
+        if st.button("💾 결과값 저장"):
+            try:
+                data = {
+                    "열쇠": today_key,
+                    "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
+                    "1종수동": sud_a or prev_sudong
+                }
+                with open(PREV_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                st.success("✅ 전일근무.json 저장 완료")
+            except Exception as e:
+                st.error(f"저장 실패: {e}")
+
     except Exception as e:
         st.error(f"오후 오류: {e}")
