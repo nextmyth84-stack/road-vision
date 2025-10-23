@@ -422,14 +422,23 @@ if st.button("📋 오후 배정 생성"):
         if missing:
             lines.append(" • 누락 인원: " + ", ".join(missing))
 
-        # 미배정 차량: 오전 2종에 있었는데 오후 2종에 없는 차량 → “14호 마감”
-        morning_cars = set(st.session_state.get("morning_cars", []))
-        afternoon_cars = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
-        unassigned = [c for c in morning_cars if c and c not in afternoon_cars]
-        if unassigned:
-            lines.append("미배정 차량:")
-            for c in sorted(unassigned):
-                lines.append(f" • {c} 마감")
+# 🚗 미배정 차량 계산 (1종 + 2종 모두 포함)
+morning_cars_2 = set(st.session_state.get("morning_cars", []))  # 오전 2종 자동
+morning_cars_1 = set(get_vehicle(x, veh1) for x in st.session_state.get("morning_auto_names", []) if get_vehicle(x, veh1))
+morning_cars = morning_cars_1.union(morning_cars_2)
+
+# 오후 차량 목록 (1종 + 2종)
+afternoon_cars_2 = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
+afternoon_cars_1 = {get_vehicle(x, veh1) for x in sud_a_list if get_vehicle(x, veh1)}
+afternoon_cars = afternoon_cars_1.union(afternoon_cars_2)
+
+# 미배정 차량 = 오전에 있었는데 오후에 없는 차량
+unassigned = [c for c in morning_cars if c and c not in afternoon_cars]
+if unassigned:
+    lines.append("미배정 차량:")
+    for c in sorted(unassigned):
+        lines.append(f" • {c} 마감")
+
 
         st.markdown("<h5 style='font-size:16px;'>📋 오후 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
