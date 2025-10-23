@@ -151,14 +151,27 @@ def build_present_map(name_list):
     return m
 
 def pick_next_from_cycle(cycle, last, allowed_norms: set):
-    """cycle(원본 이름 리스트)에서 last 다음으로 돌며 allowed_norms(정규화)에 포함된 첫 원본 이름 반환"""
-    if not cycle: return None
-    start = 0 if not last or last not in cycle else (cycle.index(last) + 1) % len(cycle)
-    for i in range(len(cycle) * 2):
-        cand = cycle[(start + i) % len(cycle)]
+    """
+    cycle: 순번 리스트(원본 이름)
+    last: 마지막 선택된 사람(원본 또는 순수 이름)
+    allowed_norms: 정규화된 이름 집합
+    """
+    if not cycle:
+        return None
+
+    # cycle 내부를 정규화 리스트로 변환
+    norm_cycle = [normalize_name(x) for x in cycle]
+    last_norm = normalize_name(last)
+
+    # 시작 인덱스 계산
+    start_idx = (norm_cycle.index(last_norm) + 1) % len(cycle) if last_norm in norm_cycle else 0
+
+    for i in range(len(cycle)):
+        cand = cycle[(start_idx + i) % len(cycle)]
         if normalize_name(cand) in allowed_norms:
             return cand
     return None
+
 
 def get_vehicle(name, veh_map):
     """name은 순수 이름 기준; 차량표 key도 정규화 비교"""
