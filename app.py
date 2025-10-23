@@ -1,4 +1,4 @@
-    # app.py — 도로주행 근무자동배정 v7.12.1 (완전본)
+# app.py — 도로주행 근무자동배정 v7.12.2 (완전본)
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os
@@ -143,6 +143,27 @@ def pick_next_from_cycle(cycle, last, allowed_norms: set):
             return cand
     return None
 
+def pick_next_key(cycle, last, excluded_names):
+    """
+    열쇠 전용: '전체 순번'에서 last 위치를 찾고, 제외자를 건너뛰며 다음 사람을 선택.
+    """
+    if not cycle:
+        return ""
+    norm_cycle = [normalize_name(x) for x in cycle]
+    excluded_norms = {normalize_name(x) for x in excluded_names}
+    last_norm = normalize_name(last)
+    try:
+        start = norm_cycle.index(last_norm)
+    except ValueError:
+        start = -1  # 전일값이 목록에 없으면 리스트 시작 이전에서 시작한다고 간주
+    n = len(cycle)
+    for i in range(1, n + 1):
+        idx = (start + i) % n
+        cand = cycle[idx]
+        if normalize_name(cand) not in excluded_norms:
+            return cand
+    return ""  # 전원 제외인 경우
+
 def mark_car(car):
     return f"{car}{' (정비)' if car in repair_cars else ''}" if car else ""
 
@@ -271,18 +292,8 @@ a_norms = {normalize_name(x) for x in a_list} - {normalize_name(x) for x in excl
 st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정</h4>", unsafe_allow_html=True)
 if st.button("📋 오전 배정 생성"):
     try:
-        # 🔑 열쇠 (휴가/교육 제외, 하루 1회)
-        key_filtered = [x for x in key_order if normalize_name(x) not in {normalize_name(e) for e in excluded}]
-        if key_filtered:
-            norm_list = [normalize_name(x) for x in key_filtered]
-            prev_norm = normalize_name(prev_key)
-            if prev_norm in norm_list:
-                idx = (norm_list.index(prev_norm) + 1) % len(key_filtered)
-                today_key = key_filtered[idx]
-            else:
-                today_key = key_filtered[0]
-        else:
-            today_key = ""
+        # 🔑 열쇠 (휴가/교육 제외, 하루 1회) — 전체 순번에서 제외자 건너뛰기
+        today_key = pick_next_key(key_order, prev_key, excluded)
         st.session_state.today_key = today_key
 
         # 🧑‍🏫 교양 1·2교시 (오전 외출 10시 반영)
@@ -297,7 +308,8 @@ if st.button("📋 오전 배정 생성"):
         sud_m, last = [], prev_sudong
         for _ in range(sudong_count):
             pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
-            if not pick: break
+            if not pick:
+                break
             sud_m.append(pick)
             last = pick
         st.session_state["sudong_base_for_pm"] = sud_m[-1] if sud_m else prev_sudong
@@ -306,25 +318,23 @@ if st.button("📋 오전 배정 생성"):
         sud_norms = {normalize_name(x) for x in sud_m}
         auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
 
-      # 🚗 오전 실제 배정 차량 저장 (1종 / 2종 구분)
+        # 🚗 오전 실제 배정 차량/이름 저장 (1종 / 2종 구분)
         assigned_veh1 = [get_vehicle(x, veh1) for x in sud_m if get_vehicle(x, veh1)]
         assigned_veh2 = [get_vehicle(x, veh2) for x in auto_m if get_vehicle(x, veh2)]
-
         st.session_state.morning_assigned_cars_1 = assigned_veh1
         st.session_state.morning_assigned_cars_2 = assigned_veh2
-        st.session_state.morning_auto_names = auto_m + sud_m  # 이름 기록 (비교용)
-
+        st.session_state.morning_auto_names_2 = auto_m  # 비교는 2종 기준으로만
 
         # 출력
         lines = []
         if today_key: lines.append(f"열쇠: {today_key}")
         if gy1: lines.append(f"1교시: {gy1}")
         if gy2: lines.append(f"2교시: {gy2}")
-                # 🔧 1종 수동 출력
+
+        # 🔧 1종 수동 출력
         if sud_m:
             for nm in sud_m:
                 lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
-            # ⚠️ 배정된 인원이 설정값보다 적을 경우 안내 문구 출력
             if sudong_count == 2 and len(sud_m) < 2:
                 lines.append("※ 수동 가능 인원이 1명입니다.")
         else:
@@ -352,28 +362,36 @@ save_check = st.checkbox("이 결과를 '전일 기준'으로 저장 (전일근�
 
 if st.button("📋 오후 배정 생성"):
     try:
-        today_key = st.session_state.get("today_key", prev_key)
+        today_key = st.session_state.get("today_key")
+        if not today_key:
+            today_key = pick_next_key(key_order, prev_key, excluded)
+
         gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5)
-        if not gy_start: gy_start = gyoyang_order[0] if gyoyang_order else None
+        if not gy_start:
+            gy_start = gyoyang_order[0] if gyoyang_order else None
 
         # 🧑‍🏫 오후 교양 3·4·5교시 (조퇴 반영)
         used = set()
         gy3 = gy4 = gy5 = None
         last_ptr = gy_start
-        for period in [3,4,5]:
+        for period in [3, 4, 5]:
             while True:
                 pick = pick_next_from_cycle(gyoyang_order, last_ptr, a_norms - used)
-                if not pick: break
+                if not pick:
+                    break
                 last_ptr = pick
                 nm = pick
                 if nm and can_attend_period(nm, period, early_leave):
-                    if period == 3: gy3 = nm
-                    elif period == 4: gy4 = nm
-                    else: gy5 = nm
+                    if period == 3:
+                        gy3 = nm
+                    elif period == 4:
+                        gy4 = nm
+                    else:
+                        gy5 = nm
                     used.add(normalize_name(nm))
                     break
 
-        # ✅ 오후 1종 수동 (1명/2명 반영, 교양과 중복 허용 = v7.6 동작)
+        # ✅ 오후 1종 수동 (교양과 중복 허용 = v7.6 동작)
         sud_a_list = []
         base_raw = st.session_state.get("sudong_base_for_pm", None) or prev_sudong
         last = base_raw
@@ -383,7 +401,6 @@ if st.button("📋 오후 배정 생성"):
                 continue
             sud_a_list.append(pick)
             last = pick
-        # (원하면 오후 1종을 used에 포함시켜 2종에서 제외하려면 다음 줄 유지)
         used.update(normalize_name(x) for x in sud_a_list)
 
         # 🚗 2종 자동(오후): 1종 제외(교양 포함)
@@ -396,6 +413,7 @@ if st.button("📋 오후 배정 생성"):
         if gy3: lines.append(f"3교시: {gy3}")
         if gy4: lines.append(f"4교시: {gy4}")
         if gy5: lines.append(f"5교시: {gy5}")
+
         # 🔧 오후 1종 수동 출력
         if sud_a_list:
             for nm in sud_a_list:
@@ -416,34 +434,30 @@ if st.button("📋 오후 배정 생성"):
         if early_leave:
             lines.append("조퇴자:")
             for e in early_leave:
-                name = e.get("name","")
+                name = e.get("name", "")
                 try:
                     t = float(e.get("time", None))
                 except:
                     t = None
-                if t is None: continue
-                t_str = "14시30분~" if abs(t-14.5) < 1e-6 else f"{int(t)}시~"
+                if t is None:
+                    continue
+                t_str = "14시30분~" if abs(t - 14.5) < 1e-6 else f"{int(t)}시~"
                 lines.append(f" • {name}({t_str})")
 
         # === 오전 대비 비교 ===
         lines.append("오전 대비 비교:")
-
-        # 오전 2종 자동 근무자 vs 오후 2종 자동 근무자 비교
-        morning_auto_names = set(st.session_state.get("morning_auto_names", []))
+        # 비교는 오전 2종 자동 ↔ 오후 2종 자동 기준
+        morning_auto_names = set(st.session_state.get("morning_auto_names_2", []))
         afternoon_auto_names = set(auto_a)
-
-        # 오후 1종 수동 근무자 목록 (전환 인원 제외용)
         afternoon_sudong_names = {normalize_name(x) for x in sud_a_list}
 
-        # 오전에 2종이었지만 오후엔 1종으로 전환된 사람 제외 후 '빠진 인원' 계산
+        # 오전 2종이었는데 오후 2종에도 없고, 오후 1종에도 없으면 '빠진 인원'
         morning_only = []
         for nm in morning_auto_names:
             n_norm = normalize_name(nm)
-            # 오후 1종에 있으면 빠진 인원에서 제외
-            if n_norm not in {normalize_name(x) for x in afternoon_auto_names} and n_norm not in afternoon_sudong_names:
+            if (n_norm not in {normalize_name(x) for x in afternoon_auto_names}) and (n_norm not in afternoon_sudong_names):
                 morning_only.append(nm)
 
-        # 추가·빠진 인원 계산
         added = sorted(list(afternoon_auto_names - morning_auto_names))
         missing = sorted(morning_only)
 
@@ -452,15 +466,12 @@ if st.button("📋 오후 배정 생성"):
         if missing:
             lines.append(" • 빠진 인원: " + ", ".join(missing))
 
-            
-         # 🚗 미배정 차량 계산 (오전에 실제 배정되었는데 오후에 빠진 차량만)
+        # 🚗 미배정 차량 계산 (오전에 실제 배정되었는데 오후에 빠진 차량만) — 1종/2종 구분 출력
         morning_cars_1 = set(st.session_state.get("morning_assigned_cars_1", []))
         morning_cars_2 = set(st.session_state.get("morning_assigned_cars_2", []))
-
         afternoon_cars_1 = {get_vehicle(x, veh1) for x in sud_a_list if get_vehicle(x, veh1)}
         afternoon_cars_2 = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
 
-        # 오전엔 있었는데 오후엔 빠진 차량만
         unassigned_1 = sorted([c for c in morning_cars_1 if c not in afternoon_cars_1])
         unassigned_2 = sorted([c for c in morning_cars_2 if c not in afternoon_cars_2])
 
@@ -474,7 +485,6 @@ if st.button("📋 오후 배정 생성"):
                 lines.append(" [2종 자동]")
                 for c in unassigned_2:
                     lines.append(f"  • {c} 마감")
-
 
         st.markdown("<h5 style='font-size:16px;'>📋 오후 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
