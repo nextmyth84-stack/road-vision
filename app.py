@@ -352,4 +352,4 @@ if st.button("📋 오후 배정 생성"):
                 "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
                 "1종수동": sud_a_list[-1] if sud_a_list else prev_sudong
             }
-            with open
+            with open:
