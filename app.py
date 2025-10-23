@@ -242,8 +242,6 @@ with b2:
                 st.session_state.early_leave = early
                 st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
             st.rerun()
-
-
 # =====================================
 # 2️⃣ 인식 결과 입력 (수동 또는 GPT 후 수정)
 # =====================================
