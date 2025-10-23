@@ -117,11 +117,11 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 excluded = {x.strip() for x in st.sidebar.text_area("휴가/교육자 (한 줄당 한 명)", height=100).splitlines() if x.strip()}
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 
-# 전일값 수정/저장 (사이드바)
+# 값 수정/저장 (사이드바)
 st.sidebar.markdown("---")
 st.sidebar.subheader("🗓 전일값 확인/수정")
 prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
+prev_gyoyang5 = st.sidebar.text_input("전일 5교시", value=prev_gyoyang5)
 prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
 if st.sidebar.button("💾 전일값 저장"):
     try:
