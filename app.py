@@ -6,420 +6,292 @@ import base64, re, json, os
 # 페이지 설정
 # -------------------------
 st.set_page_config(page_title="도로주행 근무자동배정", layout="wide")
-st.markdown(
-    "<h3 style='text-align:center; font-size:22px; margin-bottom:10px;'>🚗 도로주행 근무자동배정 (GPT OCR + 순번/차량/조퇴/저장 완전본)</h3>",
-    unsafe_allow_html=True
-)
+st.markdown("<h2 style='font-size:22px;'>🚗 도로주행 근무자동배정 (GPT OCR + 순번/차량)</h2>", unsafe_allow_html=True)
 
 # -------------------------
 # OpenAI 초기화
 # -------------------------
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
-except Exception:
-    st.error("⚠️ OPENAI_API_KEY가 설정되어 있지 않습니다.")
+except Exception as e:
+    st.error("⚠️ OPENAI_API_KEY 설정 확인 필요.")
     st.stop()
 
-MODEL_NAME = "gpt-4o"
-PREV_FILE = "전일근무.json"
-
 # -------------------------
-# 전일 기준 불러오기
+# OCR 프롬프트: 도로주행 근무자만 추출
 # -------------------------
-prev_key = ""
-prev_gyoyang5 = ""
-prev_sudong = ""
-
-if os.path.exists(PREV_FILE):
+def gpt_extract_names_from_image(image_bytes):
+    b64 = base64.b64encode(image_bytes).decode("utf-8")
+    system = (
+        "당신은 이미지 표에서 이름을 추출하는 전문가입니다. "
+        "결과는 반드시 JSON 형식으로 반환해야 하며, 불필요한 설명은 금지합니다."
+    )
+    user = (
+        "이미지에서 '학과', '기능장', '초소'를 제외한 도로주행 근무자 이름만 추출하세요.\n"
+        "이름 옆 괄호(A-합, B-불 등)는 그대로 유지하세요.\n"
+        "출력은 반드시 JSON 형식으로:\n"
+        '{"names": ["김남균(A-불)", "김주현(B-합)"]}'
+    )
     try:
-        with open(PREV_FILE, "r", encoding="utf-8") as f:
-            prev = json.load(f)
-        prev_key = prev.get("열쇠", "")
-        prev_gyoyang5 = prev.get("교양_5교시", "")
-        prev_sudong = prev.get("1종수동", "")
-        st.info(f"✅ 전일근무.json 자동 불러옴 → 열쇠:{prev_key}, 교양5:{prev_gyoyang5}, 수동:{prev_sudong}")
+        resp = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": [
+                    {"type":"text","text": user},
+                    {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{b64}"}}
+                ]}
+            ],
+            max_tokens=1000
+        )
+        raw = resp.choices[0].message.content
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        js = json.loads(m.group(0)) if m else {}
+        names = js.get("names", [])
+        return names
     except Exception as e:
-        st.warning(f"전일근무.json 불러오기 실패: {e}")
+        st.error(f"OCR 실패: {e}")
+        return []
 
 # -------------------------
-# 사이드바
-# -------------------------
-st.sidebar.header("순번 및 차량표 설정")
-
-def_list = lambda t: [x.strip() for x in t.splitlines() if x.strip()]
-
-default_key_order = """권한솔
-김남균
-김면정
-김성연
-김지은
-안유미
-윤여헌
-윤원실
-이나래
-이호석
-조윤영
-조정래"""
-default_gyoyang_order = """권한솔
-김남균
-김면정
-김병욱
-김성연
-김주현
-김지은
-안유미
-이호석
-조정래"""
-default_sudong_order = """권한솔
-김남균
-김성연
-김주현
-이호석
-조정래"""
-default_cha1 = """2호 조정래
-5호 권한솔
-7호 김남균
-8호 이호석
-9호 김주현
-10호 김성연"""
-default_cha2 = """4호 김남균
-5호 김병욱
-6호 김지은
-12호 안유미
-14호 김면정
-15호 이호석
-17호 김성연
-18호 권한솔
-19호 김주현
-22호 조정래"""
-
-key_order = def_list(st.sidebar.text_area("열쇠 순번", default_key_order, height=160))
-gyoyang_order = def_list(st.sidebar.text_area("교양 순번", default_gyoyang_order, height=160))
-sudong_order = def_list(st.sidebar.text_area("1종 수동 순번", default_sudong_order, height=160))
-
-def parse_vehicle_map(text):
-    m = {}
-    for line in text.splitlines():
-        parts = line.strip().split()
-        if len(parts) >= 2:
-            car = parts[0]; name = " ".join(parts[1:])
-            m[name] = car
-    return m
-
-veh1 = parse_vehicle_map(st.sidebar.text_area("1종 수동 차량표", default_cha1, height=140))
-veh2 = parse_vehicle_map(st.sidebar.text_area("2종 자동 차량표", default_cha2, height=200))
-
-sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
-absent_text = st.sidebar.text_area("휴가/교육자 (한 줄에 한 명)", height=100, value="")
-repair_cars_text = st.sidebar.text_input("정비 차량 (쉼표로 구분, 예: 12호,6호)", value="")
-excluded_set = set([x.strip() for x in absent_text.splitlines() if x.strip()])
-repair_cars = [x.strip() for x in repair_cars_text.split(",") if x.strip()]
-
-# -------------------------
-# 🔄 전일근무 수정 메뉴
-# -------------------------
-st.sidebar.markdown("---")
-st.sidebar.subheader("🗓 전일 근무자 확인 / 수정")
-
-prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value=prev_gyoyang5)
-prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
-
-if st.sidebar.button("💾 수정내용 저장하기"):
-    try:
-        with open(PREV_FILE, "w", encoding="utf-8") as f:
-            json.dump(
-                {"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong},
-                f, ensure_ascii=False, indent=2
-            )
-        st.sidebar.success("✅ 전일근무.json에 수정내용 저장 완료!")
-    except Exception as e:
-        st.sidebar.error(f"저장 실패: {e}")
-
-# -------------------------
-# 유틸 함수
+# 유틸: 정규화 / 매칭용
 # -------------------------
 def normalize_name(s: str) -> str:
+    """괄호, 공백, 기호 제거 후 한글만 남김"""
     if not isinstance(s, str): return ""
     s = re.sub(r"\(.*?\)", "", s)
     s = re.sub(r"[-_·•‧‵′]", "", s)
     s = re.sub(r"\s+", "", s)
     return re.sub(r"[^\uAC00-\uD7A3]", "", s)
 
-def build_norm_maps(name_list):
-    """정규화 <-> 원본 매핑"""
-    norm_to_orig = {}
-    orig_to_norm = {}
+def build_present_map(name_list):
+    """입력된 근무자 리스트를 {정규화된이름: 원본이름} 형태로 변환"""
+    m = {}
     for x in name_list:
-        n = normalize_name(x)
-        orig_to_norm[x] = n
-        if n and n not in norm_to_orig:
-            norm_to_orig[n] = x
-    return norm_to_orig, orig_to_norm
+        k = normalize_name(x)
+        if k and k not in m:
+            m[k] = x
+    return m
 
-def pick_next_from_cycle(cycle, last, allowed_norms: set) -> str | None:
-    """순번표에서 last 다음 사람 중 allowed_norms에 있는 '정규화 이름'을 찾아 반환(원본이름은 아님)"""
+def get_vehicle(name, veh_map):
+    """차량 매칭 (정규화 기준으로 비교)"""
+    key = normalize_name(name)
+    for k, v in veh_map.items():
+        if normalize_name(k) == key:
+            return v
+    return ""
+
+def pick_next_from_cycle(cycle, last, allowed_norms: set):
+    """순번표에서 last 다음으로 allowed_norms(정규화 이름)에 속한 첫 사람 반환"""
     if not cycle: return None
-    start_idx = 0 if (not last or last not in cycle) else (cycle.index(last) + 1) % len(cycle)
-    for i in range(len(cycle)):
+    start_idx = 0 if not last or last not in cycle else (cycle.index(last) + 1) % len(cycle)
+    for i in range(len(cycle)*2):
         cand = cycle[(start_idx + i) % len(cycle)]
         if normalize_name(cand) in allowed_norms:
             return cand
     return None
 
-def normalize_name(s):
-    s = re.sub(r".*?", "", s)
-    s = re.sub(r"[-_·•‧‵′]", "", s)
-    s = re.sub(r"\s+", "", s)
-    return re.sub(r"[^\uAC00-\uD7A3]", "", s)
+# -------------------------
+# 오전 근무 배정 (예시 구조)
+# -------------------------
+st.markdown("<h4 style='font-size:18px;'>1️⃣ 오전 근무 배정 생성</h4>", unsafe_allow_html=True)
 
-def build_present_map(name_list):
-    m = {}
-    for x in name_list:
-        key = normalize_name(x)
-        if key and key not in m:
-            m[key] = x
-    return m
+# 예시 입력 (실제는 이미지 OCR 결과로 대체)
+morning_list = ["김면정(A-합)", "김성연(B-불)", "이호석", "조정래"]
+excluded_set = ["안유미(휴가)"]
 
-def next_in_cycle(current, cycle):
-    if not cycle: return None
-    if current not in cycle: return cycle[0]
-    return cycle[(cycle.index(current)+1) % len(cycle)]
+key_order = ["권한솔", "김남균", "김면정", "김성연", "김지은", "안유미", "조정래"]
+gyoyang_order = ["권한솔", "김남균", "김면정", "김성연", "이호석", "조정래"]
+sudong_order = ["김남균", "김성연", "조정래"]
+veh1 = {"김남균": "7호", "김성연": "10호"}
+veh2 = {"김면정": "14호", "이호석": "15호", "조정래": "22호"}
 
-def pick_k_from_cycle(cycle, start_from, k, present_map, exclude_set=None, extra_pred=None):
-    exclude_set = exclude_set or set()
-    res = []; seen=set()
-    if not cycle: return res
-    start_idx = 0
-    if start_from in cycle:
-        start_idx = (cycle.index(start_from)+1) % len(cycle)
-    for i in range(len(cycle)*2):
-        cand = cycle[(start_idx+i) % len(cycle)]
-        nkey = normalize_name(cand)
-        if nkey in seen: continue
-        seen.add(nkey)
-        if nkey not in present_map: continue
-        if nkey in exclude_set: continue
-        if extra_pred and not extra_pred(present_map[nkey]): continue
-        res.append(present_map[nkey])
-        if len(res) >= k: break
-    return res
+# 순번 계산
+present_map = build_present_map(morning_list)
+excluded_norm = {normalize_name(x) for x in excluded_set}
+present_norms = set(present_map.keys()) - excluded_norm
 
-def get_vehicle(name, veh_map):
-    base = re.sub(r".*?", "", name).strip()
-    for k,v in veh_map.items():
-        if normalize_name(k) == normalize_name(base):
-            return v
-    return ""
+prev_key = "조정래"
+prev_gyoyang5 = "김성연"
+prev_sudong = "김성연"
+sudong_count = 1
 
-def format_name_with_car(name, veh_map):
-    car = get_vehicle(name, veh_map)
-    mark = " (정비)" if car and car in repair_cars else ""
-    note = re.search(r"(.*?)", name)
-    note = f" ({note.group(1).replace('-', '').strip()})" if note else ""
-    base = re.sub(r".*?", "", name).strip()
-    return f"{base}{(' ' + car) if car else ''}{note}{mark}"
+# 열쇠
+key_cycle_filtered = [x for x in key_order if normalize_name(x) not in excluded_norm]
+today_key = key_cycle_filtered[(key_cycle_filtered.index(prev_key)+1)%len(key_cycle_filtered)]
 
-def can_attend_period(name, period, early_leave_list):
-    time_map = {3:13.0,4:14.5,5:16.0}
-    for e in early_leave_list:
-        if normalize_name(e["name"]) in normalize_name(name):
-            if e["time"] <= time_map[period]: return False
+# 교양
+gy1_name = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, present_norms)
+gy1 = present_map.get(normalize_name(gy1_name), "-") if gy1_name else "-"
+gy2_name = pick_next_from_cycle(gyoyang_order, gy1_name, present_norms - {normalize_name(gy1)})
+gy2 = present_map.get(normalize_name(gy2_name), "-") if gy2_name else "-"
+
+# 1종 수동
+sudong_list = []
+last = prev_sudong
+for _ in range(sudong_count):
+    pick = pick_next_from_cycle(sudong_order, last, present_norms)
+    if not pick: break
+    orig = present_map.get(normalize_name(pick))
+    if orig:
+        sudong_list.append(orig)
+    last = pick
+
+# 2종 자동
+sud_norms = {normalize_name(x) for x in sudong_list}
+auto_list = [x for x in morning_list if normalize_name(x) not in sud_norms]
+
+# 출력
+st.markdown("<h4 style='font-size:16px;'>📋 오전 결과</h4>", unsafe_allow_html=True)
+lines = [
+    f"열쇠: {today_key}",
+    f"교양 1교시: {gy1}",
+    f"교양 2교시: {gy2}"
+]
+if sudong_list:
+    for nm in sudong_list:
+        car = get_vehicle(nm, veh1)
+        lines.append(f"1종수동: {nm} {car}")
+else:
+    lines.append("1종수동: (없음)")
+
+lines.append("2종 자동:")
+for nm in auto_list:
+    car = get_vehicle(nm, veh2)
+    lines.append(f" - {nm} {car}")
+
+st.code("\n".join(lines), language="text")
+# -------------------------
+# 오후 근무 배정
+# -------------------------
+st.markdown("<h4 style='font-size:18px;'>2️⃣ 오후 근무 배정 생성</h4>", unsafe_allow_html=True)
+
+# 예시 입력 (오전과 별도로 OCR 결과에서 가져옴)
+afternoon_list = ["김면정(A-합)", "김성연(B-불)", "이호석", "조정래", "김병욱(조퇴14시)"]
+
+# -------------------------
+# 조퇴자 파싱
+# -------------------------
+def parse_early_leave(names):
+    result = {}
+    for n in names:
+        m = re.search(r"조퇴\s*:?[\s]*(\d{1,2})시", n)
+        if m:
+            hour = int(m.group(1))
+            result[normalize_name(n)] = hour
+    return result
+
+early_leave = parse_early_leave(afternoon_list)
+
+def can_attend_period(name, period):
+    """조퇴 시간 기준으로 교시 참여 가능여부 확인"""
+    norm = normalize_name(name)
+    if norm not in early_leave: 
+        return True
+    leave_hour = early_leave[norm]
+    # 3교시=13시, 4교시=14시30분, 5교시=16시
+    if period == 3:
+        return leave_hour > 13
+    elif period == 4:
+        return leave_hour > 14
+    elif period == 5:
+        return leave_hour > 15
     return True
 
 # -------------------------
-# GPT OCR
+# 교양 / 수동 / 자동 오후 배정
 # -------------------------
-def gpt_extract_names_from_image(image_bytes, hint="도로주행"):
-    b64 = base64.b64encode(image_bytes).decode("utf-8")
-    system = "당신은 표에서 사람 이름을 추출하는 전문 도구입니다. 반드시 JSON으로 응답하세요."
-    user = (
-        "이 이미지는 운전면허시험 근무표입니다.\n"
-        "1️⃣ '학과', '기능장', '초소'를 제외한 도로주행 근무자 이름만 추출하세요.\n"
-        "2️⃣ '조퇴 :' 문구가 있으면 조퇴자 이름과 시간을 추출하세요. 예: 조퇴 : 김병욱(14시~)\n"
-        "3️⃣ 괄호 안 시간은 정수(14,14.5 등)로 변환하세요.\n"
-        "4️⃣ 괄호 안이 '지원','인턴','연수'이면 제외하세요.\n"
-        '결과 JSON 예: {"names":["김남균(A합)","김주현(B불)"],"early_leave":[{"name":"김병욱","time":14}]}'
-    )
-    try:
-        r = client.chat.completions.create(model=MODEL_NAME,messages=[
-            {"role":"system","content":system},
-            {"role":"user","content":[
-                {"type":"text","text":user},
-                {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{b64}"}}
-            ]}
-        ])
-        raw=r.choices[0].message.content
-        js=json.loads(re.search(r"\{.*\}",raw,re.S).group(0))
-        names=[n for n in js.get("names",[]) if not re.search("(지원|인턴|연수)",n)]
-        return names, js.get("early_leave", []), raw
-    except Exception as e:
-        return [], [], str(e)
+present_map_a = build_present_map(afternoon_list)
+present_norms_a = set(present_map_a.keys())
+excluded_norm = {normalize_name(x) for x in excluded_set}
+present_norms_a -= excluded_norm
 
-# -------------------------
-# UI
-# -------------------------
-st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드</h4>", unsafe_allow_html=True)
-morning_file=st.file_uploader("📸 오전 근무표",type=["png","jpg","jpeg"],key="morning")
-afternoon_file=st.file_uploader("📸 오후 근무표",type=["png","jpg","jpeg"],key="afternoon")
+# 오후 교양 3~5교시
+gy_start = gy2_name if 'gy2_name' in locals() and gy2_name else prev_gyoyang5
+used = set()
+gy3 = gy4 = gy5 = None
+last_pick = gy_start
+for period in [3,4,5]:
+    pick = pick_next_from_cycle(gyoyang_order, last_pick, present_norms_a - used)
+    if not pick: continue
+    cand_orig = present_map_a.get(normalize_name(pick))
+    if cand_orig and can_attend_period(cand_orig, period):
+        if period == 3: gy3 = cand_orig
+        if period == 4: gy4 = cand_orig
+        if period == 5: gy5 = cand_orig
+        used.add(normalize_name(cand_orig))
+    last_pick = pick
 
-if st.button("🧠 GPT로 이름 추출"):
-    if not morning_file and not afternoon_file:
-        st.warning("오전 또는 오후 이미지를 업로드하세요.")
-    else:
-        with st.spinner("GPT 분석 중..."):
-            if morning_file:
-                m_names,_,_=gpt_extract_names_from_image(morning_file.read(),"오전 도로주행")
-                st.session_state.m_names=m_names; st.success(f"오전 인식: {len(m_names)}명")
-            if afternoon_file:
-                a_names,early_leave,_=gpt_extract_names_from_image(afternoon_file.read(),"오후 도로주행")
-                st.session_state.a_names=a_names; st.session_state.early_leave=early_leave
-                st.success(f"오후 인식: {len(a_names)}명 (조퇴 {len(early_leave)}명)")
-        st.rerun()
+# 1종 수동(오후)
+sudong_list_a = []
+last = prev_sudong
+for _ in range(1):
+    pick = pick_next_from_cycle(sudong_order, last, present_norms_a)
+    if not pick: break
+    orig = present_map_a.get(normalize_name(pick))
+    if orig:
+        sudong_list_a.append(orig)
+    last = pick
+
+# 2종 자동
+sud_norms_a = {normalize_name(x) for x in sudong_list_a}
+auto_list_a = [x for x in afternoon_list if normalize_name(x) not in sud_norms_a]
 
 # -------------------------
-# 인식 결과
+# 출력
 # -------------------------
-st.markdown("<h4 style='font-size:18px;'>2️⃣ 인식 결과 확인</h4>", unsafe_allow_html=True)
-col1,col2=st.columns(2)
-morning_txt="\n".join(st.session_state.get("m_names",[]))
-afternoon_txt="\n".join(st.session_state.get("a_names",[]))
-morning_final=col1.text_area("오전 근무자",value=morning_txt,height=150)
-afternoon_final=col2.text_area("오후 근무자",value=afternoon_txt,height=150)
-morning_list=[x.strip() for x in morning_final.splitlines() if x.strip()]
-afternoon_list=[x.strip() for x in afternoon_final.splitlines() if x.strip()]
-early_leave_list=st.session_state.get("early_leave",[])
-
-# -------------------------
-# 오전 배정
-# -------------------------
-st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정 생성</h4>", unsafe_allow_html=True)
-
-# 항상 기본값 초기화 (NameError 방지)
-today_key = "-"
-gy1 = "-"
-gy2 = "-"
-sud_list = []
-two_auto = []
-
-if st.button("📋 오전 근무 배정 생성"):
-    try:
-        # 정규화 맵
-        present_norm_to_orig, present_orig_to_norm = build_norm_maps(morning_list)
-        excluded_norm = {normalize_name(x) for x in excluded_set}
-        present_norms = set(present_norm_to_orig.keys()) - excluded_norm
-
-        # 🔑 열쇠
-        key_cycle_filtered = [x for x in key_order if normalize_name(x) not in excluded_norm]
-        if key_cycle_filtered:
-            today_key = next_in_cycle(prev_key, key_cycle_filtered)
-
-        # 🧑‍🏫 교양 1,2교시
-        gy1_name = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, present_norms)
-        gy1 = present_norm_to_orig.get(normalize_name(gy1_name), "-") if gy1_name else "-"
-        gy2_name = pick_next_from_cycle(gyoyang_order, gy1_name or prev_gyoyang5, present_norms - {normalize_name(gy1)})
-        gy2 = present_norm_to_orig.get(normalize_name(gy2_name), "-") if gy2_name else "-"
-
-        # 🔧 1종 수동
-        sudong_cycle = [x for x in sudong_order if normalize_name(x) not in excluded_norm]
-        sud_list = []
-        last_pick = prev_sudong if prev_sudong in sudong_cycle else None
-        allowed_norms = present_norms.copy()
-        for _ in range(sudong_count):
-            pick = pick_next_from_cycle(sudong_cycle, last_pick, allowed_norms)
-            if not pick:
-                break
-            pick_orig = present_norm_to_orig.get(normalize_name(pick))
-            if pick_orig:
-                sud_list.append(pick_orig)
-                allowed_norms -= {normalize_name(pick_orig)}
-                last_pick = pick
-
-        sud_norm_set = {normalize_name(x) for x in sud_list}
-        two_auto = [x for x in morning_list if present_orig_to_norm.get(x) in (present_norms - sud_norm_set)]
-        st.session_state.gy2 = gy2 if gy2 != "-" else ""
-
-    except Exception as e:
-        st.error(f"🚨 오전 계산 중 오류: {e}")
-
-# 항상 안전하게 출력
-gy1_clean = re.sub(r"\(.*?\)", "", str(gy1)).strip() if gy1 != "-" else "-"
-gy2_clean = re.sub(r"\(.*?\)", "", str(gy2)).strip() if gy2 != "-" else "-"
-
+st.markdown("<h4 style='font-size:16px;'>📋 오후 결과</h4>", unsafe_allow_html=True)
 lines = [
-    "📅 오전 배정",
     f"열쇠: {today_key}",
-    f"교양 1교시: {gy1_clean}",
-    f"교양 2교시: {gy2_clean}",
+    f"교양 3교시: {gy3 if gy3 else '-'}",
+    f"교양 4교시: {gy4 if gy4 else '-'}",
+    f"교양 5교시: {gy5 if gy5 else '-'}"
 ]
-
-if sud_list:
-    for nm in sud_list:
-        lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
+if sudong_list_a:
+    for nm in sudong_list_a:
+        car = get_vehicle(nm, veh1)
+        lines.append(f"1종수동: {nm} {car}")
 else:
-    lines.append("1종수동: (배정자 없음)")
+    lines.append("1종수동: (없음)")
 
 lines.append("2종 자동:")
-for nm in two_auto:
-    lines.append(f" - {format_name_with_car(nm, veh2)}")
+for nm in auto_list_a:
+    car = get_vehicle(nm, veh2)
+    lines.append(f" - {nm} {car}")
 
 st.code("\n".join(lines), language="text")
 
-
 # -------------------------
-# 오후 배정
+# 전일 근무 수정 / 저장
 # -------------------------
-st.markdown("<h4 style='font-size:18px;'>4️⃣ 오후 근무 배정 생성</h4>", unsafe_allow_html=True)
-if st.button("📋 오후 근무 배정 생성"):
-    present_a_map=build_present_map(afternoon_list)
-    exclude_norm={normalize_name(x) for x in excluded_set}
-    all_allowed=[x for x in key_order if normalize_name(x) not in exclude_norm]
-    afternoon_key=next_in_cycle(prev_key,all_allowed) if prev_key else (all_allowed[0] if all_allowed else "")
-    
-    gy_start = None
-    if 'gy2' in st.session_state and st.session_state.gy2 and st.session_state.gy2 in gyoyang_order:
-        gy_start = st.session_state.gy2
-    elif prev_gyoyang5 and prev_gyoyang5 in gyoyang_order:
-        gy_start = prev_gyoyang5
+st.markdown("<h4 style='font-size:18px;'>3️⃣ 전일 근무 수정 / 저장</h4>", unsafe_allow_html=True)
+PREV_FILE = "전일근무.json"
+prev_key_in, prev_gy5_in, prev_sud_in = prev_key, prev_gyoyang5, prev_sudong
 
-    gy_pool = pick_k_from_cycle(gyoyang_order, gy_start, len(gyoyang_order), present_a_map, exclude_norm)
-    
-    def can_period(nm,period): return can_attend_period(nm,period,early_leave_list)
-    gy3=gy4=gy5=None; used=set(); idx=0
-    while idx<len(gy_pool) and not gy3:
-        c=gy_pool[idx]; idx+=1
-        if can_period(c,3): gy3=c; used.add(normalize_name(c)); break
-    while idx<len(gy_pool) and not gy4:
-        c=gy_pool[idx]; idx+=1
-        if normalize_name(c) in used: continue
-        if can_period(c,4): gy4=c; used.add(normalize_name(c)); break
-    while idx<len(gy_pool) and not gy5:
-        c=gy_pool[idx]; idx+=1
-        if normalize_name(c) in used: continue
-        if can_period(c,5): gy5=c; used.add(normalize_name(c)); break
+# 기존 json 불러오기
+if os.path.exists(PREV_FILE):
+    try:
+        with open(PREV_FILE, "r", encoding="utf-8") as f:
+            prevdata = json.load(f)
+            prev_key_in = prevdata.get("열쇠", prev_key_in)
+            prev_gy5_in = prevdata.get("교양_5교시", prev_gy5_in)
+            prev_sud_in = prevdata.get("1종수동", prev_sud_in)
+    except Exception as e:
+        st.warning(f"전일근무.json 불러오기 실패: {e}")
 
-    aft_sudong=pick_k_from_cycle(sudong_order,prev_sudong,1,present_a_map,exclude_norm)
-    aft_sudong=aft_sudong[0] if aft_sudong else None
-    sudong_norm={normalize_name(aft_sudong)} if aft_sudong else set()
-    aft_2jong=[x for x in afternoon_list if normalize_name(x) not in sudong_norm and normalize_name(x) not in exclude_norm]
+col1, col2, col3 = st.columns(3)
+with col1:
+    new_key = st.text_input("전일 열쇠", value=prev_key_in)
+with col2:
+    new_gy5 = st.text_input("전일 교양 5교시", value=prev_gy5_in)
+with col3:
+    new_sud = st.text_input("전일 1종 수동", value=prev_sud_in)
 
-    lines=[f"📅 오후 배정",f"열쇠: {afternoon_key}",f"교양 3교시: {gy3 or '-'}",f"교양 4교시: {gy4 or '-'}",f"교양 5교시: {gy5 or '-'}"]
-    if aft_sudong: lines.append(f"1종수동 (오후): {format_name_with_car(aft_sudong,veh1)}")
-    else: lines.append("1종수동 (오후): (배정자 없음)")
-    lines.append("2종 자동:")
-    for nm in aft_2jong: lines.append(f" - {format_name_with_car(nm,veh2)}")
-
-    if early_leave_list:
-        lines.append("조퇴자:")
-        for e in early_leave_list:
-            t=str(e['time']).replace('.5','시30분~') if isinstance(e['time'],float) else f"{int(e['time'])}시~"
-            lines.append(f" - {e['name']}({t})")
-
-    st.code("\n".join(lines),language="text")
-
-    # ✅ 자동 저장
-    today_record = {
-        "열쇠": afternoon_key,
-        "교양_5교시": gy5 if gy5 else (gy4 if gy4 else (gy3 if gy3 else prev_gyoyang5)),
-        "1종수동": aft_sudong if aft_sudong else prev_sudong
-    }
+if st.button("💾 수정내용 저장"):
+    try:
+        with open(PREV_FILE, "w", encoding="utf-8") as f:
+            json.dump({"열쇠": new_key, "교양_5교시": new_gy5, "1종수동": new_sud},
+                      f, ensure_ascii=False, indent=2)
+        st.success("전일근무.json 저장 완료 ✅")
+    except Exception as e:
+        st.error(f"저장 실패: {e}")
