@@ -343,9 +343,13 @@ if st.button("📋 오전 근무 배정 생성"):
     # 오후 교양 순번 계산용으로 저장 (오전 2교시 교양자)
     st.session_state.gy2 = gy2 if gy2 != "-" else ""
 
-# 출력
-gy1_clean = re.sub(r"\(.*?\)", "", gy1).strip() if gy1 != "-" else "-"
-gy2_clean = re.sub(r"\(.*?\)", "", gy2).strip() if gy2 != "-" else "-"
+# gy1, gy2가 미리 None일 수도 있으니 안전 처리
+gy1 = gy1 if 'gy1' in locals() else "-"
+gy2 = gy2 if 'gy2' in locals() else "-"
+
+# 괄호 제거 버전 미리 계산
+gy1_clean = re.sub(r"\(.*?\)", "", str(gy1)).strip() if gy1 != "-" else "-"
+gy2_clean = re.sub(r"\(.*?\)", "", str(gy2)).strip() if gy2 != "-" else "-"
 
 lines = [
     "📅 오전 배정",
