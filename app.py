@@ -111,7 +111,7 @@ repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표�
 st.sidebar.markdown("---")
 st.sidebar.subheader("🗓 전일값 확인/수정")
 prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
+prev_gyoyang5 = st.sidebar.text_input("전일 5교시", value=prev_gyoyang5)
 prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
 if st.sidebar.button("💾 전일값 저장"):
     try:
