@@ -19,21 +19,19 @@ except Exception:
     st.stop()
 MODEL_NAME = "gpt-4o"
 
-# =====================================
-# 전일 기준 불러오기
-# =====================================
-PREV_FILE = "전일근무.json"
-prev_key = prev_gyoyang5 = prev_sudong = ""
-if os.path.exists(PREV_FILE):
+# 전일값 수정/저장 (사이드바)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🗓 전일값 확인/수정")
+prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
+prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
+prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
+if st.sidebar.button("💾 전일값 저장"):
     try:
-        with open(PREV_FILE, "r", encoding="utf-8") as f:
-            js = json.load(f)
-        prev_key = js.get("열쇠", "")
-        prev_gyoyang5 = js.get("교양_5교시", "")
-        prev_sudong = js.get("1종수동", "")
-        st.info(f"전일 불러옴 → 열쇠:{prev_key or '-'}, 교양5:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
+        with open(PREV_FILE, "w", encoding="utf-8") as f:
+            json.dump({"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong}, f, ensure_ascii=False, indent=2)
+        st.sidebar.success("저장 완료")
     except Exception as e:
-        st.warning(f"전일근무.json 불러오기 실패: {e}")
+        st.sidebar.error(f"저장 실패: {e}")
 
 # =====================================
 # 사이드바 입력
