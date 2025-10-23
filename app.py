@@ -86,9 +86,15 @@ default_cha2 = """4호 김남균
 19호 김주현
 22호 조정래"""
 
-key_order = _list(st.sidebar.text_area("열쇠 순번", default_key, height=160))
-gyoyang_order = _list(st.sidebar.text_area("교양 순번", default_gyoyang, height=160))
-sudong_order = _list(st.sidebar.text_area("1종 수동 순번", default_sudong, height=160))
+# 접힘 구조 적용
+with st.sidebar.expander("🔑 열쇠 순번 보기 / 수정", expanded=False):
+    key_order = _list(st.text_area("열쇠 순번", default_key, height=160))
+
+with st.sidebar.expander("📚 교양 순번 보기 / 수정", expanded=False):
+    gyoyang_order = _list(st.text_area("교양 순번", default_gyoyang, height=160))
+
+with st.sidebar.expander("🧰 1종 수동 순번 보기 / 수정", expanded=False):
+    sudong_order = _list(st.text_area("1종 수동 순번", default_sudong, height=160))
 
 def parse_vehicle_map(text):
     m = {}
