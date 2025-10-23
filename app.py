@@ -151,13 +151,20 @@ def build_present_map(name_list):
     return m
 
 def pick_next_from_cycle(cycle, last, allowed_norms: set):
-    """
-    cycle: 순번 리스트(원본 이름)
-    last: 마지막 선택된 사람(원본 또는 순수 이름)
-    allowed_norms: 정규화된 이름 집합
-    """
+    """정규화된 이름 기준으로 순환"""
     if not cycle:
         return None
+    cycle_norm = [normalize_name(x) for x in cycle]
+    last_norm = normalize_name(last)
+    start = 0
+    if last_norm in cycle_norm:
+        start = (cycle_norm.index(last_norm) + 1) % len(cycle_norm)
+    for i in range(len(cycle) * 2):
+        cand = cycle[(start + i) % len(cycle)]
+        if normalize_name(cand) in allowed_norms:
+            return cand
+    return None
+
 
     # cycle 내부를 정규화 리스트로 변환
     norm_cycle = [normalize_name(x) for x in cycle]
