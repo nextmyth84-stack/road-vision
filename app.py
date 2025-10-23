@@ -174,6 +174,42 @@ def clipboard_copy_button(text: str, label="📋 결과 복사"):
         <button onclick="copyText()" style="background-color:#4CAF50;color:white;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;">{label}</button>
     """
     st.markdown(clipboard_script, unsafe_allow_html=True)
+# =====================================
+# GPT OCR
+# =====================================
+def gpt_extract(img_bytes, want_early=False, want_late=False):
+    b64 = base64.b64encode(img_bytes).decode()
+    user = (
+        "이 이미지는 운전면허시험 근무표입니다.\n"
+        "1) '학과', '기능장', '초소'를 제외한 도로주행 근무자 이름만 추출하세요.\n"
+        "2) 괄호안 정보(A-합 등)는 유지하되, 괄호에 '지원','인턴','연수' 포함자는 제외하세요.\n"
+        + ("3) '조퇴:' 항목이 있다면 이름과 시간을 숫자(예: 14 또는 14.5)로 JSON에 포함하세요.\n" if want_early else "")
+        + ("4) '외출:' 또는 '10시 출근:' 항목이 있다면 이름과 시간을 숫자(예: 10)로 JSON에 포함하세요.\n" if want_late else "")
+        + "반환 예시: {\"names\": [\"김면정\",\"김성연\"], "
+        + ("\"early_leave\": [{\"name\":\"김병욱\",\"time\":14}], " if want_early else "")
+        + ("\"late_start\": [{\"name\":\"안유미\",\"time\":10}]" if want_late else "")
+        + "}"
+    )
+    try:
+        res = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "표에서 이름을 JSON으로 추출"},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                ]}
+            ],
+        )
+        raw = res.choices[0].message.content
+        js = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
+        names = [re.sub(r"\(.*?\)", "", n).strip() for n in js.get("names", []) if not re.search(r"(지원|인턴|연수)", n)]
+        early = js.get("early_leave", []) if want_early else []
+        late = js.get("late_start", []) if want_late else []
+        return names, early, late
+    except Exception as e:
+        st.error(f"OCR 실패: {e}")
+        return [], [], []
 
 # =====================================
 # 1) 이미지 업로드 & OCR
