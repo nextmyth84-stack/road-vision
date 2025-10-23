@@ -418,14 +418,31 @@ if st.button("📋 오후 배정 생성"):
 
         # === 오전 대비 비교 ===
         lines.append("오전 대비 비교:")
-        morning_names = set(st.session_state.get("morning_auto_names", []))
-        afternoon_names = set(auto_a)
-        added = sorted(list(afternoon_names - morning_names))
-        missing = sorted(list(morning_names - afternoon_names))
+
+        # 오전 2종 자동 근무자 vs 오후 2종 자동 근무자 비교
+        morning_auto_names = set(st.session_state.get("morning_auto_names", []))
+        afternoon_auto_names = set(auto_a)
+
+        # 오후 1종 수동 근무자 목록 (전환 인원 제외용)
+        afternoon_sudong_names = {normalize_name(x) for x in sud_a_list}
+
+        # 오전에 2종이었지만 오후엔 1종으로 전환된 사람 제외 후 '빠진 인원' 계산
+        morning_only = []
+        for nm in morning_auto_names:
+            n_norm = normalize_name(nm)
+            # 오후 1종에 있으면 빠진 인원에서 제외
+            if n_norm not in {normalize_name(x) for x in afternoon_auto_names} and n_norm not in afternoon_sudong_names:
+                morning_only.append(nm)
+
+        # 추가·빠진 인원 계산
+        added = sorted(list(afternoon_auto_names - morning_auto_names))
+        missing = sorted(morning_only)
+
         if added:
             lines.append(" • 추가 인원: " + ", ".join(added))
         if missing:
-            lines.append(" • 누락 인원: " + ", ".join(missing))
+            lines.append(" • 빠진 인원: " + ", ".join(missing))
+
             
          # 🚗 미배정 차량 계산 (오전에 실제 배정되었는데 오후에 빠진 차량만)
         morning_cars_1 = set(st.session_state.get("morning_assigned_cars_1", []))
