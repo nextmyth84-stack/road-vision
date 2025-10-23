@@ -344,13 +344,16 @@ if st.button("📋 오전 근무 배정 생성"):
     st.session_state.gy2 = gy2 if gy2 != "-" else ""
 
     # 출력
-    lines = [
-        "📅 오전 배정",
-        f"열쇠: {today_key}",
-       f"교양 1교시: {re.sub(r'\(.*?\)', '', gy1).strip() if gy1!='-' else '-'}",
-       f"교양 2교시: {re.sub(r'\(.*?\)', '', gy2).strip() if gy2!='-' else '-'}",
+gy1_clean = re.sub(r"\(.*?\)", "", gy1).strip() if gy1 != "-" else "-"
+gy2_clean = re.sub(r"\(.*?\)", "", gy2).strip() if gy2 != "-" else "-"
 
-    ]
+lines = [
+    "📅 오전 배정",
+    f"열쇠: {today_key}",
+    f"교양 1교시: {gy1_clean}",
+    f"교양 2교시: {gy2_clean}",
+]
+
     if sud_list:
         for nm in sud_list:
             lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
