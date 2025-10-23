@@ -291,6 +291,13 @@ afternoon_list=[x.strip() for x in afternoon_final.splitlines() if x.strip()]
 early_leave_list=st.session_state.get("early_leave",[])
 
 if st.button("📋 오전 근무 배정 생성"):
+    # 기본값 초기화 (NameError 방지)
+    today_key = "-"
+    gy1 = "-"
+    gy2 = "-"
+    sud_list = []
+    two_auto = []
+
     # 정규화 맵
     present_norm_to_orig, present_orig_to_norm = build_norm_maps(morning_list)
 
@@ -300,12 +307,12 @@ if st.button("📋 오전 근무 배정 생성"):
     # 오늘 오전 실제 가능 인원(정규화)
     present_norms = set(present_norm_to_orig.keys()) - excluded_norm
 
-    # 🔑 열쇠: 전체 근무자(휴가/교육 제외) 1일 1회 순환
+    # 🔑 열쇠
     all_allowed_norms = [normalize_name(x) for x in key_order if normalize_name(x) not in excluded_norm]
-    # all_allowed_norms를 순번표 그대로 쓰려면 pick_next_from_cycle에 원본 cycle을 넣어야 하므로,
-    # 열쇠는 기존 next_in_cycle로 유지하되 제외만 반영
     key_cycle_filtered = [x for x in key_order if normalize_name(x) in set(all_allowed_norms)]
-    today_key = next_in_cycle(prev_key, key_cycle_filtered) if key_cycle_filtered else ""
+    if key_cycle_filtered:
+        today_key = next_in_cycle(prev_key, key_cycle_filtered)
+
 
     # 🧑‍🏫 교양: prev_gyoyang5 다음부터 회전해 정확히 2명(1,2교시) 선발
     gy_cycle = gyoyang_order[:]  # 원본 순번표
