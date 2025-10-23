@@ -132,7 +132,6 @@ def mark_car(car):
     return f"{car}{' (정비)' if car in repair_cars else ''}" if car else ""
 
 def get_vehicle(name, veh_map):
-    """정규화 키로 차량 검색"""
     nkey = normalize_name(name)
     for k, v in veh_map.items():
         if normalize_name(k) == nkey:
@@ -140,7 +139,6 @@ def get_vehicle(name, veh_map):
     return ""
 
 def can_attend_period(name_pure: str, period:int, early_list):
-    """3=13:00, 4=14:30, 5=16:00 이전 조퇴면 해당 교시 불가(건너뜀)"""
     tmap = {3: 13.0, 4: 14.5, 5: 16.0}
     for e in early_list:
         if normalize_name(e.get("name","")) == normalize_name(name_pure):
@@ -246,7 +244,6 @@ if st.button("📋 오전 배정 생성"):
         gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - {normalize_name(gy1)})
         st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
 
-        # 🔧 1종 수동(정상 로직)
         sud_m, last = [], prev_sudong
         for _ in range(sudong_count):
             pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
@@ -325,7 +322,7 @@ if st.button("📋 오후 배정 생성"):
             for nm in auto_a:
                 lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2))}")
 
-        # 비교
+        # 비교 및 미배정 차량
         lines.append("오전 대비 비교:")
         morning_names = set(st.session_state.get("morning_auto_names", []))
         afternoon_names = set(auto_a)
@@ -334,7 +331,6 @@ if st.button("📋 오후 배정 생성"):
         if added: lines.append(" • 추가 인원: " + ", ".join(added))
         if missing: lines.append(" • 누락 인원: " + ", ".join(missing))
 
-        # 미배정 차량
         morning_cars = set(st.session_state.get("morning_cars", []))
         afternoon_cars = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
         unassigned = [c for c in morning_cars if c and c not in afternoon_cars]
@@ -345,11 +341,19 @@ if st.button("📋 오후 배정 생성"):
 
         st.code("\n".join(lines), language="text")
 
-        # 저장
+        # ✅ 결과 저장
         if save_check:
             data = {
                 "열쇠": today_key,
                 "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
                 "1종수동": sud_a_list[-1] if sud_a_list else prev_sudong
             }
-            with open:
+            try:
+                with open(PREV_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                st.success("전일근무.json 업데이트 완료")
+            except Exception as e:
+                st.error(f"전일 저장 실패: {e}")
+
+    except Exception as e:
+        st.error(f"오후 오류: {e}")
