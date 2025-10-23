@@ -317,7 +317,7 @@ if st.button("📋 오후 배정 생성"):
         # ✅ 오후 1종 수동: v7.6 방식 복귀
         sud_a_list = []
         base_raw = st.session_state.get("sudong_base_for_pm", None) or prev_sudong
-        pick = pick_next_from_cycle(sudong_order, base_raw, a_norms - used)
+        pick = pick_next_from_cycle(sudong_order, base_raw, a_norms)
         if pick:
             sud_a_list.append(pick)
             used.add(normalize_name(pick))
