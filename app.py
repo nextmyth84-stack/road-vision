@@ -385,9 +385,9 @@ if st.button("📋 오후 배정 생성"):
         # 🔧 오후 1종 수동 출력
         if sud_a_list:
             for nm in sud_a_list:
-            lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
-        if sudong_count == 2 and len(sud_a_list) < 2:
-            lines.append("※ 수동 가능 인원이 1명입니다.")
+                lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
+            if sudong_count == 2 and len(sud_a_list) < 2:
+                lines.append("※ 수동 가능 인원이 1명입니다.")
         else:
             lines.append("1종수동: (배정자 없음)")
             if sudong_count >= 1:
