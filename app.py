@@ -273,7 +273,16 @@ if st.button("📋 오전 배정 생성"):
     try:
         # 🔑 열쇠 (휴가/교육 제외, 하루 1회)
         key_filtered = [x for x in key_order if normalize_name(x) not in {normalize_name(e) for e in excluded}]
-        today_key = key_filtered[(key_filtered.index(prev_key)+1) % len(key_filtered)] if (key_filtered and prev_key in key_filtered) else (key_filtered[0] if key_filtered else "")
+        if key_filtered:
+            norm_list = [normalize_name(x) for x in key_filtered]
+            prev_norm = normalize_name(prev_key)
+            if prev_norm in norm_list:
+                idx = (norm_list.index(prev_norm) + 1) % len(key_filtered)
+                today_key = key_filtered[idx]
+            else:
+                today_key = key_filtered[0]
+        else:
+            today_key = ""
         st.session_state.today_key = today_key
 
         # 🧑‍🏫 교양 1·2교시 (오전 외출 10시 반영)
