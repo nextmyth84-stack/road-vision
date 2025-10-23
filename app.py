@@ -137,6 +137,27 @@ if st.sidebar.button("💾 전일값 저장"):
 def normalize_name(s):
     return re.sub(r"[^가-힣]", "", re.sub(r"\(.*?\)", "", s or ""))
 
+# 코스점검(A-합 / B-불) 추출
+COURSE_PATTERN = re.compile(r"\(\s*([AB])\s*-\s*(합|불)\s*\)")
+
+def extract_course_check(name_list):
+    """
+    예: ["김성연(A-합)", "김남균(B-불)", "조윤영"] -> (["김성연"], ["김남균"])
+    괄호 안 표기는 그대로 읽고, 출력용 이름은 괄호를 제거해서 반환.
+    """
+    a_pass, b_fail = [], []
+    for raw in name_list:
+        m = COURSE_PATTERN.search(raw)
+        if not m:
+            continue
+        base = re.sub(r"\(.*?\)", "", raw).strip()  # 괄호 제거한 표시용 이름
+        tag = f"{m.group(1)}-{m.group(2)}"         # "A-합" or "B-불"
+        if tag == "A-합":
+            a_pass.append(base)
+        elif tag == "B-불":
+            b_fail.append(base)
+    return a_pass, b_fail
+
 def pick_next_from_cycle(cycle, last, allowed_norms: set):
     """정규화 기준 순환"""
     if not cycle:
