@@ -116,6 +116,27 @@ excluded_set = set([x.strip() for x in absent_text.splitlines() if x.strip()])
 repair_cars = [x.strip() for x in repair_cars_text.split(",") if x.strip()]
 
 # -------------------------
+# 🔄 전일근무 수정 메뉴
+# -------------------------
+st.sidebar.markdown("---")
+st.sidebar.subheader("🗓 전일 근무자 확인 / 수정")
+
+prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
+prev_gyoyang5 = st.sidebar.text_input("전일 5교시 교양", value=prev_gyoyang5)
+prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
+
+if st.sidebar.button("💾 수정내용 저장하기"):
+    try:
+        with open(PREV_FILE, "w", encoding="utf-8") as f:
+            json.dump(
+                {"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong},
+                f, ensure_ascii=False, indent=2
+            )
+        st.sidebar.success("✅ 전일근무.json에 수정내용 저장 완료!")
+    except Exception as e:
+        st.sidebar.error(f"저장 실패: {e}")
+
+# -------------------------
 # 유틸 함수
 # -------------------------
 def normalize_name(s):
