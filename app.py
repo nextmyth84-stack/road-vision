@@ -139,6 +139,34 @@ if st.sidebar.button("💾 수정내용 저장하기"):
 # -------------------------
 # 유틸 함수
 # -------------------------
+def normalize_name(s: str) -> str:
+    if not isinstance(s, str): return ""
+    s = re.sub(r"\(.*?\)", "", s)
+    s = re.sub(r"[-_·•‧‵′]", "", s)
+    s = re.sub(r"\s+", "", s)
+    return re.sub(r"[^\uAC00-\uD7A3]", "", s)
+
+def build_norm_maps(name_list):
+    """정규화 <-> 원본 매핑"""
+    norm_to_orig = {}
+    orig_to_norm = {}
+    for x in name_list:
+        n = normalize_name(x)
+        orig_to_norm[x] = n
+        if n and n not in norm_to_orig:
+            norm_to_orig[n] = x
+    return norm_to_orig, orig_to_norm
+
+def pick_next_from_cycle(cycle, last, allowed_norms: set) -> str | None:
+    """순번표에서 last 다음 사람 중 allowed_norms에 있는 '정규화 이름'을 찾아 반환(원본이름은 아님)"""
+    if not cycle: return None
+    start_idx = 0 if (not last or last not in cycle) else (cycle.index(last) + 1) % len(cycle)
+    for i in range(len(cycle)):
+        cand = cycle[(start_idx + i) % len(cycle)]
+        if normalize_name(cand) in allowed_norms:
+            return cand
+    return None
+
 def normalize_name(s):
     s = re.sub(r".*?", "", s)
     s = re.sub(r"[-_·•‧‵′]", "", s)
@@ -262,29 +290,78 @@ morning_list=[x.strip() for x in morning_final.splitlines() if x.strip()]
 afternoon_list=[x.strip() for x in afternoon_final.splitlines() if x.strip()]
 early_leave_list=st.session_state.get("early_leave",[])
 
-# -------------------------
-# 오전 배정
-# -------------------------
-st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정 생성</h4>", unsafe_allow_html=True)
 if st.button("📋 오전 근무 배정 생성"):
-    present_m_map=build_present_map(morning_list)
-    exclude_norm={normalize_name(x) for x in excluded_set}
-    all_allowed=[x for x in key_order if normalize_name(x) not in exclude_norm]
-    today_key=next_in_cycle(prev_key,all_allowed) if prev_key else (all_allowed[0] if all_allowed else "")
-    gy_selected=pick_k_from_cycle(gyoyang_order,prev_gyoyang5,2,present_m_map,exclude_norm)
-    gy1=gy_selected[0] if len(gy_selected)>0 else "-"
-    gy2=gy_selected[1] if len(gy_selected)>1 else "-"
-    sudong_selected=pick_k_from_cycle(sudong_order,prev_sudong,sudong_count,present_m_map,exclude_norm)
-    sudong_set={normalize_name(x) for x in sudong_selected}
-    morning_2jong=[x for x in morning_list if normalize_name(x) not in sudong_set and normalize_name(x) not in exclude_norm]
-    st.session_state.gy2 = gy2  # 오후 순번 계산용 저장
-    lines=[f"📅 오전 배정",f"열쇠: {today_key}",f"교양 1교시: {gy1}",f"교양 2교시: {gy2}"]
-    if sudong_selected:
-        for nm in sudong_selected: lines.append(f"1종수동: {format_name_with_car(nm,veh1)}")
-    else: lines.append("1종수동: (배정자 없음)")
+    # 정규화 맵
+    present_norm_to_orig, present_orig_to_norm = build_norm_maps(morning_list)
+
+    # 휴가/교육 제외 세트(정규화)
+    excluded_norm = {normalize_name(x) for x in excluded_set}
+
+    # 오늘 오전 실제 가능 인원(정규화)
+    present_norms = set(present_norm_to_orig.keys()) - excluded_norm
+
+    # 🔑 열쇠: 전체 근무자(휴가/교육 제외) 1일 1회 순환
+    all_allowed_norms = [normalize_name(x) for x in key_order if normalize_name(x) not in excluded_norm]
+    # all_allowed_norms를 순번표 그대로 쓰려면 pick_next_from_cycle에 원본 cycle을 넣어야 하므로,
+    # 열쇠는 기존 next_in_cycle로 유지하되 제외만 반영
+    key_cycle_filtered = [x for x in key_order if normalize_name(x) in set(all_allowed_norms)]
+    today_key = next_in_cycle(prev_key, key_cycle_filtered) if key_cycle_filtered else ""
+
+    # 🧑‍🏫 교양: prev_gyoyang5 다음부터 회전해 정확히 2명(1,2교시) 선발
+    gy_cycle = gyoyang_order[:]  # 원본 순번표
+    # 1교시
+    gy1_name_in_cycle = pick_next_from_cycle(gy_cycle, prev_gyoyang5, present_norms)
+    gy1 = present_norm_to_orig.get(normalize_name(gy1_name_in_cycle), "-") if gy1_name_in_cycle else "-"
+    # 2교시 (gy1 바로 다음)
+    # gy1이 없으면 prev_gyoyang5에서 다시 시작
+    base_for_gy2 = gy1_name_in_cycle if gy1_name_in_cycle else prev_gyoyang5
+    # 2교시 후보에서 1교시 정규화 이름 제외
+    present_norms_for_gy2 = present_norms - ({normalize_name(gy1)} if gy1 != "-" else set())
+    gy2_name_in_cycle = pick_next_from_cycle(gy_cycle, base_for_gy2, present_norms_for_gy2)
+    gy2 = present_norm_to_orig.get(normalize_name(gy2_name_in_cycle), "-") if gy2_name_in_cycle else "-"
+
+    # 🔧 1종 수동: prev_sudong 다음부터 회전해 sudong_count명 선발
+    sudong_cycle = sudong_order[:]
+    sud_list = []
+    last_pick = prev_sudong if prev_sudong in sudong_cycle else None
+    allowed_for_sudong = set(present_norms)  # (원하면 교양자 제외하려면 여기서 제거)
+    for _ in range(sudong_count):
+        pick = pick_next_from_cycle(sudong_cycle, last_pick, allowed_for_sudong)
+        if not pick: break
+        pick_orig = present_norm_to_orig.get(normalize_name(pick))
+        if pick_orig:
+            sud_list.append(pick_orig)
+            allowed_for_sudong -= {normalize_name(pick_orig)}
+            last_pick = pick
+        else:
+            break
+
+    # 🚗 2종 자동: 오전 전체 - (1종수동 배정자)
+    sud_norm_set = {normalize_name(x) for x in sud_list}
+    two_auto = [x for x in morning_list if present_orig_to_norm.get(x) in (present_norms - sud_norm_set)]
+
+    # 오후 교양 순번 계산용으로 저장 (오전 2교시 교양자)
+    st.session_state.gy2 = gy2 if gy2 != "-" else ""
+
+    # 출력
+    lines = [
+        "📅 오전 배정",
+        f"열쇠: {today_key}",
+        f"교양 1교시: {re.sub(r'\\(.*?\\)', '', gy1).strip() if gy1!='-' else '-'}",
+        f"교양 2교시: {re.sub(r'\\(.*?\\)', '', gy2).strip() if gy2!='-' else '-'}",
+    ]
+    if sud_list:
+        for nm in sud_list:
+            lines.append(f"1종수동: {format_name_with_car(nm, veh1)}")
+    else:
+        lines.append("1종수동: (배정자 없음)")
+
     lines.append("2종 자동:")
-    for nm in morning_2jong: lines.append(f" - {format_name_with_car(nm,veh2)}")
-    st.code("\n".join(lines),language="text")
+    for nm in two_auto:
+        lines.append(f" - {format_name_with_car(nm, veh2)}")
+
+    st.code("\n".join(lines), language="text")
+
 
 # -------------------------
 # 오후 배정
