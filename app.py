@@ -205,7 +205,7 @@ def gpt_extract(image_bytes, want_early=False):
         "1) '학과', '기능장', '초소'를 제외한 **도로주행 근무자 이름**만 추출하세요.\n"
         "2) 이름 옆 괄호(A-합, B-불 등)는 그대로 둡니다.\n"
         "3) 괄호에 '지원','인턴','연수'가 포함된 항목은 제외하세요.\n"
-        + ("4) 이미지 상단의 '조퇴 :' 항목에서 조퇴자 이름과 시간을 함께 추출하세요. 시간은 14 또는 14.5와 같이 숫자로 주세요.\n" if want_early else "") +
+        + ("4) 이미지 상단의 '조퇴 :' 항목에서 조퇴자 이름과 시간을 함께 추출하세요.\n" if want_early else "") +
         ('반환 예시: {"names":["김면정(A-합)","김성연(B-불)"]' + (',"early_leave":[{"name":"김병욱","time":14}]' if want_early else '') + "}"
         )
     )
@@ -224,6 +224,7 @@ def gpt_extract(image_bytes, want_early=False):
         m = re.search(r"\{.*\}", raw, re.S)
         js = json.loads(m.group(0)) if m else {}
         names = [n for n in js.get("names", []) if not re.search(r"(지원|인턴|연수)", n)]
+        names = [re.sub(r"\(.*?\)", "", n).strip() for n in names]  # 👈 괄호 제거 핵심
         early = js.get("early_leave", []) if want_early else []
         return names, early
     except Exception as e:
