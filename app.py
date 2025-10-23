@@ -333,6 +333,9 @@ if st.button("📋 오전 배정 생성"):
         st.session_state.morning_assigned_cars_1 = assigned_veh1
         st.session_state.morning_assigned_cars_2 = assigned_veh2
         st.session_state.morning_auto_names_2 = auto_m  # 비교는 2종 기준으로만
+        
+        # 🧩 코스점검 추출
+        course_A, course_B = extract_course_check(m_list)
 
         # 출력
         lines = []
@@ -355,6 +358,14 @@ if st.button("📋 오전 배정 생성"):
             lines.append("2종 자동:")
             for nm in auto_m:
                 lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2))}")
+
+        # ✅ 코스점검 출력 추가
+        if course_A or course_B:
+            lines.append("코스점검:")
+            if course_A:
+                lines.append(" A-합 → " + ", ".join(course_A))
+            if course_B:
+                lines.append(" B-불 → " + ", ".join(course_B))
 
         st.markdown("<h5 style='font-size:16px;'>📋 오전 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
