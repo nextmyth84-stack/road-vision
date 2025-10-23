@@ -31,7 +31,7 @@ if os.path.exists(PREV_FILE):
         prev_key = js.get("열쇠", "")
         prev_gyoyang5 = js.get("교양_5교시", "")
         prev_sudong = js.get("1종수동", "")
-        st.info(f"전일 불러옴 → 열쇠:{prev_key or '-'}, 교양5:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
+        st.info(f"전일 불러옴 → 열쇠:{prev_key or '-'}, 5교시:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
     except Exception as e:
         st.warning(f"전일근무.json 불러오기 실패: {e}")
 
