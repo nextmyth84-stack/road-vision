@@ -297,12 +297,14 @@ if st.button("📋 오전 배정 생성"):
         sud_norms = {normalize_name(x) for x in sud_m}
         auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
 
-      # 오전 차량 저장 (1종 + 2종 모두)
-        st.session_state.morning_cars = (
-            [get_vehicle(x, veh2) for x in auto_m if get_vehicle(x, veh2)] +
-        [get_vehicle(x, veh1) for x in sud_m if get_vehicle(x, veh1)]
-        )
-        st.session_state.morning_auto_names = auto_m + sud_m
+      # 🚗 오전 실제 배정 차량 저장 (1종 / 2종 구분)
+        assigned_veh1 = [get_vehicle(x, veh1) for x in sud_m if get_vehicle(x, veh1)]
+        assigned_veh2 = [get_vehicle(x, veh2) for x in auto_m if get_vehicle(x, veh2)]
+
+        st.session_state.morning_assigned_cars_1 = assigned_veh1
+        st.session_state.morning_assigned_cars_2 = assigned_veh2
+        st.session_state.morning_auto_names = auto_m + sud_m  # 이름 기록 (비교용)
+
 
         # 출력
         lines = []
@@ -425,20 +427,17 @@ if st.button("📋 오후 배정 생성"):
         if missing:
             lines.append(" • 누락 인원: " + ", ".join(missing))
             
-        # 🚗 미배정 차량 계산 (1종 / 2종 구분)
-        # 오전 차량
-        morning_cars_1 = {get_vehicle(x, veh1) for x in st.session_state.get("morning_auto_names", []) if get_vehicle(x, veh1)}
-        morning_cars_2 = {get_vehicle(x, veh2) for x in st.session_state.get("morning_auto_names", []) if get_vehicle(x, veh2)}
+         # 🚗 미배정 차량 계산 (오전에 실제 배정되었는데 오후에 빠진 차량만)
+        morning_cars_1 = set(st.session_state.get("morning_assigned_cars_1", []))
+        morning_cars_2 = set(st.session_state.get("morning_assigned_cars_2", []))
 
-        # 오후 차량
         afternoon_cars_1 = {get_vehicle(x, veh1) for x in sud_a_list if get_vehicle(x, veh1)}
         afternoon_cars_2 = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
 
-        # 각 구분별 미배정 차량
-        unassigned_1 = sorted([c for c in morning_cars_1 if c and c not in afternoon_cars_1])
-        unassigned_2 = sorted([c for c in morning_cars_2 if c and c not in afternoon_cars_2])
+        # 오전엔 있었는데 오후엔 빠진 차량만
+        unassigned_1 = sorted([c for c in morning_cars_1 if c not in afternoon_cars_1])
+        unassigned_2 = sorted([c for c in morning_cars_2 if c not in afternoon_cars_2])
 
-        # 출력
         if unassigned_1 or unassigned_2:
             lines.append("미배정 차량:")
             if unassigned_1:
@@ -449,6 +448,7 @@ if st.button("📋 오후 배정 생성"):
                 lines.append(" [2종 자동]")
                 for c in unassigned_2:
                     lines.append(f"  • {c} 마감")
+
 
         st.markdown("<h5 style='font-size:16px;'>📋 오후 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
