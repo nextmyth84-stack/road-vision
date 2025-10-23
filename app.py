@@ -254,7 +254,8 @@ if st.button("📋 오후 근무 배정 생성"):
     exclude_norm={normalize_name(x) for x in excluded_set}
     all_allowed=[x for x in key_order if normalize_name(x) not in exclude_norm]
     afternoon_key=next_in_cycle(prev_key,all_allowed) if prev_key else (all_allowed[0] if all_allowed else "")
-    gy_pool=pick_k_from_cycle(gyoyang_order,prev_gyoyang5,len(gyoyang_order),present_a_map,exclude_norm)
+    gy_start = gy2 if gy2 and gy2 in gyoyang_order else (prev_gyoyang5 if prev_gyoyang5 in gyoyang_order else None)
+gy_pool = pick_k_from_cycle(gyoyang_order, gy_start, len(gyoyang_order), present_a_map, exclude_norm)
     def can_period(nm,period): return can_attend_period(nm,period,early_leave_list)
     gy3=gy4=gy5=None; used=set(); idx=0
     while idx<len(gy_pool) and not gy3:
