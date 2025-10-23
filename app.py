@@ -322,12 +322,12 @@ if st.button("📋 오전 배정 생성"):
                 sud_m.append(pure)
                 allow_for_sud -= {normalize_name(pure)}
                 last = pick
-        # 오전 1종 수동 마지막 선택자를 오후 기준으로 넘김
+       # 오전 1종 수동 마지막 선택자를 오후 기준으로 넘김 (순수 이름으로 저장)
         if sud_m:
-            st.session_state["sudong_base_for_pm"] = sud_m[-1]   # 예: '권한솔'
+            st.session_state["sudong_base_for_pm"] = strip_to_pure_korean(sud_m[-1])
         else:
-        # 오전에 1종이 없으면 전일값을 그대로 사용 (없으면 None)
-            st.session_state["sudong_base_for_pm"] = prev_sudong if prev_sudong in sudong_order else None
+            st.session_state["sudong_base_for_pm"] = strip_to_pure_korean(prev_sudong) if prev_sudong else None
+
     
         # 🚗 2종 자동 (오전): 전체 - 1종 (교양 포함)
         sud_norms = {normalize_name(x) for x in sud_m}
@@ -396,11 +396,17 @@ if st.button("📋 오후 배정 생성"):
                     else: gy5 = nm_pure
                     used.add(normalize_name(nm_pure))
                     break
-        # 🔧 1종 수동(오후): 오전 마지막 1종 다음 사람을 선택 (없으면 전일값 기준)
+       # 🔧 1종 수동(오후): 오전 마지막 1종 다음 사람을 선택 (없으면 전일값 기준)
         sud_a = []
-        # 오전 결과에서 넘겨받은 기준(없으면 전일값)
         base_last = st.session_state.get("sudong_base_for_pm", None)
-        if base_last not in sudong_order:
+        if base_last:
+            base_last_norm = normalize_name(base_last)
+        # sudong_order에서도 정규화된 이름을 기준으로 순서 매칭
+        sud_order_norm = [normalize_name(x) for x in sudong_order]
+        if base_last_norm in sud_order_norm:
+            idx = sud_order_norm.index(base_last_norm)
+            base_last = sudong_order[idx]
+        else:
             base_last = prev_sudong if prev_sudong in sudong_order else None
 
         pick = pick_next_from_cycle(sudong_order, base_last, allow_a - used)
