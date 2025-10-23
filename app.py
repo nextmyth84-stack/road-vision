@@ -347,8 +347,9 @@ if st.button("📋 오전 근무 배정 생성"):
     lines = [
         "📅 오전 배정",
         f"열쇠: {today_key}",
-        f"교양 1교시: {re.sub(r'\\(.*?\\)', '', gy1).strip() if gy1!='-' else '-'}",
-        f"교양 2교시: {re.sub(r'\\(.*?\\)', '', gy2).strip() if gy2!='-' else '-'}",
+       f"교양 1교시: {re.sub(r'\(.*?\)', '', gy1).strip() if gy1!='-' else '-'}",
+       f"교양 2교시: {re.sub(r'\(.*?\)', '', gy2).strip() if gy2!='-' else '-'}",
+
     ]
     if sud_list:
         for nm in sud_list:
