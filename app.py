@@ -258,7 +258,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False):
         )
         raw = res.choices[0].message.content
         js = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
-        names = [re.sub(r"\(.*?\)", "", n).strip() for n in js.get("names", []) if not re.search(r"(지원|인턴|연수)", n)]
+        names = [n.strip() for n in js.get("names", []) if not re.search(r"(지원|인턴|연수)", n)]
         early = js.get("early_leave", []) if want_early else []
         late = js.get("late_start", []) if want_late else []
         return names, early, late
