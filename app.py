@@ -290,78 +290,59 @@ morning_list=[x.strip() for x in morning_final.splitlines() if x.strip()]
 afternoon_list=[x.strip() for x in afternoon_final.splitlines() if x.strip()]
 early_leave_list=st.session_state.get("early_leave",[])
 
+# -------------------------
+# 오전 배정
+# -------------------------
+st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정 생성</h4>", unsafe_allow_html=True)
+
+# 항상 기본값 초기화 (NameError 방지)
+today_key = "-"
+gy1 = "-"
+gy2 = "-"
+sud_list = []
+two_auto = []
+
 if st.button("📋 오전 근무 배정 생성"):
-    # NameError 방지용 기본값 (초기화)
-    today_key = "-"
-    gy1 = "-"
-    gy2 = "-"
-    sud_list = []
-    two_auto = []
+    try:
+        # 정규화 맵
+        present_norm_to_orig, present_orig_to_norm = build_norm_maps(morning_list)
+        excluded_norm = {normalize_name(x) for x in excluded_set}
+        present_norms = set(present_norm_to_orig.keys()) - excluded_norm
 
-    # 기본값 초기화 (NameError 방지)
-    today_key = "-"
-    gy1 = "-"
-    gy2 = "-"
-    sud_list = []
-    two_auto = []
+        # 🔑 열쇠
+        key_cycle_filtered = [x for x in key_order if normalize_name(x) not in excluded_norm]
+        if key_cycle_filtered:
+            today_key = next_in_cycle(prev_key, key_cycle_filtered)
 
-    # 정규화 맵
-    present_norm_to_orig, present_orig_to_norm = build_norm_maps(morning_list)
+        # 🧑‍🏫 교양 1,2교시
+        gy1_name = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, present_norms)
+        gy1 = present_norm_to_orig.get(normalize_name(gy1_name), "-") if gy1_name else "-"
+        gy2_name = pick_next_from_cycle(gyoyang_order, gy1_name or prev_gyoyang5, present_norms - {normalize_name(gy1)})
+        gy2 = present_norm_to_orig.get(normalize_name(gy2_name), "-") if gy2_name else "-"
 
-    # 휴가/교육 제외 세트(정규화)
-    excluded_norm = {normalize_name(x) for x in excluded_set}
+        # 🔧 1종 수동
+        sudong_cycle = [x for x in sudong_order if normalize_name(x) not in excluded_norm]
+        sud_list = []
+        last_pick = prev_sudong if prev_sudong in sudong_cycle else None
+        allowed_norms = present_norms.copy()
+        for _ in range(sudong_count):
+            pick = pick_next_from_cycle(sudong_cycle, last_pick, allowed_norms)
+            if not pick:
+                break
+            pick_orig = present_norm_to_orig.get(normalize_name(pick))
+            if pick_orig:
+                sud_list.append(pick_orig)
+                allowed_norms -= {normalize_name(pick_orig)}
+                last_pick = pick
 
-    # 오늘 오전 실제 가능 인원(정규화)
-    present_norms = set(present_norm_to_orig.keys()) - excluded_norm
+        sud_norm_set = {normalize_name(x) for x in sud_list}
+        two_auto = [x for x in morning_list if present_orig_to_norm.get(x) in (present_norms - sud_norm_set)]
+        st.session_state.gy2 = gy2 if gy2 != "-" else ""
 
-    # 🔑 열쇠
-    all_allowed_norms = [normalize_name(x) for x in key_order if normalize_name(x) not in excluded_norm]
-    key_cycle_filtered = [x for x in key_order if normalize_name(x) in set(all_allowed_norms)]
-    if key_cycle_filtered:
-        today_key = next_in_cycle(prev_key, key_cycle_filtered)
+    except Exception as e:
+        st.error(f"🚨 오전 계산 중 오류: {e}")
 
-
-    # 🧑‍🏫 교양: prev_gyoyang5 다음부터 회전해 정확히 2명(1,2교시) 선발
-    gy_cycle = gyoyang_order[:]  # 원본 순번표
-    # 1교시
-    gy1_name_in_cycle = pick_next_from_cycle(gy_cycle, prev_gyoyang5, present_norms)
-    gy1 = present_norm_to_orig.get(normalize_name(gy1_name_in_cycle), "-") if gy1_name_in_cycle else "-"
-    # 2교시 (gy1 바로 다음)
-    # gy1이 없으면 prev_gyoyang5에서 다시 시작
-    base_for_gy2 = gy1_name_in_cycle if gy1_name_in_cycle else prev_gyoyang5
-    # 2교시 후보에서 1교시 정규화 이름 제외
-    present_norms_for_gy2 = present_norms - ({normalize_name(gy1)} if gy1 != "-" else set())
-    gy2_name_in_cycle = pick_next_from_cycle(gy_cycle, base_for_gy2, present_norms_for_gy2)
-    gy2 = present_norm_to_orig.get(normalize_name(gy2_name_in_cycle), "-") if gy2_name_in_cycle else "-"
-
-    # 🔧 1종 수동: prev_sudong 다음부터 회전해 sudong_count명 선발
-    sudong_cycle = sudong_order[:]
-    sud_list = []
-    last_pick = prev_sudong if prev_sudong in sudong_cycle else None
-    allowed_for_sudong = set(present_norms)  # (원하면 교양자 제외하려면 여기서 제거)
-    for _ in range(sudong_count):
-        pick = pick_next_from_cycle(sudong_cycle, last_pick, allowed_for_sudong)
-        if not pick: break
-        pick_orig = present_norm_to_orig.get(normalize_name(pick))
-        if pick_orig:
-            sud_list.append(pick_orig)
-            allowed_for_sudong -= {normalize_name(pick_orig)}
-            last_pick = pick
-        else:
-            break
-
-    # 🚗 2종 자동: 오전 전체 - (1종수동 배정자)
-    sud_norm_set = {normalize_name(x) for x in sud_list}
-    two_auto = [x for x in morning_list if present_orig_to_norm.get(x) in (present_norms - sud_norm_set)]
-
-    # 오후 교양 순번 계산용으로 저장 (오전 2교시 교양자)
-    st.session_state.gy2 = gy2 if gy2 != "-" else ""
-
-# gy1, gy2가 미리 None일 수도 있으니 안전 처리
-gy1 = gy1 if 'gy1' in locals() else "-"
-gy2 = gy2 if 'gy2' in locals() else "-"
-
-# 괄호 제거 버전 미리 계산
+# 항상 안전하게 출력
 gy1_clean = re.sub(r"\(.*?\)", "", str(gy1)).strip() if gy1 != "-" else "-"
 gy2_clean = re.sub(r"\(.*?\)", "", str(gy2)).strip() if gy2 != "-" else "-"
 
@@ -383,7 +364,6 @@ for nm in two_auto:
     lines.append(f" - {format_name_with_car(nm, veh2)}")
 
 st.code("\n".join(lines), language="text")
-
 
 
 # -------------------------
