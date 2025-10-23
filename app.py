@@ -87,13 +87,13 @@ default_cha2 = """4호 김남균
 19호 김주현
 22호 조정래"""
 
-with st.sidebar.expander("🔑 열쇠 순번 보기 / 수정", expanded=False):
+with st.sidebar.expander("열쇠 순번 보기 / 수정", expanded=False):
     key_order = _list(st.text_area("열쇠 순번", default_key, height=160))
 
-with st.sidebar.expander("📚 교양 순번 보기 / 수정", expanded=False):
+with st.sidebar.expander("교양 순번 보기 / 수정", expanded=False):
     gyoyang_order = _list(st.text_area("교양 순번", default_gyoyang, height=160))
 
-with st.sidebar.expander("🧰 1종 수동 순번 보기 / 수정", expanded=False):
+with st.sidebar.expander("1종 수동 순번 보기 / 수정", expanded=False):
     sudong_order = _list(st.text_area("1종 수동 순번", default_sudong, height=160))
 
 
@@ -107,10 +107,10 @@ def parse_vehicle_map(text):
             m[name] = car
     return m
 
-with st.sidebar.expander("🚗 1종 수동 차량표 보기 / 수정", expanded=False):
+with st.sidebar.expander("1종 수동 차량표 보기 / 수정", expanded=False):
     veh1 = parse_vehicle_map(st.text_area("1종 수동 차량표", default_cha1, height=120))
 
-with st.sidebar.expander("🚙 2종 자동 차량표 보기 / 수정", expanded=False):
+with st.sidebar.expander("2종 자동 차량표 보기 / 수정", expanded=False):
     veh2 = parse_vehicle_map(st.text_area("2종 자동 차량표", default_cha2, height=180))
 
 sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
@@ -271,12 +271,12 @@ def gpt_extract(img_bytes, want_early=False, want_late=False):
 # =====================================
 st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
-with col1: m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
-with col2: a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
+with col1: m_file = st.file_uploader("오전 근무표", type=["png","jpg","jpeg"])
+with col2: a_file = st.file_uploader("오후 근무표", type=["png","jpg","jpeg"])
 
 b1, b2 = st.columns(2)
 with b1:
-    if st.button("🧠 오전 GPT 인식"):
+    if st.button("오전 근무지 인식"):
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
@@ -287,7 +287,7 @@ with b1:
                 st.success(f"오전 인식: {len(m_names)}명, 외출 {len(late)}명")
             st.rerun()
 with b2:
-    if st.button("🧠 오후 GPT 인식"):
+    if st.button("오후 근무지 인식"):
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
@@ -334,7 +334,7 @@ if st.button("📋 오전 배정 생성"):
         gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - ({gy1_norm} if gy1_norm else set()))
         st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
 
-        # 🔧 1종 수동 (인원수 반영)
+        # 1종 수동 (인원수 반영)
         sud_m, last = [], prev_sudong
         for _ in range(sudong_count):
             pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
