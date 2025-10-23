@@ -1,17 +1,16 @@
-# app.py — 도로주행 근무자동배정 v7.9 완전본
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os
 
-# =========================
-# 기본 설정
-# =========================
+# =====================================
+# 페이지 설정
+# =====================================
 st.set_page_config(page_title="도로주행 근무자동배정", layout="wide")
 st.markdown("<h3 style='text-align:center; font-size:22px;'>🚗 도로주행 근무자동배정</h3>", unsafe_allow_html=True)
 
-# =========================
+# =====================================
 # OpenAI 초기화
-# =========================
+# =====================================
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
 except Exception:
@@ -19,9 +18,9 @@ except Exception:
     st.stop()
 MODEL_NAME = "gpt-4o"
 
-# =========================
-# 전일 기준 로드
-# =========================
+# =====================================
+# 전일 기준 불러오기
+# =====================================
 PREV_FILE = "전일근무.json"
 prev_key = prev_gyoyang5 = prev_sudong = ""
 if os.path.exists(PREV_FILE):
@@ -35,9 +34,9 @@ if os.path.exists(PREV_FILE):
     except Exception as e:
         st.warning(f"전일근무.json 불러오기 실패: {e}")
 
-# =========================
-# 사이드바
-# =========================
+# =====================================
+# 사이드바 입력
+# =====================================
 st.sidebar.header("순번표 / 차량표 / 옵션")
 
 def _list(s): return [x.strip() for x in s.splitlines() if x.strip()]
@@ -108,23 +107,9 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 excluded = {x.strip() for x in st.sidebar.text_area("휴가/교육자 (한 줄당 한 명)", height=100).splitlines() if x.strip()}
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 
-# 전일값 수정/저장 (사이드바)
-st.sidebar.markdown("---")
-st.sidebar.subheader("🗓 전일값 확인/수정")
-prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("전일 교양5", value=prev_gyoyang5)
-prev_sudong = st.sidebar.text_input("전일 1종수동", value=prev_sudong)
-if st.sidebar.button("💾 전일값 저장"):
-    try:
-        with open(PREV_FILE, "w", encoding="utf-8") as f:
-            json.dump({"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong}, f, ensure_ascii=False, indent=2)
-        st.sidebar.success("저장 완료")
-    except Exception as e:
-        st.sidebar.error(f"저장 실패: {e}")
-
-# =========================
+# =====================================
 # 유틸 함수
-# =========================
+# =====================================
 def normalize_name(s):
     return re.sub(r"[^가-힣]", "", re.sub(r"\(.*?\)", "", s or ""))
 
@@ -154,7 +139,6 @@ def get_vehicle(name, veh_map):
             return v
     return ""
 
-# 조퇴 반영
 def can_attend_period(name_pure: str, period:int, early_list):
     """3=13:00, 4=14:30, 5=16:00 이전 조퇴면 해당 교시 불가(건너뜀)"""
     tmap = {3: 13.0, 4: 14.5, 5: 16.0}
@@ -167,9 +151,9 @@ def can_attend_period(name_pure: str, period:int, early_list):
             return t > tmap[period]
     return True
 
-# =========================
+# =====================================
 # GPT OCR
-# =========================
+# =====================================
 def gpt_extract(img_bytes, want_early=False):
     b64 = base64.b64encode(img_bytes).decode()
     user = (
@@ -201,17 +185,14 @@ def gpt_extract(img_bytes, want_early=False):
         st.error(f"OCR 실패: {e}")
         return [], []
 
-# =========================
-# 1) 이미지 업로드 & OCR
-# =========================
+# =====================================
+# 1️⃣ 이미지 업로드 & OCR
+# =====================================
 st.markdown("<h4 style='font-size:18px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
-c1, c2 = st.columns(2)
-with c1:
-    m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
-with c2:
-    a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
+col1, col2 = st.columns(2)
+with col1: m_file = st.file_uploader("📸 오전 근무표", type=["png","jpg","jpeg"])
+with col2: a_file = st.file_uploader("📸 오후 근무표", type=["png","jpg","jpeg"])
 
-# 버튼 나란히
 b1, b2 = st.columns(2)
 with b1:
     if st.button("🧠 오전 GPT 인식"):
@@ -235,16 +216,15 @@ with b2:
                 st.success(f"오후 인식: {len(a_names)}명, 조퇴 {len(early)}명")
             st.rerun()
 
-# =========================
-# 2) 인식 결과 확인/수정
-# =========================
+# =====================================
+# 2️⃣ 인식 결과 확인/수정
+# =====================================
 st.markdown("<h4 style='font-size:18px;'>2️⃣ 인식 결과 확인/수정</h4>", unsafe_allow_html=True)
-d1, d2 = st.columns(2)
-with d1:
+c3, c4 = st.columns(2)
+with c3:
     morning = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=150)
-with d2:
+with c4:
     afternoon = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=150)
-
 m_list = [x.strip() for x in morning.splitlines() if x.strip()]
 a_list = [x.strip() for x in afternoon.splitlines() if x.strip()]
 early_leave = st.session_state.get("early_leave", [])
@@ -252,50 +232,35 @@ early_leave = st.session_state.get("early_leave", [])
 m_norms = {normalize_name(x) for x in m_list} - {normalize_name(x) for x in excluded}
 a_norms = {normalize_name(x) for x in a_list} - {normalize_name(x) for x in excluded}
 
-# =========================
-# 3) 오전 배정
-# =========================
+# =====================================
+# 3️⃣ 오전 배정
+# =====================================
 st.markdown("<h4 style='font-size:18px;'>3️⃣ 오전 근무 배정</h4>", unsafe_allow_html=True)
 if st.button("📋 오전 배정 생성"):
     try:
-        # 🔑 열쇠 (하루 1회, 휴가/교육 제외)
         key_filtered = [x for x in key_order if normalize_name(x) not in {normalize_name(e) for e in excluded}]
         today_key = key_filtered[(key_filtered.index(prev_key)+1) % len(key_filtered)] if (key_filtered and prev_key in key_filtered) else (key_filtered[0] if key_filtered else "")
         st.session_state.today_key = today_key
 
-        # 🧑‍🏫 교양 1·2교시
         gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
         gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - {normalize_name(gy1)})
-
-        # 오후 교양 시작 포인터 저장(오전 2교시 기준)
         st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
 
-        # 🔧 1종 수동: sudong_count 적용
+        # 🔧 1종 수동(정상 로직)
         sud_m, last = [], prev_sudong
         for _ in range(sudong_count):
             pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
             if not pick: break
-            sud_m.append(pick); last = pick
+            sud_m.append(pick)
+            last = pick
+        st.session_state["sudong_base_for_pm"] = sud_m[-1] if sud_m else prev_sudong
 
-        # 오후 1종 시작 포인터(정규화) 저장
-        if sud_m:
-            st.session_state["sudong_base_for_pm_norm"] = normalize_name(sud_m[-1])
-        else:
-            st.session_state["sudong_base_for_pm_norm"] = normalize_name(prev_sudong) if prev_sudong else None
-
-        # 🚗 2종 자동(오전): 전체 - 1종 (교양 포함)
         sud_norms = {normalize_name(x) for x in sud_m}
         auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
-
-        # 오전 2종 차량 세션 저장(미배정 차량 계산용)
         st.session_state.morning_cars = [get_vehicle(x, veh2) for x in auto_m if get_vehicle(x, veh2)]
         st.session_state.morning_auto_names = auto_m
 
-        # === 출력 ===
-        lines = []
-        if today_key: lines.append(f"열쇠: {today_key}")
-        if gy1: lines.append(f"1교시: {gy1}")
-        if gy2: lines.append(f"2교시: {gy2}")
+        lines = [f"열쇠: {today_key}", f"1교시: {gy1}", f"2교시: {gy2}"]
         if sud_m:
             for nm in sud_m:
                 lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
@@ -306,29 +271,22 @@ if st.button("📋 오전 배정 생성"):
             for nm in auto_m:
                 lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2))}")
 
-        st.markdown("<h5 style='font-size:16px;'>📋 오전 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
-        st.download_button("📥 오전 결과 저장", "\n".join(lines).encode("utf-8-sig"), file_name="오전근무배정.txt")
-
     except Exception as e:
         st.error(f"오전 오류: {e}")
 
-# =========================
-# 4) 오후 배정 (+ 비교/미배정 차량 + 저장체크)
-# =========================
+# =====================================
+# 4️⃣ 오후 배정
+# =====================================
 st.markdown("<h4 style='font-size:18px;'>4️⃣ 오후 근무 배정</h4>", unsafe_allow_html=True)
 save_check = st.checkbox("이 결과를 '전일 기준'으로 저장 (전일근무.json 덮어쓰기)", value=True)
 
 if st.button("📋 오후 배정 생성"):
     try:
         today_key = st.session_state.get("today_key", prev_key)
+        gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5)
+        if not gy_start: gy_start = gyoyang_order[0] if gyoyang_order else None
 
-        # 오후 교양 시작 포인터: 오전 2교시(없으면 전일 5교시)
-        gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5 if prev_gyoyang5 in gyoyang_order else None)
-        if not gy_start:
-            gy_start = gyoyang_order[0] if gyoyang_order else None
-
-        # 🧑‍🏫 오후 교양 3·4·5교시 (조퇴 반영)
         used = set()
         gy3 = gy4 = gy5 = None
         last_ptr = gy_start
@@ -345,30 +303,18 @@ if st.button("📋 오후 배정 생성"):
                     used.add(normalize_name(nm))
                     break
 
-        # 🔧 오후 1종 수동: 오전 마지막 1종 다음(정규화 포인터 사용)
+        # ✅ 오후 1종 수동: v7.6 방식 복귀
         sud_a_list = []
-        base_norm = st.session_state.get("sudong_base_for_pm_norm", None)
-        sud_order_norm = [normalize_name(x) for x in sudong_order]
-        if base_norm and base_norm in sud_order_norm:
-            base_resolved = sudong_order[sud_order_norm.index(base_norm)]
-        else:
-            base_resolved = prev_sudong if prev_sudong in sudong_order else None
-
-        pick = pick_next_from_cycle(sudong_order, base_resolved, a_norms - used)
+        base_raw = st.session_state.get("sudong_base_for_pm", None) or prev_sudong
+        pick = pick_next_from_cycle(sudong_order, base_raw, a_norms - used)
         if pick:
             sud_a_list.append(pick)
             used.add(normalize_name(pick))
 
-        # 🚗 2종 자동(오후): 전체 - 1종 (교양 포함)
         sud_a_norms = {normalize_name(x) for x in sud_a_list}
         auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-        # === 출력 ===
-        lines = []
-        if today_key: lines.append(f"열쇠: {today_key}")
-        if gy3: lines.append(f"3교시: {gy3}")
-        if gy4: lines.append(f"4교시: {gy4}")
-        if gy5: lines.append(f"5교시: {gy5}")
+        lines = [f"열쇠: {today_key}", f"3교시: {gy3}", f"4교시: {gy4}", f"5교시: {gy5}"]
         if sud_a_list:
             for nm in sud_a_list:
                 lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
@@ -379,56 +325,31 @@ if st.button("📋 오후 배정 생성"):
             for nm in auto_a:
                 lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2))}")
 
-        # 조퇴자
-        if early_leave:
-            lines.append("조퇴자:")
-            for e in early_leave:
-                name = e.get("name","")
-                try:
-                    t = float(e.get("time", None))
-                except:
-                    t = None
-                if t is None: continue
-                t_str = "14시30분~" if abs(t-14.5) < 1e-6 else f"{int(t)}시~"
-                lines.append(f" • {name}({t_str})")
-
-        # === 오전 대비 비교 ===
+        # 비교
         lines.append("오전 대비 비교:")
         morning_names = set(st.session_state.get("morning_auto_names", []))
         afternoon_names = set(auto_a)
         added = sorted(list(afternoon_names - morning_names))
         missing = sorted(list(morning_names - afternoon_names))
-        if added:
-            lines.append(" • 추가 인원: " + ", ".join(added))
-        if missing:
-            lines.append(" • 누락 인원: " + ", ".join(missing))
+        if added: lines.append(" • 추가 인원: " + ", ".join(added))
+        if missing: lines.append(" • 누락 인원: " + ", ".join(missing))
 
-        # 미배정 차량: 오전 2종에 있었는데 오후 2종에 없는 차량 → “14호 마감”
+        # 미배정 차량
         morning_cars = set(st.session_state.get("morning_cars", []))
         afternoon_cars = {get_vehicle(x, veh2) for x in auto_a if get_vehicle(x, veh2)}
-        unassigned_cars = [c for c in morning_cars if c and c not in afternoon_cars]
-        if unassigned_cars:
+        unassigned = [c for c in morning_cars if c and c not in afternoon_cars]
+        if unassigned:
             lines.append("미배정 차량:")
-            for c in sorted(unassigned_cars):
+            for c in sorted(unassigned):
                 lines.append(f" • {c} 마감")
 
-        st.markdown("<h5 style='font-size:16px;'>📋 오후 결과</h5>", unsafe_allow_html=True)
         st.code("\n".join(lines), language="text")
-        st.download_button("📥 오후 결과 저장", "\n".join(lines).encode("utf-8-sig"), file_name="오후근무배정.txt")
 
-        # ✅ 저장 (원래 방식): 체크박스가 켜져 있으면 즉시 저장
+        # 저장
         if save_check:
-            to_store = {
+            data = {
                 "열쇠": today_key,
                 "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
-                "1종수동": (sud_a_list[-1] if sud_a_list else prev_sudong)
+                "1종수동": sud_a_list[-1] if sud_a_list else prev_sudong
             }
-            try:
-                with open(PREV_FILE, "w", encoding="utf-8") as f:
-                    json.dump(to_store, f, ensure_ascii=False, indent=2)
-                st.success("전일근무.json 업데이트 완료")
-            except Exception as e:
-                st.error(f"전일 저장 실패: {e}")
-
-    except Exception as e:
-        st.error(f"오후 오류: {e}")
+            with open
