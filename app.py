@@ -306,11 +306,18 @@ if st.button("📋 오전 배정 생성"):
         if today_key: lines.append(f"열쇠: {today_key}")
         if gy1: lines.append(f"1교시: {gy1}")
         if gy2: lines.append(f"2교시: {gy2}")
+                # 🔧 1종 수동 출력
         if sud_m:
             for nm in sud_m:
                 lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
+            # ⚠️ 배정된 인원이 설정값보다 적을 경우 안내 문구 출력
+            if sudong_count == 2 and len(sud_m) < 2:
+                lines.append("※ 수동 가능 인원이 1명입니다.")
         else:
             lines.append("1종수동: (배정자 없음)")
+            if sudong_count >= 1:
+                lines.append("※ 수동 가능 인원이 0명입니다.")
+
         if auto_m:
             lines.append("2종 자동:")
             for nm in auto_m:
@@ -375,11 +382,17 @@ if st.button("📋 오후 배정 생성"):
         if gy3: lines.append(f"3교시: {gy3}")
         if gy4: lines.append(f"4교시: {gy4}")
         if gy5: lines.append(f"5교시: {gy5}")
+        # 🔧 오후 1종 수동 출력
         if sud_a_list:
             for nm in sud_a_list:
-                lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
+            lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1))}")
+        if sudong_count == 2 and len(sud_a_list) < 2:
+            lines.append("※ 수동 가능 인원이 1명입니다.")
         else:
             lines.append("1종수동: (배정자 없음)")
+            if sudong_count >= 1:
+                lines.append("※ 수동 가능 인원이 0명입니다.")
+
         if auto_a:
             lines.append("2종 자동:")
             for nm in auto_a:
