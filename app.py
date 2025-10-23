@@ -337,9 +337,9 @@ if st.button("📋 오전 배정 생성"):
                 last = pick
        # 오전 1종 수동 마지막 선택자를 오후 기준으로 넘김 (순수 이름으로 저장)
        if sud_m:
-    st.session_state["sudong_base_for_pm"] = sud_m[-1]
-else:
-    st.session_state["sudong_base_for_pm"] = prev_sudong
+            st.session_state["sudong_base_for_pm"] = sud_m[-1]
+        else:
+            st.session_state["sudong_base_for_pm"] = prev_sudong
 
     
         # 🚗 2종 자동 (오전): 전체 - 1종 (교양 포함)
