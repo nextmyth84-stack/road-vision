@@ -87,9 +87,15 @@ default_cha2 = """4호 김남균
 19호 김주현
 22호 조정래"""
 
-key_order = _list(st.sidebar.text_area("열쇠 순번", default_key, height=160))
-gyoyang_order = _list(st.sidebar.text_area("교양 순번", default_gyoyang, height=160))
-sudong_order = _list(st.sidebar.text_area("1종 수동 순번", default_sudong, height=160))
+with st.sidebar.expander("🔑 열쇠 순번 보기 / 수정", expanded=False):
+    key_order = _list(st.text_area("열쇠 순번", default_key, height=160))
+
+with st.sidebar.expander("📚 교양 순번 보기 / 수정", expanded=False):
+    gyoyang_order = _list(st.text_area("교양 순번", default_gyoyang, height=160))
+
+with st.sidebar.expander("🧰 1종 수동 순번 보기 / 수정", expanded=False):
+    sudong_order = _list(st.text_area("1종 수동 순번", default_sudong, height=160))
+
 
 def parse_vehicle_map(text):
     m = {}
@@ -101,8 +107,11 @@ def parse_vehicle_map(text):
             m[name] = car
     return m
 
-veh1 = parse_vehicle_map(st.sidebar.text_area("1종 수동 차량표", default_cha1, height=120))
-veh2 = parse_vehicle_map(st.sidebar.text_area("2종 자동 차량표", default_cha2, height=180))
+with st.sidebar.expander("🚗 1종 수동 차량표 보기 / 수정", expanded=False):
+    veh1 = parse_vehicle_map(st.text_area("1종 수동 차량표", default_cha1, height=120))
+
+with st.sidebar.expander("🚙 2종 자동 차량표 보기 / 수정", expanded=False):
+    veh2 = parse_vehicle_map(st.text_area("2종 자동 차량표", default_cha2, height=180))
 
 sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
 excluded = {x.strip() for x in st.sidebar.text_area("휴가/교육자 (한 줄당 한 명)", height=100).splitlines() if x.strip()}
