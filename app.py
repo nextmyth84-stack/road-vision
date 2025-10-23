@@ -341,7 +341,6 @@ if st.button("📋 오전 배정 생성"):
         else:
             st.session_state["sudong_base_for_pm"] = prev_sudong
 
-    
         # 🚗 2종 자동 (오전): 전체 - 1종 (교양 포함)
         sud_norms = {normalize_name(x) for x in sud_m}
         auto_m = [v[1] for k, v in present_m.items() if (k in allow_m) and (k not in sud_norms)]
