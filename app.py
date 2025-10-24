@@ -357,6 +357,25 @@ elif section == "전일 근무자":
 # 탭 UI 구성 (오전 / 오후 분리)
 # -----------------------
 tab1, tab2 = st.tabs(["🌅 오전 근무", "🌇 오후 근무"])
+st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px; /* 탭 간격 */
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 16px;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+        background-color: #f0f2f6;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: white !important;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # =====================================
 # 🌅 오전 근무 탭
@@ -391,7 +410,7 @@ with tab1:
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (자동 추출 후 수정 가능)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (수정 가능)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area(
         "근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120
     )
