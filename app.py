@@ -152,7 +152,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                 ]}
             ]
         )
-       raw = res.choices[0].message.content or ""
+        raw = res.choices[0].message.content or ""
         m = re.search(r"\{.*\}", raw, re.S)
         js = {}
         if m:
