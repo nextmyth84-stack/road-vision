@@ -283,21 +283,11 @@ st.sidebar.header("📂 데이터 관리 (간결 버전)")
 # 선택 메뉴
 section = st.sidebar.selectbox(
     "수정할 항목 선택",
-    ["열쇠 순번", "교양 순번", "1종 수동 순번", "1종 수동 차량표", "2종 자동 차량표", "전체 근무자", "전일 근무자"]
+    ["전일 근무자", "열쇠 순번", "교양 순번", "1종 수동 순번", "1종 수동 차량표", "2종 자동 차량표", "전체 근무자"],
+    index=0  # 기본 선택 인덱스 0 → 전일 근무자
 )
 
-if section == "전일 근무자":
-    prev_data = load_json(PREV_FILE, {"열쇠": "", "교양_5교시": "", "1종수동": ""})
-    prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", value=prev_data.get("열쇠", ""))
-    prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시", value=prev_data.get("교양_5교시", ""))
-    prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동", value=prev_data.get("1종수동", ""))
-    if st.sidebar.button("💾 저장"):
-        save_json(PREV_FILE, {
-            "열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong
-        })
-        st.sidebar.success("전일 근무자 정보 저장 완료")
-        
-elif section == "열쇠 순번":
+if section == "열쇠 순번":
     text = st.sidebar.text_area("🔑 열쇠 순번", "\n".join(key_order), height=200)
     new_data = [x.strip() for x in text.splitlines() if x.strip()]
     if st.sidebar.button("💾 저장"):
@@ -348,6 +338,17 @@ elif section == "전체 근무자":
     if st.sidebar.button("💾 저장"):
         save_json(files["employees"], new_data)
         st.sidebar.success("전체 근무자 저장 완료")
+
+elif section == "전일 근무자":
+    prev_data = load_json(PREV_FILE, {"열쇠": "", "교양_5교시": "", "1종수동": ""})
+    prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", value=prev_data.get("열쇠", ""))
+    prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시", value=prev_data.get("교양_5교시", ""))
+    prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동", value=prev_data.get("1종수동", ""))
+    if st.sidebar.button("💾 저장"):
+        save_json(PREV_FILE, {
+            "열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong
+        })
+        st.sidebar.success("전일 근무자 정보 저장 완료")
 
 
 
