@@ -416,7 +416,7 @@ with tab1:
     )
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
-    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:16px;'>🌅 오전 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
         "오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220
     )
