@@ -19,43 +19,7 @@ st.markdown("""
 </p>
 """, unsafe_allow_html=True)
 
-# -----------------------
-# 사이드바 디자인 + 하단 제작자 표시
-# -----------------------
-st.sidebar.markdown("""
-<style>
-section[data-testid="stSidebar"] {
-    background-color: #f8fafc;
-    padding: 10px;
-    border-right: 1px solid #e5e7eb;
-}
-.streamlit-expanderHeader {
-    font-weight: 700 !important;
-    color: #1e3a8a !important;
-    font-size: 15px !important;
-}
-div.stButton > button {
-    background-color: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 12px;
-    margin-top: 6px;
-    font-weight: 600;
-}
-div.stButton > button:hover {
-    background-color: #1d4ed8;
-}
-.sidebar-subtitle {
-    font-weight: 600;
-    color: #334155;
-    margin-top: 10px;
-    margin-bottom: 4px;
-}
-</style>
-""", unsafe_allow_html=True)
 
-st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정 메뉴</h3>", unsafe_allow_html=True)
 
 # 🔹 아래쪽에 제작자 표시
 st.sidebar.markdown("---")
