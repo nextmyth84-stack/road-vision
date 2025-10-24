@@ -366,7 +366,7 @@ st.markdown("""
         gap: 12px; /* 탭 간격 */
     }
     .stTabs [data-baseweb="tab"] {
-        font-size: 20px;
+        font-size: 20px; !important
         padding: 16px 40px;
         border-radius: 10px 10px 0 0;
         background-color: #d1d5db;
