@@ -354,13 +354,6 @@ cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 �
 
 
 
-# 세션 최신화
-st.session_state.update({
-    "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
-    "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
-    "sudong_count": sudong_count, "repair_cars": repair_cars, "cutoff": cutoff
-})
-
 # -----------------------
 # 탭 UI 구성 (오전 / 오후 분리)
 # -----------------------
