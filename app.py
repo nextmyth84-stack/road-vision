@@ -111,6 +111,23 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
             best_score, best = score, cand
     return best if best and best_score >= cutoff else name
 
+# =====================================
+# 세션 기본값 초기화 (KeyError 방지)
+# =====================================
+default_session = {
+    "employee_list": [],
+    "cutoff": 0.6,
+    "key_order": [],
+    "gyoyang_order": [],
+    "sudong_order": [],
+    "veh1": {},
+    "veh2": {},
+}
+for k, v in default_session.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+
 # -----------------------
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
