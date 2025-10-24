@@ -58,7 +58,7 @@ def _apply_ocr_fixups(s):
         s = s.replace(k, v)
     return s
 
-def correct_name(name, valid_names, cutoff=0.65):
+def correct_name(name, valid_names, cutoff=0.6):
     """OCR 교정 — 근무자명단 기반 근사 교정"""
     if not valid_names:
         return name
