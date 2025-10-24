@@ -91,7 +91,7 @@ def hangul_similarity(a, b):
         score += s
     return score / total
 
-def correct_name_v2(name, valid_names, cutoff=0.63):
+def correct_name_v2(name, valid_names, cutoff=0.6):
     """전체 근무자 기준 고급 오타 교정"""
     if not name or not valid_names:
         return name
