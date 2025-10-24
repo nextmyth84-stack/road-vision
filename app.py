@@ -251,63 +251,75 @@ veh1_map = load_json(files["veh1"])
 veh2_map = load_json(files["veh2"])
 employee_list = load_json(files["employees"])
 
-# -----------------------
-# 사이드바
-# -----------------------
-st.sidebar.header("📂 데이터 관리")
-with st.sidebar.expander("🔑 열쇠 순번", expanded=False):
-    t = st.text_area("열쇠 순번", "\n".join(key_order), height=180)
-    if st.button("저장 (열쇠 순번)"):
-        save_json(files["열쇠"], [x.strip() for x in t.splitlines() if x.strip()])
-        key_order = load_json(files["열쇠"]); st.success("열쇠 순번 저장 완료")
+# =====================================
+# 사이드바 — JSON 기반 순번/차량/근무자 관리 (토글 확장)
+# =====================================
+st.sidebar.header("⚙️ 설정 및 데이터 관리")
 
-with st.sidebar.expander("📘 교양 순번", expanded=False):
-    t = st.text_area("교양 순번", "\n".join(gyoyang_order), height=180)
-    if st.button("저장 (교양 순번)"):
-        save_json(files["교양"], [x.strip() for x in t.splitlines() if x.strip()])
-        gyoyang_order = load_json(files["교양"]); st.success("교양 순번 저장 완료")
+# 파일 로드
+key_order   = load_json(files["열쇠"], ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조윤영","조정래"])
+gyoyang_order = load_json(files["교양"], ["권한솔","김남균","김면정","김병욱","김성연","김주현","김지은","안유미","이호석","조정래"])
+sudong_order  = load_json(files["1종"], ["권한솔","김남균","김성연","김주현","이호석","조정래"])
+veh1_map = load_json(files["veh1"], {"2호":"조정래","5호":"권한솔","7호":"김남균","8호":"이호석","9호":"김주현","10호":"김성연"})
+veh2_map = load_json(files["veh2"], {"4호":"김남균","5호":"김병욱","6호":"김지은","12호":"안유미","14호":"김면정","15호":"이호석","17호":"김성연","18호":"권한솔","19호":"김주현","22호":"조정래"})
+all_employees = load_json(files["employees"], ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조윤영","조정래","김병욱","김주현"])
 
-with st.sidebar.expander("🧰 1종 수동 순번", expanded=False):
-    t = st.text_area("1종 수동 순번", "\n".join(sudong_order), height=180)
-    if st.button("저장 (1종 수동 순번)"):
-        save_json(files["1종"], [x.strip() for x in t.splitlines() if x.strip()])
-        sudong_order = load_json(files["1종"]); st.success("1종 수동 순번 저장 완료")
+# 🔽 토글형 편집 UI
+with st.sidebar.expander("🧭 순번표 (열쇠 / 교양 / 1종 수동)", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        new_key = st.text_area("열쇠 순번", "\n".join(key_order), height=180)
+    with col2:
+        new_gyo = st.text_area("교양 순번", "\n".join(gyoyang_order), height=180)
+    with col3:
+        new_sud = st.text_area("1종 수동 순번", "\n".join(sudong_order), height=180)
+    if st.button("💾 순번표 저장"):
+        save_json(files["열쇠"], [x.strip() for x in new_key.splitlines() if x.strip()])
+        save_json(files["교양"], [x.strip() for x in new_gyo.splitlines() if x.strip()])
+        save_json(files["1종"], [x.strip() for x in new_sud.splitlines() if x.strip()])
+        st.success("✅ 순번표 저장 완료")
 
-with st.sidebar.expander("🚗 1종 수동 차량표", expanded=False):
-    t = "\n".join([f"{car} {nm}" for car, nm in veh1_map.items()])
-    t_new = st.text_area("1종 수동 차량표 (차량 공백 이름)", t, height=180)
-    if st.button("저장 (1종 차량표)"):
-        new_map = {}
-        for line in t_new.splitlines():
-            p = line.strip().split()
-            if len(p) >= 2:
-                new_map[p[0]] = " ".join(p[1:])
-        save_json(files["veh1"], new_map)
-        veh1_map = load_json(files["veh1"]); st.success("1종 수동 차량표 저장 완료")
+# 차량표
+with st.sidebar.expander("🚗 차량표 관리", expanded=False):
+    c1, c2 = st.columns(2)
+    with c1:
+        veh1_text = "\n".join([f"{k} {v}" for k,v in veh1_map.items()])
+        new_v1 = st.text_area("1종 수동 차량표", veh1_text, height=150)
+    with c2:
+        veh2_text = "\n".join([f"{k} {v}" for k,v in veh2_map.items()])
+        new_v2 = st.text_area("2종 자동 차량표", veh2_text, height=150)
+    if st.button("💾 차량표 저장"):
+        def parse_map(t):
+            m = {}
+            for line in t.splitlines():
+                p=line.strip().split()
+                if len(p)>=2: m[p[0]]=p[1]
+            return m
+        save_json(files["veh1"], parse_map(new_v1))
+        save_json(files["veh2"], parse_map(new_v2))
+        st.success("✅ 차량표 저장 완료")
 
-with st.sidebar.expander("🚘 2종 자동 차량표", expanded=False):
-    t = "\n".join([f"{car} {nm}" for car, nm in veh2_map.items()])
-    t_new = st.text_area("2종 자동 차량표 (차량 공백 이름)", t, height=180)
-    if st.button("저장 (2종 차량표)"):
-        new_map = {}
-        for line in t_new.splitlines():
-            p = line.strip().split()
-            if len(p) >= 2:
-                new_map[p[0]] = " ".join(p[1:])
-        save_json(files["veh2"], new_map)
-        veh2_map = load_json(files["veh2"]); st.success("2종 자동 차량표 저장 완료")
+# 전체 근무자 명단
+with st.sidebar.expander("👥 전체 근무자 관리", expanded=False):
+    emp_text = "\n".join(all_employees)
+    new_emp = st.text_area("근무자 명단", emp_text, height=220)
+    if st.button("💾 근무자 저장"):
+        save_json(files["employees"], [x.strip() for x in new_emp.splitlines() if x.strip()])
+        st.success("✅ 근무자 명단 저장 완료")
 
-with st.sidebar.expander("👥 전체 근무자 명단", expanded=False):
-    t = st.text_area("전체 근무자 명단", "\n".join(employee_list), height=200)
-    if st.button("저장 (전체 근무자)"):
-        save_json(files["employees"], [x.strip() for x in t.splitlines() if x.strip()])
-        employee_list = load_json(files["employees"]); st.success("전체 근무자 저장 완료")
+# 옵션 설정
+sudong_count = st.sidebar.radio("1종 수동 인원수", [1,2], index=0)
+repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)").split(",") if x.strip()]
 
-sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0)
-repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
-cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
-
-st.sidebar.info(f"전일 기준 → 열쇠:{prev_key or '-'}, 교양5:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
+# 전일값 수정
+st.sidebar.markdown("---")
+st.sidebar.subheader("🗓 전일값 확인/수정")
+prev_key = st.sidebar.text_input("전일 열쇠", value=prev_key)
+prev_gy5 = st.sidebar.text_input("전일 교양5", value=prev_gy5)
+prev_sud = st.sidebar.text_input("전일 1종수동", value=prev_sud)
+if st.sidebar.button("💾 전일값 저장"):
+    save_json(PREV_FILE, {"열쇠": prev_key, "교양_5교시": prev_gy5, "1종수동": prev_sud})
+    st.sidebar.success("✅ 전일값 저장 완료")
 
 # 세션 최신화
 st.session_state.update({
