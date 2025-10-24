@@ -360,7 +360,26 @@ cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 �
 # -----------------------
 tab1, tab2 = st.tabs(["🌅 오전 근무", "🌇 오후 근무"])
 
-# =====================================
+st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px; /* 탭 간격 */
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 16px;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+        background-color: #d1d5db;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2563eb !important;
+        color: white !important;
+        font-weight: 600;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+=========
 # 🌅 오전 근무 탭
 # =====================================
 with tab1:
