@@ -40,14 +40,13 @@ def save_json(file, data):
     except Exception as e:
         st.error(f"저장 실패: {e}")
 
-# -----------------------
-# 전일 기준 로드
-# -----------------------
-PREV_FILE = "전일근무.json"
-prev_data = load_json(PREV_FILE, {"열쇠": "", "교양_5교시": "", "1종수동": ""})
-prev_key = prev_data.get("열쇠", "")
-prev_gyoyang5 = prev_data.get("교양_5교시", "")
-prev_sudong = prev_data.get("1종수동", "")
+# 전일근무 불러오기
+prev_data = load_json(PREV_FILE, {"열쇠":"","교양_5교시":"","1종수동":""})
+prev_key = prev_data.get("열쇠","")
+prev_gy5 = prev_data.get("교양_5교시","")
+prev_sd = prev_data.get("1종수동","")
+st.sidebar.markdown("---")
+st.sidebar.info(f"전일 기준 → 열쇠:{prev_key or '-'}, 교양5:{prev_gy5 or '-'}, 1종:{prev_sd or '-'}")
 
 # -----------------------
 # 클립보드 복사 (버튼 UI, 모바일 호환)
