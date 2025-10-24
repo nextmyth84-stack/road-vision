@@ -20,15 +20,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-# 🔹 아래쪽에 제작자 표시
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-<p style='text-align:center; font-size:8px; color:#94a3b8;'>
-    powered by <b>wook</b>
-</p>
-""", unsafe_allow_html=True)
-
 # -----------------------
 # OpenAI API 연결
 # -----------------------
@@ -421,7 +412,13 @@ repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표�
 
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
-
+# 🔹 아래쪽에 제작자 표시
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<p style='text-align:center; font-size:8px; color:#94a3b8;'>
+    powered by <b>wook</b>
+</p>
+""", unsafe_allow_html=True)
 
 # 세션 최신화
 st.session_state.update({
