@@ -316,7 +316,12 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0, horizo
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
-st.sidebar.info(f"전일 기준 → 열쇠:{prev_key or '-'}, 교양5:{prev_gyoyang5 or '-'}, 1종:{prev_sudong or '-'}")
+# 전일값 로드/표시
+prev_data = load_json(PREV_FILE, {"열쇠":"", "교양_5교시":"", "1종수동":""})
+prev_key  = prev_data.get("열쇠","")
+prev_gy5  = prev_data.get("교양_5교시","")
+prev_sd   = prev_data.get("1종수동","")
+st.sidebar.info(f"전일 기준 → 열쇠:{prev_key or '-'}, 교양5:{prev_gy5 or '-'}, 1종:{prev_sd or '-'}")
 
 # 세션 최신화
 st.session_state.update({
@@ -597,7 +602,7 @@ with tab2:
             ])
 
             if added:        lines.append(" • 추가 인원: " + ", ".join(added))
-            if missing:      lines.append(" • 빠진 인원: " + ", ".join(missing))
+            if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
             if newly_joined: lines.append(" • 신규 도로주행 인원: " + ", ".join(newly_joined))
 
             # 🚫 미배정 차량
