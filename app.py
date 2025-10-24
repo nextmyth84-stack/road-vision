@@ -9,7 +9,7 @@ import base64, re, json, os, difflib
 # 페이지 설정
 # -----------------------
 st.set_page_config(page_title="도로주행 근무자동배정 v7.40", layout="wide")
-st.markdown("<h3 style='text-align:center; font-size:26px;'>🚗 도로주행 근무자동배정 v7.40</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center; font-size:28px;'>🚗 도로주행 근무자동배정 v7.40</h3>", unsafe_allow_html=True)
 
 # -----------------------
 # OpenAI API 연결
