@@ -294,6 +294,9 @@ if st.sidebar.button("💾 전일근무 수정 저장"):
         json.dump(new_data, f, ensure_ascii=False, indent=2)
     st.sidebar.success("전일 근무자 정보가 수정되었습니다.")
 
+sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0, horizontal=True)
+repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
+
 st.sidebar.header("📂 데이터 관리")
 with st.sidebar.expander("🔑 열쇠 순번", expanded=False):
     t = st.text_area("열쇠 순번", "\n".join(key_order or []), height=180)
@@ -343,8 +346,7 @@ with st.sidebar.expander("👥 전체 근무자 명단", expanded=False):
         save_json(files["employees"], [x.strip() for x in t.splitlines() if x.strip()])
         st.success("전체 근무자 저장 완료"); st.rerun()
 
-sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0, horizontal=True)
-repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
+
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
 
