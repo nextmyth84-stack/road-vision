@@ -390,7 +390,7 @@ with tab1:
     with col2:
         pass
 
-    if st.button("🧠 오전 GPT 인식"):
+    if st.button(" 오전 GPT 인식"):
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
@@ -529,7 +529,7 @@ with tab2:
     with col2:
         pass
 
-    if st.button("🧠 오후 GPT 인식"):
+    if st.button("오후 GPT 인식"):
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
