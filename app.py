@@ -435,6 +435,13 @@ if st.sidebar.button("💾 모든 데이터 저장"):
     save_json("data/전체근무자.json", all_staff)
     st.sidebar.success("모든 데이터 저장 완료 ✅")
 
+# 세션 최신화
+st.session_state.update({
+    "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
+    "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
+    "sudong_count": sudong_count, "repair_cars": repair_cars, "cutoff": cutoff
+})
+
 # -----------------------
 # 탭 UI 구성 (오전 / 오후 분리)
 # -----------------------
