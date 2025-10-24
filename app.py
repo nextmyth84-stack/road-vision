@@ -418,7 +418,7 @@ with tab1:
     )
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
-    st.markdown("<h4 style='font-size:16px;'>🌅 오전 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
         "오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220
     )
@@ -550,7 +550,7 @@ with tab2:
                 st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
 
-    st.markdown("<h4 style='font-size:16px;'>🌇 오후 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
     afternoon_text = st.text_area(
         "오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220
     )
