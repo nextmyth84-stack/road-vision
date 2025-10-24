@@ -14,8 +14,8 @@ st.set_page_config(page_title="도로주행 근무자동배정 v7.4", layout="wi
 # 상단 제목 + 제작자 서명
 st.markdown("""
 <h3 style='text-align:center; color:#1e3a8a;'>🚗 도로주행 근무자동배정 v7.4</h3>
-<p style='text-align:center; font-size:13px; color:#64748b; margin-top:-6px;'>
-    Developed by <b>wook</b> | RoadVision System
+<p style='text-align:center; font-size:8px; color:#64748b; margin-top:-6px;'>
+    Developed by <b>wook</b>
 </p>
 """, unsafe_allow_html=True)
 
@@ -60,7 +60,7 @@ st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정
 # 🔹 아래쪽에 제작자 표시
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
-<p style='text-align:center; font-size:12px; color:#94a3b8;'>
+<p style='text-align:center; font-size:8px; color:#94a3b8;'>
     powered by <b>wook</b>
 </p>
 """, unsafe_allow_html=True)
