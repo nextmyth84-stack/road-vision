@@ -41,20 +41,43 @@ def save_json(file, data):
         st.error(f"저장 실패: {e}")
 
 # -----------------------
-# 전일 근무자 표시 (수정 가능)
+# 전일 근무자 로드
+# -----------------------
+PREV_FILE = "전일근무.json"
+
+# 파일 불러오기 (없으면 기본값)
+def load_prev_data():
+    if os.path.exists(PREV_FILE):
+        try:
+            with open(PREV_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {"열쇠": "", "교양_5교시": "", "1종수동": ""}
+
+prev_data = load_prev_data()
+prev_key = prev_data.get("열쇠", "")
+prev_gyoyang5 = prev_data.get("교양_5교시", "")
+prev_sudong = prev_data.get("1종수동", "")
+
+# -----------------------
+# 사이드바 - 전일 근무자 수정 가능
 # -----------------------
 st.sidebar.markdown("### 📅 전일 근무자 수정")
-prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", prev_key or "")
-prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시 담당자", prev_gyoyang5 or "")
-prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동 담당자", prev_sudong or "")
+prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", value=prev_key)
+prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시 담당자", value=prev_gyoyang5)
+prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동 담당자", value=prev_sudong)
 
 if st.sidebar.button("💾 전일근무 수정 저장"):
-    save_json(PREV_FILE, {
+    new_data = {
         "열쇠": prev_key,
         "교양_5교시": prev_gyoyang5,
         "1종수동": prev_sudong
-    })
+    }
+    with open(PREV_FILE, "w", encoding="utf-8") as f:
+        json.dump(new_data, f, ensure_ascii=False, indent=2)
     st.sidebar.success("전일 근무자 정보가 수정되었습니다.")
+
 
 # -----------------------
 # 클립보드 복사 (버튼 UI, 모바일 호환)
