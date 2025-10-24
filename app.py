@@ -5,11 +5,65 @@ import streamlit as st
 from openai import OpenAI
 import base64, re, json, os, difflib
 
+
 # -----------------------
-# 페이지 설정
+# 페이지 설정 및 상단 헤더
 # -----------------------
-st.set_page_config(page_title="도로주행 근무자동배정 v7.40", layout="wide")
-st.markdown("<h3 style='text-align:center; font-size:28px;'>🚗 도로주행 근무자동배정 v7.40</h3>", unsafe_allow_html=True)
+st.set_page_config(page_title="도로주행 근무자동배정 v7.4", layout="wide")
+
+# 상단 제목 + 제작자 서명
+st.markdown("""
+<h3 style='text-align:center; color:#1e3a8a;'>🚗 도로주행 근무자동배정 v7.4</h3>
+<p style='text-align:center; font-size:13px; color:#64748b; margin-top:-6px;'>
+    Developed by <b>wook</b> | RoadVision System
+</p>
+""", unsafe_allow_html=True)
+
+# -----------------------
+# 사이드바 디자인 + 하단 제작자 표시
+# -----------------------
+st.sidebar.markdown("""
+<style>
+section[data-testid="stSidebar"] {
+    background-color: #f8fafc;
+    padding: 10px;
+    border-right: 1px solid #e5e7eb;
+}
+.streamlit-expanderHeader {
+    font-weight: 700 !important;
+    color: #1e3a8a !important;
+    font-size: 15px !important;
+}
+div.stButton > button {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin-top: 6px;
+    font-weight: 600;
+}
+div.stButton > button:hover {
+    background-color: #1d4ed8;
+}
+.sidebar-subtitle {
+    font-weight: 600;
+    color: #334155;
+    margin-top: 10px;
+    margin-bottom: 4px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정 메뉴</h3>", unsafe_allow_html=True)
+
+# 🔹 아래쪽에 제작자 표시
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<p style='text-align:center; font-size:12px; color:#94a3b8;'>
+    powered by <b>wook</b>
+</p>
+""", unsafe_allow_html=True)
 
 # -----------------------
 # OpenAI API 연결
