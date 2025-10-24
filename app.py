@@ -366,7 +366,7 @@ st.markdown("""
         gap: 12px; /* 탭 간격 */
     }
     .stTabs [data-baseweb="tab"] {
-        font-size: 16px;
+        font-size: 20px;
         padding: 16px 40px;
         border-radius: 10px 10px 0 0;
         background-color: #d1d5db;
@@ -374,7 +374,7 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #2563eb !important;
         color: white !important;
-        font-weight: 600;
+        font-weight: 700;
     }
     </style>
 """, unsafe_allow_html=True)
