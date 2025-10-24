@@ -447,7 +447,7 @@ st.markdown("""
 # 🌅 오전 근무 탭
 # =====================================
 with tab1:
-    st.markdown("<h4 style='margin-top:6px;'>1️⃣ 근무표 이미지 업로드 & OCR</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png","jpg","jpeg"], key="m_upload")
@@ -586,7 +586,7 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & 인식</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         a_file = st.file_uploader("📸 오후 근무표 업로드", type=["png","jpg","jpeg"], key="a_upload")
