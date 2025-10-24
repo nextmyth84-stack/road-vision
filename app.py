@@ -356,3 +356,4 @@ if st.button("📋 오후 배정 생성"):
             save_json(PREV_FILE, {
                 "열쇠": today_key,
                 "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang
+            }
