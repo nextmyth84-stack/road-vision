@@ -138,6 +138,8 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         "‘휴가, 교육, 출장, 공가, 연가, 연차, 돌봄’은 excluded로.\n"
         "‘조퇴’는 early_leave로, ‘10시 출근’ 등은 late_start로.\n"
         "JSON으로 출력."
+        "반드시 하나의 JSON만 출력하세요. 텍스트 설명 절대 넣지 마세요.",
+
     )
     try:
         res = client.chat.completions.create(
@@ -150,11 +152,20 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                 ]}
             ]
         )
-        raw = res.choices[0].message.content or ""
+       raw = res.choices[0].message.content or ""
         m = re.search(r"\{.*\}", raw, re.S)
-        if not m:
-            return [], [], [], [], []
-        js = json.loads(m.group(0))
+        js = {}
+        if m:
+            try:
+                js = json.loads(m.group(0))
+            except json.JSONDecodeError:
+                parts = re.findall(r"\{[^\}]*\}", raw)
+                js = json.loads(parts[0]) if parts else {}
+        if not isinstance(js, dict):
+            js = {}
+
+
+
         names, courses = [], []
         for n in js.get("names", []):
             m2 = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
