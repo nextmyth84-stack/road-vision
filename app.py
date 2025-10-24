@@ -321,13 +321,6 @@ if st.sidebar.button("💾 전일값 저장"):
     save_json(PREV_FILE, {"열쇠": prev_key, "교양_5교시": prev_gy5, "1종수동": prev_sud})
     st.sidebar.success("✅ 전일값 저장 완료")
 
-# 세션 최신화
-st.session_state.update({
-    "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
-    "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
-    "sudong_count": sudong_count, "repair_cars": repair_cars, "cutoff": cutoff
-})
-
 # -----------------------
 # 업로드 & OCR
 # -----------------------
