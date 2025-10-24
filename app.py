@@ -7,9 +7,9 @@ import base64, re, json, os, difflib
 
 
 st.markdown("""
-<h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무자동배정 </h3>
-<p style='text-align:center; font-size:13px; color:#64748b; margin-top:-6px;'>
-   
+<h3 style='text-align:center; color:#1e3a8a;'>🚗 도로주행 근무자동배정 v7.4</h3>
+<p style='text-align:center; font-size:8px; color:#64748b; margin-top:-6px;'>
+    Developed by <b>wook</b> | RoadVision System
 </p>
 """, unsafe_allow_html=True)
 
