@@ -7,18 +7,10 @@ import base64, re, json, os, difflib
 
 
 # -----------------------
-# 페이지 설정 및 상단 헤더
+# 페이지 설정
 # -----------------------
-st.set_page_config(page_title="도로주행 근무자동배정 v7.4", layout="wide")
-
-# 상단 제목 + 제작자 서명
-st.markdown("""
-<h3 style='text-align:center; color:#1e3a8a;'>🚗 도로주행 근무자동배정 v7.4</h3>
-<p style='text-align:center; font-size:8px; color:#64748b; margin-top:-6px;'>
-    Developed by <b>wook</b>
-</p>
-""", unsafe_allow_html=True)
-
+st.set_page_config(page_title="도로주행 근무자동배정 v7.40", layout="wide")
+st.markdown("<h3 style='text-align:center; font-size:22px;'>도로주행 근무자동배정</h3>", unsafe_allow_html=True)
 
 # -----------------------
 # OpenAI API 연결
