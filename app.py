@@ -255,6 +255,45 @@ employee_list = load_json(files["employees"])
 # -----------------------
 # 사이드바 (저장 후 즉시 반영)
 # -----------------------
+# -----------------------
+# 전일 근무자 로드
+# -----------------------
+PREV_FILE = "전일근무.json"
+
+# 파일 불러오기 (없으면 기본값)
+def load_prev_data():
+    if os.path.exists(PREV_FILE):
+        try:
+            with open(PREV_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {"열쇠": "", "교양_5교시": "", "1종수동": ""}
+
+prev_data = load_prev_data()
+prev_key = prev_data.get("열쇠", "")
+prev_gyoyang5 = prev_data.get("교양_5교시", "")
+prev_sudong = prev_data.get("1종수동", "")
+
+# -----------------------
+# 사이드바 - 전일 근무자 수정 가능
+# -----------------------
+
+st.sidebar.markdown("### 📅 전일 근무자 수정")
+prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", value=prev_key)
+prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시 담당자", value=prev_gyoyang5)
+prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동 담당자", value=prev_sudong)
+
+if st.sidebar.button("💾 전일근무 수정 저장"):
+    new_data = {
+        "열쇠": prev_key,
+        "교양_5교시": prev_gyoyang5,
+        "1종수동": prev_sudong
+    }
+    with open(PREV_FILE, "w", encoding="utf-8") as f:
+        json.dump(new_data, f, ensure_ascii=False, indent=2)
+    st.sidebar.success("전일 근무자 정보가 수정되었습니다.")
+
 st.sidebar.header("📂 데이터 관리")
 with st.sidebar.expander("🔑 열쇠 순번", expanded=False):
     t = st.text_area("열쇠 순번", "\n".join(key_order or []), height=180)
@@ -308,43 +347,6 @@ sudong_count = st.sidebar.radio("1종 수동 인원수", [1, 2], index=0, horizo
 repair_cars = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", value="").split(",") if x.strip()]
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
-# -----------------------
-# 전일 근무자 로드
-# -----------------------
-PREV_FILE = "전일근무.json"
-
-# 파일 불러오기 (없으면 기본값)
-def load_prev_data():
-    if os.path.exists(PREV_FILE):
-        try:
-            with open(PREV_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except:
-            pass
-    return {"열쇠": "", "교양_5교시": "", "1종수동": ""}
-
-prev_data = load_prev_data()
-prev_key = prev_data.get("열쇠", "")
-prev_gyoyang5 = prev_data.get("교양_5교시", "")
-prev_sudong = prev_data.get("1종수동", "")
-
-# -----------------------
-# 사이드바 - 전일 근무자 수정 가능
-# -----------------------
-st.sidebar.markdown("### 📅 전일 근무자 수정")
-prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", value=prev_key)
-prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시 담당자", value=prev_gyoyang5)
-prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동 담당자", value=prev_sudong)
-
-if st.sidebar.button("💾 전일근무 수정 저장"):
-    new_data = {
-        "열쇠": prev_key,
-        "교양_5교시": prev_gyoyang5,
-        "1종수동": prev_sudong
-    }
-    with open(PREV_FILE, "w", encoding="utf-8") as f:
-        json.dump(new_data, f, ensure_ascii=False, indent=2)
-    st.sidebar.success("전일 근무자 정보가 수정되었습니다.")
 
 
 # 세션 최신화
