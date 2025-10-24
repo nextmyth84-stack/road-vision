@@ -1,5 +1,5 @@
 # =====================================
-# app.py — 도로주행 근무자동배정 v7.17.2 (완전본)
+# app.py — 도로주행 근무자동배정 v7.18 (교정강화 완전본)
 # =====================================
 import streamlit as st
 from openai import OpenAI
@@ -9,7 +9,7 @@ st.set_page_config(page_title="도로주행 근무자동배정", layout="wide")
 st.markdown("<h3 style='text-align:center; font-size:22px;'>🚗 도로주행 근무자동배정</h3>", unsafe_allow_html=True)
 
 # =====================================
-# OpenAI API 초기화
+# OpenAI 초기화
 # =====================================
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
@@ -19,7 +19,7 @@ except Exception:
 MODEL_NAME = "gpt-4o"
 
 # =====================================
-# 파일 유틸 함수
+# JSON 파일 유틸
 # =====================================
 def load_json(path, default=None):
     if os.path.exists(path):
@@ -38,28 +38,21 @@ def save_json(path, data):
         st.error(f"{path} 저장 실패: {e}")
 
 # =====================================
-# 교정용 한글 자모 분리/비교
+# 고급 교정 알고리즘 (자모 + difflib)
 # =====================================
+
 CHO_LIST = list("ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ")
 JUNG_LIST = list("ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ")
 JONG_LIST = [""] + list("ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ")
 
-# (기존 것을 이 블록으로 교체)
 CONFUSABLES = {
-    # 초성/종성 자주 헷갈림
     'ㅁ': ['ㅂ'], 'ㅂ': ['ㅁ'],
     'ㄴ': ['ㄹ'], 'ㄹ': ['ㄴ'],
     'ㄱ': ['ㅋ'], 'ㅋ': ['ㄱ'],
     'ㅅ': ['ㅈ','ㅊ'], 'ㅈ': ['ㅅ','ㅊ'], 'ㅊ': ['ㅈ','ㅅ'],
-
-    # 중성 자주 헷갈림
     'ㅐ': ['ㅔ'], 'ㅔ': ['ㅐ'],
-    'ㅡ': ['ㅜ'], 'ㅜ': ['ㅡ'],   # ★ 은↔운 케이스 잡는 핵심
-    # (필요하면 추가)
-    # 'ㅓ': ['ㅗ'], 'ㅗ': ['ㅓ'],
-    # 'ㅕ': ['ㅑ'], 'ㅑ': ['ㅕ'],
+    'ㅡ': ['ㅜ'], 'ㅜ': ['ㅡ']  # 은↔운 교정 핵심
 }
-
 
 def split_hangul(c):
     code = ord(c) - 0xAC00
@@ -72,7 +65,6 @@ def similar_jamo(a, b):
     return a == b or (a in CONFUSABLES and b in CONFUSABLES[a])
 
 def hangul_similarity(a, b):
-    """자모 유사도 (OCR 혼동 허용 포함)"""
     if not a or not b:
         return 0
     score = 0
@@ -91,23 +83,32 @@ def hangul_similarity(a, b):
         score += s
     return score / total
 
-def correct_name_v2(name, valid_names, cutoff=0.65):
-    """전체 근무자 기준 고급 오타 교정"""
+def normalized_name(s):
+    return re.sub(r"[^가-힣]", "", s or "")
+
+def correct_name_v3(name, valid_names, cutoff=0.6):
+    """자모 + 시퀀스 평균 + 상대 점수 기준"""
     if not name or not valid_names:
         return name
-    name_norm = re.sub(r"[^가-힣]", "", name)
-    best_match, best_score = None, 0
+    n = normalized_name(name)
+    best = (None, 0)
+    scores = []
     for valid in valid_names:
-        score = hangul_similarity(name_norm, valid)
-        if score > best_score:
-            best_match, best_score = valid, score
-    return best_match if best_score >= cutoff else name
-
-def normalize_name(s):
-    return re.sub(r"[^가-힣]", "", re.sub(r"\(.*?\)", "", s or ""))
+        v = normalized_name(valid)
+        jamo_score = hangul_similarity(n, v)
+        seq_score = difflib.SequenceMatcher(None, n, v).ratio()
+        score = (jamo_score + seq_score) / 2
+        scores.append((valid, score))
+        if score > best[1]:
+            best = (valid, score)
+    # 상대 차이 계산
+    scores.sort(key=lambda x: x[1], reverse=True)
+    if len(scores) > 1 and (scores[0][1] - scores[1][1]) < 0.08:
+        return name  # 유사 후보 여러개면 교정 보류
+    return best[0] if best[1] >= cutoff else name
 
 # =====================================
-# 기본 JSON 파일들
+# 데이터 파일 기본 경로
 # =====================================
 EMP_FILE = "employee_list.json"
 PREV_FILE = "전일근무.json"
@@ -128,6 +129,7 @@ with st.sidebar.expander("👥 전체 근무자명단", expanded=False):
         new_list = [x.strip() for x in emp_edit.splitlines() if x.strip()]
         save_json(EMP_FILE, new_list)
         st.sidebar.success("전체 근무자 저장 완료")
+
 
 # =====================================
 # 순번/차량표 파일 정의
