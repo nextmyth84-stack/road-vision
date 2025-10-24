@@ -120,20 +120,30 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
     return best if best and best_score >= cutoff else name
 
 # -----------------------
-# OCR 추출 함수
+# OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
     """
-    반환: names, course_records, excluded, early_leave, late_start
+    반환: names(괄호 제거), course_records, excluded, early_leave, late_start
+    - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
+    - excluded = ["김OO", ...]  # 휴가/교육/출장/공가/연가/연차/돌봄 블록에서 추출
+    - early_leave = [{"name":"김OO","time":14.5}, ...]  # 13/14.5/16
+    - late_start = [{"name":"김OO","time":10.0}, ...]   # 10/10.5 등
     """
     b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
-        "1) 학과·기능·초소·PC 제외.\n"
-        "2) 괄호 속 A/B합불 → 코스점검.\n"
-        "3) 상단의 휴가·교육·출장·공가·연가·연차·돌봄 등은 excluded.\n"
-        "4) 10시 출근·조퇴 시간 인식.\n"
-        "JSON 예시: {\"names\": [\"김성연(B합)\"], \"excluded\": [\"안유미\"]}"
+        "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
+        "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
+        "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
+        "4) '지각/10시 출근/외출' 등 표기에서 오전 시작시간(예:10 또는 10.5)을 late_start 로.\n"
+        "5) '조퇴' 표기에서 오후 시간(13/14.5/16 등)을 early_leave 로.\n"
+        "JSON 예시: {\n"
+        "  \"names\": [\"김성연(B합)\",\"김병욱(A불)\"],\n"
+        "  \"excluded\": [\"안유미\"],\n"
+        "  \"early_leave\": [{\"name\":\"김병욱\",\"time\":14.5}],\n"
+        "  \"late_start\": [{\"name\":\"김성연\",\"time\":10}]\n"
+        "}"
     )
     try:
         res = client.chat.completions.create(
@@ -152,7 +162,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         raw_names = js.get("names", [])
         names, course_records = [], []
         for n in raw_names:
-            # 이름(내용) 형태면 코스 점검 추출 + 이름만 보존
             m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
             if m:
                 name = m.group(1).strip()
@@ -163,14 +172,13 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                     course_records.append({"name": name, "course": f"{course}코스", "result": result})
                 names.append(name)
             else:
-                # 괄호가 없으면 이름 그대로
                 names.append(n.strip())
 
         excluded = js.get("excluded", []) if want_excluded else []
         early_leave = js.get("early_leave", []) if want_early else []
         late_start = js.get("late_start", []) if want_late else []
 
-        # 숫자 캐스팅 안전화
+        # 숫자 캐스팅
         def to_float(x):
             try:
                 return float(x)
@@ -185,7 +193,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     except Exception as e:
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
-
 # -----------------------
 # 교양 시간 제한 규칙
 # -----------------------
