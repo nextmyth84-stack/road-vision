@@ -114,6 +114,70 @@ def clipboard_copy_button(text: str):
         }});
         </script>
     """, height=70)
+# =====================================
+# 🔧 사이드바 구성
+# =====================================
+st.sidebar.header("📋 순번표 / 차량표 설정")
+
+def _list(s): return [x.strip() for x in s.splitlines() if x.strip()]
+
+with st.sidebar.expander("🔑 열쇠 순번", expanded=False):
+    key_text = st.text_area("열쇠 순번", "\n".join(key_order), height=180)
+    if st.button("💾 열쇠순번 저장"):
+        new_list = _list(key_text)
+        save_json(KEY_FILE, new_list)
+        st.sidebar.success("열쇠 순번 저장 완료")
+        st.experimental_rerun()
+
+with st.sidebar.expander("📘 교양 순번", expanded=False):
+    gy_text = st.text_area("교양 순번", "\n".join(gyoyang_order), height=180)
+    if st.button("💾 교양순번 저장"):
+        new_list = _list(gy_text)
+        save_json(GY_FILE, new_list)
+        st.sidebar.success("교양 순번 저장 완료")
+        st.experimental_rerun()
+
+with st.sidebar.expander("🔧 1종 수동 순번", expanded=False):
+    sd_text = st.text_area("1종 수동 순번", "\n".join(sudong_order), height=150)
+    sudong_count = st.radio("1종 수동 인원수", [1, 2], horizontal=True)
+    if st.button("💾 1종 순번 저장"):
+        new_list = _list(sd_text)
+        save_json(SUD_FILE, new_list)
+        st.sidebar.success("1종 순번 저장 완료")
+        st.experimental_rerun()
+
+with st.sidebar.expander("🚗 차량표 (1종 수동)", expanded=False):
+    v1_text = st.text_area("1종 수동 차량표", "\n".join(veh1_lines), height=150)
+    if st.button("💾 1종 차량표 저장"):
+        new_list = _list(v1_text)
+        save_json(VEH1_FILE, new_list)
+        st.sidebar.success("1종 차량표 저장 완료")
+        st.experimental_rerun()
+
+with st.sidebar.expander("🚘 차량표 (2종 자동)", expanded=False):
+    v2_text = st.text_area("2종 자동 차량표", "\n".join(veh2_lines), height=200)
+    if st.button("💾 2종 차량표 저장"):
+        new_list = _list(v2_text)
+        save_json(VEH2_FILE, new_list)
+        st.sidebar.success("2종 차량표 저장 완료")
+        st.experimental_rerun()
+
+with st.sidebar.expander("🗓 전일 값 확인/수정", expanded=False):
+    prev_key = st.text_input("전일 열쇠", value=prev_key)
+    prev_gyoyang5 = st.text_input("전일 교양5", value=prev_gyoyang5)
+    prev_sudong = st.text_input("전일 1종 수동", value=prev_sudong)
+    if st.button("💾 전일값 저장"):
+        save_json(PREV_FILE, {"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong})
+        st.sidebar.success("전일값 저장 완료")
+
+with st.sidebar.expander("👥 전체 근무자명단 보기/수정", expanded=False):
+    st.markdown("근무자명단은 OCR 오타 교정에 사용됩니다.")
+    emp_text = st.text_area("근무자명단", "\n".join(employees), height=200)
+    if st.button("💾 근무자명단 저장"):
+        new_list = _list(emp_text)
+        save_json(EMP_FILE, new_list)
+        st.sidebar.success("근무자명단 저장 완료")
+        st.experimental_rerun()
 
 # =====================================
 # 2️⃣ 최신 파일 반영 & 유틸
