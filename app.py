@@ -393,7 +393,7 @@ with tab1:
 
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (자동 추출 후 수정 가능)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area(
-        .join(st.session_state.get("excluded_auto", [])), height=120
+        "\n".join(st.session_state.get("excluded_auto", [])), height=120
     )
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
