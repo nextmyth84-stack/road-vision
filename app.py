@@ -351,9 +351,12 @@ if st.button("📋 오후 배정 생성"):
         st.code(result_text, language="text")
         clipboard_copy_button(result_text)
 
-        # 전일 저장
-        if save_check:
-            save_json(PREV_FILE, {
-                "열쇠": today_key,
-                "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang
-            }
+
+# 전일 저장
+if save_check:
+    save_json(PREV_FILE, {
+        "열쇠": today_key,
+        "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
+        "1종수동": sud_a[-1] if sud_a else st.session_state.get("sudong_base_for_pm", prev_sudong)
+    })
+    st.success("✅ 전일근무.json 저장 완료")
