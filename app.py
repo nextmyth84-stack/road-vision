@@ -40,14 +40,21 @@ def save_json(file, data):
     except Exception as e:
         st.error(f"저장 실패: {e}")
 
-# 전일 기준 로드
-prev_data = load_json(PREV_FILE, {"열쇠":"","교양_5교시":"","1종수동":""})
-prev_key = prev_data.get("열쇠","")
-prev_gy5 = prev_data.get("교양_5교시","")
-prev_sd = prev_data.get("1종수동","")
+# -----------------------
+# 전일 근무자 표시 (수정 가능)
+# -----------------------
+st.sidebar.markdown("### 📅 전일 근무자 수정")
+prev_key = st.sidebar.text_input("🔑 전일 열쇠 담당자", prev_key or "")
+prev_gyoyang5 = st.sidebar.text_input("📘 전일 교양 5교시 담당자", prev_gyoyang5 or "")
+prev_sudong = st.sidebar.text_input("🧰 전일 1종 수동 담당자", prev_sudong or "")
 
-st.sidebar.markdown("---")
-st.sidebar.markdown(f"📅 전일 기준 → 열쇠:{prev_key or '-'}, 교양5:{prev_gy5 or '-'}, 1종:{prev_sd or '-'}")
+if st.sidebar.button("💾 전일근무 수정 저장"):
+    save_json(PREV_FILE, {
+        "열쇠": prev_key,
+        "교양_5교시": prev_gyoyang5,
+        "1종수동": prev_sudong
+    })
+    st.sidebar.success("전일 근무자 정보가 수정되었습니다.")
 
 # -----------------------
 # 클립보드 복사 (버튼 UI, 모바일 호환)
