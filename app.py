@@ -593,13 +593,15 @@ with tab1:
         except Exception as e:
             st.error(f"오전 오류: {e}")
 # =====================================
-# 🌇 오후 탭 (최종)
+# 🌇 오후 근무 탭
 # =====================================
 with tab2:
     st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         a_file = st.file_uploader("📸 오후 근무표 업로드", type=["png","jpg","jpeg"], key="a_upload")
+    with col2:
+        pass
 
     if st.button("오후 GPT 인식"):
         if not a_file:
@@ -609,56 +611,55 @@ with tab2:
                 names, _, excluded, early, late = gpt_extract(
                     a_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
-                fixed = [correct_name_v2(n, st.session_state["employee_list"]) for n in names]
-                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"]) for n in excluded]
-                for e in early: e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"])
-                for l in late:  l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"])
+                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
+                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
+                for e in early:
+                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                for l in late:
+                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                st.session_state.a_names_raw     = fixed
+                st.session_state.a_names_raw = fixed
                 st.session_state.excluded_auto_pm = excluded_fixed
-                st.session_state.early_leave_pm   = [e for e in early if e.get("time") is not None]
-                st.session_state.late_start_pm    = [l for l in late  if l.get("time") is not None]
+                st.session_state.early_leave_pm = [e for e in early if e.get("time") is not None]
+                st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
 
     st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
     afternoon_text = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220)
-    a_list  = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
+    a_list = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
+
     excluded_set = {normalize_name(x) for x in st.session_state.get("excluded_auto", [])}
     a_norms = {normalize_name(x) for x in a_list} - excluded_set
 
     save_check = st.checkbox("전일근무자(열쇠,5교시,1종수동,1종자동) 자동 저장", value=True)
 
-    # -------------------------------
-    # 🚗 오후 배정 생성
-    # -------------------------------
+    st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
     if st.button("📋 오후 배정 생성"):
         try:
-            # 기본 세팅
             gyoyang_order = st.session_state.get("gyoyang_order", [])
-            sudong_order  = st.session_state.get("sudong_order", [])
-            veh1_map      = st.session_state.get("veh1", {})
-            veh2_map      = st.session_state.get("veh2", {})
-            sudong_count  = st.session_state.get("sudong_count", 1)
-            auto1_order   = st.session_state.get("auto1_order", []) or []
-            repair_store  = st.session_state.get("repair_store", {"veh1":[], "veh2":[], "auto1":[]})
+            sudong_order = st.session_state.get("sudong_order", [])
+            veh1_map = st.session_state.get("veh1", {})
+            veh2_map = st.session_state.get("veh2", {})
+            sudong_count = st.session_state.get("sudong_count", 1)
+            repair_cars = st.session_state.get("repair_cars", [])
+            auto1_order = st.session_state.get("auto1_order", [])
+            repair_auto1 = set(st.session_state.get("repair_auto1", []))
 
-            # 전일 + 오전 데이터
-            prev_data = load_json("전일근무.json", {"열쇠":"","교양_5교시":"","1종수동":"","1종자동":""})
-            today_key = st.session_state.get("today_key", prev_data["열쇠"])
-            gy_start  = st.session_state.get("gyoyang_base_for_pm", prev_data["교양_5교시"]) or (gyoyang_order[0] if gyoyang_order else "")
-            sud_base  = st.session_state.get("sudong_base_for_pm", prev_data["1종수동"])
-            today_auto1 = st.session_state.get("today_auto1", prev_data["1종자동"])
-
+            today_key = st.session_state.get("today_key", prev_key)
+            gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5) or (gyoyang_order[0] if gyoyang_order else "")
+            sud_base = st.session_state.get("sudong_base_for_pm", prev_sudong)
+            prev_auto1 = prev_data.get("1종자동", "")
             early_leave = st.session_state.get("early_leave", [])
 
-            # 🧑‍🏫 교양(3~5교시)
+            # 🧑‍🏫 교양 3~5교시
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
-            for period in [3,4,5]:
+            for period in [3, 4, 5]:
                 while True:
                     pick = pick_next_from_cycle(gyoyang_order, last_ptr, a_norms - used)
-                    if not pick: break
+                    if not pick:
+                        break
                     last_ptr = pick
                     if can_attend_period_afternoon(pick, period, early_leave):
                         if period == 3: gy3 = pick
@@ -674,46 +675,29 @@ with tab2:
                 if not pick: break
                 sud_a.append(pick); last = pick
 
-            # 🚗 2종 자동(사람)
+            # 🚗 1종 자동 순번 (정비차 제외)
+            available_auto1 = [c for c in auto1_order if c not in repair_auto1]
+            today_auto1 = ""
+            if available_auto1:
+                if prev_auto1 in available_auto1:
+                    idx = (available_auto1.index(prev_auto1) + 1) % len(available_auto1)
+                    today_auto1 = available_auto1[idx]
+                else:
+                    today_auto1 = available_auto1[0]
+
+            # 🚙 2종 자동(사람)
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-            # === 차량 배정 (정비 대체 포함)
-            used_veh1, used_veh2 = set(), set()
-            veh1_all = list(veh1_map.keys())
-            veh2_all = list(veh2_map.keys())
-            veh1_repair = set(repair_store.get("veh1") or [])
-            veh2_repair = set(repair_store.get("veh2") or [])
+            # 차량 매칭
+            sud_a_with_car = [(nm, get_vehicle(nm, veh1_map)) for nm in sud_a]
+            auto_a_with_car = [(nm, get_vehicle(nm, veh2_map)) for nm in auto_a]
 
-            # 1종 수동
-            sud_a_with_car = []
-            for nm in sud_a:
-                base = get_vehicle(nm, veh1_map)
-                if base and base not in veh1_repair and base not in used_veh1:
-                    car = base
-                else:
-                    cands = [c for c in veh1_all if c not in veh1_repair and c not in used_veh1]
-                    car = random.choice(cands) if cands else ""
-                if car: used_veh1.add(car)
-                sud_a_with_car.append((nm, car))
-
-            # 2종 자동
-            auto_a_with_car = []
-            for nm in auto_a:
-                base = get_vehicle(nm, veh2_map)
-                if base and base not in veh2_repair and base not in used_veh2:
-                    car = base
-                else:
-                    cands = [c for c in veh2_all if c not in veh2_repair and c not in used_veh2]
-                    car = random.choice(cands) if cands else ""
-                if car: used_veh2.add(car)
-                auto_a_with_car.append((nm, car))
-
-            # 🚫 마감차량 계산
+            # 🚫 마감 차량 계산
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
-            pm_c1 = {c for _, c in sud_a_with_car if c}
-            pm_c2 = {c for _, c in auto_a_with_car if c}
+            pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
+            pm_c2 = {get_vehicle(x, veh2_map) for x in auto_a if get_vehicle(x, veh2_map)}
             un1 = sorted([c for c in am_c1 if c and c not in pm_c1])
             un2 = sorted([c for c in am_c2 if c and c not in pm_c2])
 
@@ -722,8 +706,7 @@ with tab2:
             # -----------------------------
             lines = []
 
-            # 🔑 열쇠 (위에 한 줄 띄움)
-            lines.append("")  
+            # 🔑 열쇠 (출력 후 한 줄 띄움)
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
@@ -738,12 +721,14 @@ with tab2:
             # 🚚 1종 수동
             if sud_a_with_car:
                 for nm, car in sud_a_with_car:
-                    if car: lines.append(f"1종수동: {car} {nm}")
-                    else:   lines.append(f"1종수동: {nm}")
+                    if car:
+                        lines.append(f"1종수동: {car} {nm}")
+                    else:
+                        lines.append(f"1종수동: {nm}")
             else:
                 lines.append("1종수동: (배정자 없음)")
 
-            # 🚗 1종 자동
+            # 🚗 1종 자동 (위에 한 줄 띄움)
             if today_auto1:
                 lines.append("")
                 lines.append(f"1종자동: {today_auto1}")
@@ -753,8 +738,10 @@ with tab2:
                 lines.append("")
                 lines.append("2종자동:")
                 for nm, car in auto_a_with_car:
-                    if car: lines.append(f" • {car} {nm}")
-                    else:   lines.append(f" • {nm}")
+                    if car:
+                        lines.append(f" • {car} {nm}")
+                    else:
+                        lines.append(f" • {nm}")
 
             # 🚫 마감 차량
             if un1 or un2:
@@ -762,44 +749,54 @@ with tab2:
                 lines.append("🚫 마감 차량:")
                 if un1:
                     lines.append(" [1종 수동]")
-                    for c in un1: lines.append(f"  • {c} 마감")
+                    for c in un1:
+                        lines.append(f"  • {c} 마감")
                 if un2:
                     lines.append(" [2종 자동]")
-                    for c in un2: lines.append(f"  • {c} 마감")
+                    for c in un2:
+                        lines.append(f"  • {c} 마감")
 
+            pm_result_text = "\n".join(lines)
 
-
-            
             # -----------------------------
-            # 🟦 2️⃣ 블록 — 오전 대비 비교
+            # 🟨 2️⃣ 블록 — 오전 대비 비교
             # -----------------------------
-            lines2 = []
+            comp = []
+            comp.append("🔍 오전 대비 비교:")
+
             morning_auto_names = set(st.session_state.get("morning_auto_names", []))
-            afternoon_auto_names = {normalize_name(nm) for nm, _ in auto_a_with_car}
-            afternoon_sudong_norms = {normalize_name(nm) for nm, _ in sud_a_with_car}
+            afternoon_auto_names = set(auto_a)
+            afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
 
-            added   = sorted([x for x in afternoon_auto_names - {normalize_name(y) for y in morning_auto_names}])
-            missing = sorted([
-                nm for nm in morning_auto_names
-                if normalize_name(nm) not in afternoon_auto_names
-                and normalize_name(nm) not in afternoon_sudong_norms
-            ])
+            added = sorted(list(afternoon_auto_names - morning_auto_names))
+            missing = []
+            for nm in morning_auto_names:
+                n_norm = normalize_name(nm)
+                if n_norm not in afternoon_auto_names and n_norm not in afternoon_sudong_norms:
+                    missing.append(nm)
 
-            lines2.append("🔍 오전 대비 비교:")
-            if added:   lines2.append(" • 추가 인원: " + ", ".join(added))
-            if missing: lines2.append(" • 제외 인원: " + ", ".join(missing))
+            if added:
+                comp.append(" • 추가 인원: " + ", ".join(added))
+            if missing:
+                comp.append(" • 제외 인원: " + ", ".join(missing))
 
-            pm_compare_text = "\n".join(lines2).strip()
-            st.markdown("#### 🔍 오전 대비 비교")
+            pm_compare_text = "\n".join(comp)
+
+            # === 출력 ===
+            st.markdown("#### 🌇 오후 근무 결과")
+            st.code(pm_result_text, language="text")
+            clipboard_copy_button("📋 결과 복사하기", pm_result_text)
+
+            st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
             st.code(pm_compare_text, language="text")
-            clipboard_copy_button("📋 상세 복사하기", pm_compare_text)
+            clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
             # ✅ 전일 저장
             if save_check:
-                save_json("전일근무.json", {
+                save_json(PREV_FILE, {
                     "열쇠": today_key,
-                    "교양_5교시": gy5 or gy4 or gy3 or prev_data["교양_5교시"],
-                    "1종수동": (sud_a[-1] if sud_a else prev_data["1종수동"]),
+                    "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
+                    "1종수동": (sud_a[-1] if sud_a else prev_sudong),
                     "1종자동": today_auto1
                 })
                 st.success("전일근무.json 업데이트 완료 ✅")
