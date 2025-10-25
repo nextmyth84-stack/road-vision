@@ -318,7 +318,7 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     prev_gyoyang5 = st.text_input("🧑‍🏫 전일 교양(5교시)", prev_gyoyang5)
     prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong)
     # === NEW: 전일 1종 자동 차량 ===
-    prev_auto1 = st.text_input("🚗 전일 1종 자동(차량)", prev_auto1)
+    prev_auto1 = st.text_input("🚗 전일 1종 자동", prev_auto1)
 
     if st.button("💾 전일 근무자 저장"):
         save_json(PREV_FILE, {
