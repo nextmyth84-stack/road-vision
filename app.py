@@ -686,8 +686,9 @@ with tab2:
 
              # === 출력 ===
             lines = []
-            if today_key: lines.append(f"열쇠: {today_key}")
-            lines = []
+            if today_key: 
+                lines.append(f"열쇠: {today_key}")
+                lines.append("")
             if gy3: lines.append(f"3교시: {gy3}")
             if gy4: lines.append(f"4교시: {gy4}")
             if gy5: lines.append(f"5교시: {gy5}")
