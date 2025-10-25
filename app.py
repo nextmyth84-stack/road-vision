@@ -384,6 +384,32 @@ with st.sidebar.expander("🚘 차량 담당 관리", expanded=False):
         veh1_map = load_json(files["veh1"])
         veh2_map = load_json(files["veh2"])
         st.sidebar.success("차량표 저장 완료 ✅")
+    # -----------------------
+    # ⚙️ 정비 차량 선택 및 목록 표시 (추가된 부분)
+    # -----------------------
+    st.markdown("<div class='sidebar-subtitle'>⚙️ 정비 차량 선택</div>", unsafe_allow_html=True)
+
+    repair_json_path = os.path.join(DATA_DIR, "정비차량.json")
+    saved_repairs = load_json(repair_json_path, [])
+
+    all_cars = list(veh1_map.keys()) + list(veh2_map.keys())
+    repair_cars_selected = st.multiselect(
+        "정비 차량 선택 (1종/2종 포함)",
+        all_cars,
+        default=saved_repairs,
+    )
+
+    if st.button("💾 정비 차량 저장"):
+        save_json(repair_json_path, repair_cars_selected)
+        st.session_state["repair_cars"] = repair_cars_selected
+        st.sidebar.success("정비 차량 저장 완료 ✅")
+
+    st.markdown("<div style='margin-top:6px; font-size:13px; color:#475569;'>🧾 현재 정비 차량:</div>", unsafe_allow_html=True)
+    if repair_cars_selected:
+        for car in repair_cars_selected:
+            st.sidebar.markdown(f"- {car}")
+    else:
+        st.sidebar.markdown("<span style='color:#9ca3af;'>등록된 정비 차량 없음</span>", unsafe_allow_html=True)
 
 # 근무자 목록
 with st.sidebar.expander("👥 전체 근무자", expanded=False):
