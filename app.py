@@ -130,7 +130,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         "  \"early_leave\": [{\"name\": \"김병욱\", \"time\": 14.5}],\n"
         "  \"late_start\": [{\"name\": \"김성연\", \"time\": 10}]\n"
         "}"
-)
+    )
 
     try:
         res = client.chat.completions.create(
