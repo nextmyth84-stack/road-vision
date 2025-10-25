@@ -384,7 +384,7 @@ with st.sidebar.expander("🚘 차량 담당 관리", expanded=False):
         veh1_map = load_json(files["veh1"])
         veh2_map = load_json(files["veh2"])
         st.sidebar.success("차량표 저장 완료 ✅")
-        
+
 # 근무자 목록
 with st.sidebar.expander("👥 전체 근무자", expanded=False):
     st.markdown("<div class='sidebar-subtitle'>근무자 목록</div>", unsafe_allow_html=True)
@@ -393,24 +393,6 @@ with st.sidebar.expander("👥 전체 근무자", expanded=False):
         save_json(files["employees"], [x.strip() for x in t.splitlines() if x.strip()])
         employee_list = load_json(files["employees"])
         st.sidebar.success("근무자 명단 저장 완료 ✅")
-# -----------------------
-# 🛠 정비 차량 관리 (선택+목록+삭제)
-# -----------------------
-with st.sidebar.expander("🛠 정비 차량 관리", expanded=True):
-    # 현재 보유 차량번호 리스트
-    veh1_list = sorted(list(veh1_map.keys()), key=lambda x: (len(x), x))
-    veh2_list = sorted(list(veh2_map.keys()), key=lambda x: (len(x), x))
-
-    st.markdown("<div class='sidebar-subtitle'>1종 수동 정비 차량 선택</div>", unsafe_allow_html=True)
-    sel_veh1 = st.multiselect("1종(여러개 선택 가능)", options=veh1_list, default=repair_store.get("veh1", []), key="ms_repair_v1")
-
-    st.markdown("<div class='sidebar-subtitle'>2종 자동 정비 차량 선택</div>", unsafe_allow_html=True)
-    sel_veh2 = st.multiselect("2종(여러개 선택 가능)", options=veh2_list, default=repair_store.get("veh2", []), key="ms_repair_v2")
-
-    if st.button("💾 정비 차량 저장"):
-        repair_store = {"veh1": sel_veh1, "veh2": sel_veh2}
-        save_json(FILES["repair"], repair_store)
-        st.success("정비 차량 저장 완료 ✅")
 
 # =====================================
 # ⚙️ 추가 설정
