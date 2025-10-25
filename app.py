@@ -542,10 +542,21 @@ with tab1:
             st.session_state.morning_assigned_cars_1 = [get_vehicle(x, veh1_map) for x in sud_m if get_vehicle(x, veh1_map)]
             st.session_state.morning_assigned_cars_2 = [get_vehicle(x, veh2_map) for x in auto_m if get_vehicle(x, veh2_map)]
             st.session_state.morning_auto_names = auto_m + sud_m
-
-            # === 출력 ===
           
-            # === 출력 ===
+           # === 출력 ===
+            lines = []
+            if today_key:
+                lines.append(f"열쇠: {today_key}")
+                lines.append("")
+
+            if gy1:
+                lines.append(f"1교시: {gy1}")
+            if gy2:
+                lines.append(f"2교시: {gy2}")
+            if gy1 or gy2:
+                lines.append("")
+
+
 
             if sud_m:
                 for nm in sud_m:
