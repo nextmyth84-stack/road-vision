@@ -593,7 +593,7 @@ with tab1:
         except Exception as e:
             st.error(f"오전 오류: {e}")
 # =====================================
-# 🌇 오후 근무 탭
+# 🌇 오후 근무 탭 (v7.42b)
 # =====================================
 with tab2:
     st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
@@ -689,10 +689,6 @@ with tab2:
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-            # 차량 매칭
-            sud_a_with_car = [(nm, get_vehicle(nm, veh1_map)) for nm in sud_a]
-            auto_a_with_car = [(nm, get_vehicle(nm, veh2_map)) for nm in auto_a]
-
             # 🚫 마감 차량 계산
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
@@ -706,55 +702,43 @@ with tab2:
             # -----------------------------
             lines = []
 
-            # 🔑 열쇠 (출력 후 한 줄 띄움)
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
 
-            # 🧑‍🏫 교양
             if gy3: lines.append(f"3교시: {gy3}")
             if gy4: lines.append(f"4교시: {gy4}")
             if gy5:
                 lines.append(f"5교시: {gy5}")
                 lines.append("")
 
-            # 🚚 1종 수동
-            if sud_a_with_car:
-                for nm, car in sud_a_with_car:
-                    if car:
-                        lines.append(f"1종수동: {car} {nm}")
-                    else:
-                        lines.append(f"1종수동: {nm}")
+            if sud_a:
+                for nm in sud_a:
+                    car = mark_car(get_vehicle(nm, veh1_map), repair_cars)
+                    lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
             else:
                 lines.append("1종수동: (배정자 없음)")
 
-            # 🚗 1종 자동 (위에 한 줄 띄움)
             if today_auto1:
                 lines.append("")
                 lines.append(f"1종자동: {today_auto1}")
 
-            # 🚙 2종 자동 (위에 한 줄 띄움)
-            if auto_a_with_car:
+            if auto_a:
                 lines.append("")
                 lines.append("2종자동:")
-                for nm, car in auto_a_with_car:
-                    if car:
-                        lines.append(f" • {car} {nm}")
-                    else:
-                        lines.append(f" • {nm}")
+                for nm in auto_a:
+                    car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
+                    lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
-            # 🚫 마감 차량
             if un1 or un2:
                 lines.append("")
                 lines.append("🚫 마감 차량:")
                 if un1:
                     lines.append(" [1종 수동]")
-                    for c in un1:
-                        lines.append(f"  • {c} 마감")
+                    for c in un1: lines.append(f"  • {c} 마감")
                 if un2:
                     lines.append(" [2종 자동]")
-                    for c in un2:
-                        lines.append(f"  • {c} 마감")
+                    for c in un2: lines.append(f"  • {c} 마감")
 
             pm_result_text = "\n".join(lines)
 
@@ -768,17 +752,22 @@ with tab2:
             afternoon_auto_names = set(auto_a)
             afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
 
-            added = sorted(list(afternoon_auto_names - morning_auto_names))
+            # 추가 인원 제거, 신규 인원 유지
             missing = []
             for nm in morning_auto_names:
                 n_norm = normalize_name(nm)
                 if n_norm not in afternoon_auto_names and n_norm not in afternoon_sudong_norms:
                     missing.append(nm)
 
-            if added:
-                comp.append(" • 추가 인원: " + ", ".join(newly_joined))
+            newly_joined = sorted([
+                x for x in a_list
+                if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
+            ])
+
             if missing:
                 comp.append(" • 제외 인원: " + ", ".join(missing))
+            if newly_joined:
+                comp.append(" • 신규 인원: " + ", ".join(newly_joined))
 
             pm_compare_text = "\n".join(comp)
 
@@ -791,7 +780,6 @@ with tab2:
             st.code(pm_compare_text, language="text")
             clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
-            # ✅ 전일 저장
             if save_check:
                 save_json(PREV_FILE, {
                     "열쇠": today_key,
