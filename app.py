@@ -634,7 +634,7 @@ with tab2:
                 lines1 += auto_a_lines
                 lines1.append("")
 
-            # 🚫 미배정 차량 (오전 → 오후 빠진 차량만)
+            # 🚫 마감 차량 (오전 → 오후 빠진 차량만)
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
             pm_c1 = set(used_cars_1)
@@ -642,7 +642,7 @@ with tab2:
             un1 = sorted([c for c in am_c1 if c and c not in pm_c1])
             un2 = sorted([c for c in am_c2 if c and c not in pm_c2])
             if un1 or un2:
-                lines1.append("🚫 미배정 차량:")
+                lines1.append("🚫 마감 차량:")
                 if un1:
                     lines1.append(" [1종 수동]")
                     for c in un1: lines1.append(f"  • {c} 마감")
@@ -674,9 +674,8 @@ with tab2:
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
 
-            if added:        lines2.append(" • 추가 인원: " + ", ".join(added))
-            if missing:      lines2.append(" • 빠진 인원: " + ", ".join(missing))
-            if newly_joined: lines2.append(" • 신규 도로주행 인원: " + ", ".join(newly_joined))
+            if missing:      lines2.append(" • 제외 인원: " + ", ".join(missing))
+            if newly_joined: lines2.append(" • 추가 인원: " + ", ".join(newly_joined))
 
             pm_text_secondary = "\n".join(lines2).rstrip()
 
