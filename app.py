@@ -758,7 +758,7 @@ with tab2:
             
             if added:        lines.append(" • 추가 인원: " + ", ".join(added))
             if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
-            if newly_joined: lines.append(" • 신규 도로주행 인원: " + ", ".join(newly_joined))
+            if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
                     
             # === 전체 결과 구성 ===
             pm_text_all = "\n".join(lines)
@@ -783,7 +783,7 @@ with tab2:
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
             if pm_compare_text:
-                st.markdown("#### 🔍 오전 대비 비교")
+                st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
                 st.code(pm_compare_text, language="text")
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
