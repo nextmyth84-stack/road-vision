@@ -684,7 +684,7 @@ with tab2:
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-            # === 출력 ===
+             # === 출력 ===
             lines = []
             if today_key: lines.append(f"열쇠: {today_key}")
             if gy3: lines.append(f"3교시: {gy3}")
@@ -759,4 +759,5 @@ with tab2:
                 st.success("전일근무.json 업데이트 완료 ✅")
 
         except Exception as e:
+
 
