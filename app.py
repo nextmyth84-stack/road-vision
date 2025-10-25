@@ -341,7 +341,7 @@ with st.sidebar.expander("🔢 순번표 관리", expanded=False):
     t3 = st.text_area("", "\n".join(sudong_order), height=120)
 
     # === NEW: 1종 자동 순번 편집 ===
-    st.markdown("<div class='sidebar-subtitle'>1종 자동 순번(차량만 회전)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-subtitle'>1종 자동 순번</div>", unsafe_allow_html=True)
     t4 = st.text_area("", "\n".join(auto1_order or []), height=100)
 
     if st.button("💾 순번표 저장"):
