@@ -686,32 +686,24 @@ with tab2:
 
             # === 출력 ===
             lines = []
-            if today_key: 
-                lines.append(f"열쇠: {today_key}")
-                lines.append("")
+            if today_key: lines.append(f"열쇠: {today_key}")
             if gy3: lines.append(f"3교시: {gy3}")
             if gy4: lines.append(f"4교시: {gy4}")
             if gy5: lines.append(f"5교시: {gy5}")
 
             if sud_a:
-                for nm in auto_m:
-                    lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
+                for nm in sud_a:
+                    lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1_map), repair_cars)}")
                 if sudong_count == 2 and len(sud_a) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
                 lines.append("1종수동: (배정자 없음)")
 
-            # === NEW: 오후에도 1종 자동 차량 출력 (오전과 동일차량) ===
-            if st.session_state.get("today_auto1"):
-                lines.append("")
-                lines.append(f"1종자동 차량: {st.session_state['today_auto1']}")
-                lines.append("")
-
             if auto_a:
                 lines.append("2종자동:")
                 for nm in auto_a:
-                    car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
-                    lines.append(f" • {car} {nm}" if car else f" • {nm}")
+                    lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
+
             # 🔍 오전 대비 비교
             lines.append("")
             lines.append("🔍 오전 대비 비교:")
@@ -757,15 +749,14 @@ with tab2:
             st.code(pm_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_text)
 
-            # ✅ 전일 저장 (1종자동 포함)
+            # ✅ 전일 저장
             if save_check:
                 save_json(PREV_FILE, {
                     "열쇠": today_key,
                     "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
-                    "1종수동": (sud_a[-1] if sud_a else prev_sudong),
-                    "1종자동": st.session_state.get("today_auto1", ""),  # === NEW
+                    "1종수동": (sud_a[-1] if sud_a else prev_sudong)
                 })
                 st.success("전일근무.json 업데이트 완료 ✅")
 
         except Exception as e:
-            st.error(f"오후 오류: {e}")
+
