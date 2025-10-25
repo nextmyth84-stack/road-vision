@@ -369,26 +369,6 @@ with st.sidebar.expander("🛠 정비 차량 관리", expanded=True):
         save_json(FILES["repair"], repair_store)
         st.success("정비 차량 저장 완료 ✅")
 
-    # 현재 정비 목록 표시 + 개별 삭제
-    st.markdown("<div class='sidebar-subtitle'>현재 정비 목록</div>", unsafe_allow_html=True)
-    if not repair_store.get("veh1") and not repair_store.get("veh2"):
-        st.caption("등록된 정비 차량이 없습니다.")
-    else:
-        if repair_store.get("veh1"):
-            st.write("**[1종]**", " ".join([f"<span class='badge red'>{c}</span>" for c in repair_store["veh1"]]), unsafe_allow_html=True)
-        if repair_store.get("veh2"):
-            st.write("**[2종]**", " ".join([f"<span class='badge red'>{c}</span>" for c in repair_store["veh2"]]), unsafe_allow_html=True)
-
-        # 개별 삭제 UI
-        del1 = st.multiselect("삭제할 1종 정비차량", options=repair_store.get("veh1", []), key="del_v1")
-        del2 = st.multiselect("삭제할 2종 정비차량", options=repair_store.get("veh2", []), key="del_v2")
-        if st.button("선택 삭제"):
-            new_v1 = [c for c in repair_store.get("veh1", []) if c not in del1]
-            new_v2 = [c for c in repair_store.get("veh2", []) if c not in del2]
-            repair_store = {"veh1": new_v1, "veh2": new_v2}
-            save_json(FILES["repair"], repair_store)
-            st.success("선택한 정비 차량 삭제 완료 ✅")
-
 # -----------------------
 # 세션 최신화 (전역 참조용)
 # -----------------------
