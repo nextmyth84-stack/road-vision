@@ -328,7 +328,27 @@ with st.sidebar.expander("👥 전체 근무자", expanded=False):
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
-repair_cars  = [x.strip() for x in st.sidebar.text_input("정비 차량 (쉼표로 구분)", "").split(",") if x.strip()]
+# ⚙️ 추가 설정
+st.sidebar.markdown("---")
+st.sidebar.subheader("⚙️ 추가 설정")
+
+# 1종 수동 인원 수 설정
+sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
+
+# 🚗 정비 차량 선택 (1종·2종 차량 전체 목록에서 선택)
+all_cars = sorted(list(set(
+    list(st.session_state["veh1"].keys()) + list(st.session_state["veh2"].keys())
+)))
+repair_cars = st.sidebar.multiselect("정비 차량 선택", options=all_cars, default=[])
+
+# 👇 제작자 표시
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<p style='text-align:center; font-size:10px; color:#94a3b8;'>
+    powered by <b>wook</b>
+</p>
+""", unsafe_allow_html=True)
+
 
 # 아래 제작자 표시
 st.sidebar.markdown("---")
