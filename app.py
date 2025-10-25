@@ -716,7 +716,7 @@ with tab2:
 
             if auto_a:
                 lines.append("2종자동:")
-                for nm in auto_m:
+                for nm in auto_a:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
