@@ -333,7 +333,7 @@ st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>📂 데이�
 # =====================================
 with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     prev_key = st.text_input("🔑 전일 열쇠 담당", prev_key)
-    prev_gyoyang5 = st.text_input("🕓 전일 교양(5교시)", prev_gyoyang5)
+    prev_gyoyang5 = st.text_input("🧑‍🏫 전일 교양(5교시)", prev_gyoyang5)
     prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong)
     if st.button("💾 전일 근무자 저장"):
         save_json(PREV_FILE, {
@@ -517,7 +517,7 @@ with tab1:
                     today_key = [x for x in key_order if normalize_name(x) == norm_list[0]][0]
             st.session_state.today_key = today_key
 
-            # 🕓 교양 1·2교시
+            # 🧑‍🏫 교양 1·2교시
             gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
             if gy1 and not can_attend_period_morning(gy1, 1, late_start):
                 gy1 = pick_next_from_cycle(gyoyang_order, gy1, m_norms)
@@ -642,7 +642,7 @@ with tab2:
 
             early_leave = st.session_state.get("early_leave", [])
 
-            # 🕓 교양 3~5교시
+            # 🧑‍🏫 교양 3~5교시
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
