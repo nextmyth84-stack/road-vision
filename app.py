@@ -696,7 +696,6 @@ with tab2:
             if sud_a:
                 for nm in auto_m:
                     lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
-
                 if sudong_count == 2 and len(sud_a) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
