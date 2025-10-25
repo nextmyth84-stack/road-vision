@@ -360,7 +360,7 @@ with st.sidebar.expander("🔢 순번표 관리", expanded=False):
         st.sidebar.success("순번표 저장 완료 ✅")
 
 # 차량표
-with st.sidebar.expander("🚘 차량표 관리", expanded=False):
+with st.sidebar.expander("🚘 차량 담당 관리", expanded=False):
     def parse_vehicle_map(text):
         m = {}
         for line in text.splitlines():
