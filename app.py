@@ -316,12 +316,6 @@ with st.sidebar.expander("🛠 정비 차량 관리", expanded=True):
             save_json(FILES["repair"], repair_store)
             st.success("정비 차량 저장 완료 ✅")
 
-    with colB:
-        if st.button("🧹 정비 목록 전체 초기화"):
-            repair_store = {"veh1": [], "veh2": []}
-            save_json(FILES["repair"], repair_store)
-            st.warning("정비 목록을 비웠습니다.")
-
     # 현재 정비 목록 표시 + 개별 삭제
     st.markdown("<div class='sidebar-subtitle'>현재 정비 목록</div>", unsafe_allow_html=True)
     if not repair_store.get("veh1") and not repair_store.get("veh2"):
