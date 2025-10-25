@@ -739,9 +739,7 @@ with tab2:
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
 
-            if added:        lines.append(" • 추가 인원: " + ", ".join(added))
-            if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
-            if newly_joined: lines.append(" • 신규 도로주행 인원: " + ", ".join(newly_joined))
+
 
             # 🚫 미배정 차량
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
