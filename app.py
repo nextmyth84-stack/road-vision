@@ -773,7 +773,7 @@ with tab2:
             if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
             if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
-            block2_text = "n".join(compare_lines).strip()
+            block2_text = "n".join(lines).strip()
 
             # === 출력 ===
             st.markdown("#### 🌇 오후 근무 결과 (블록 1)")
