@@ -691,7 +691,9 @@ with tab2:
                 lines.append("")
             if gy3: lines.append(f"3교시: {gy3}")
             if gy4: lines.append(f"4교시: {gy4}")
-            if gy5: lines.append(f"5교시: {gy5}")
+            if gy5: 
+                lines.append(f"5교시: {gy5}")
+                lines.append("")
 
             if sud_a:
                 for nm in sud_a:
