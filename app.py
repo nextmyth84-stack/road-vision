@@ -1,5 +1,5 @@
 # =====================================
-# app.py — 도로주행 근무자동배정 v7.40 (완전본, v7.30 기반)
+# app.py — 도로주행 근무 자동 배정 v7.40 (완전본, v7.30 기반)
 # =====================================
 import streamlit as st
 from openai import OpenAI
@@ -7,7 +7,7 @@ import base64, re, json, os, difflib
 
 
 st.markdown("""
-<h3 style='text-align:center; color:#1e3a8a;'>  도로주행 근무자동배정 </h3>
+<h3 style='text-align:center; color:#1e3a8a;'>  도로주행 근무 자동 배정 </h3>
 <p style='text-align:center; font-size:8px; color:#64748b; margin-top:-6px;'>
     Developed by <b>wook</b>
 </p>
