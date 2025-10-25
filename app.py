@@ -754,7 +754,7 @@ with tab2:
 
             # 🔍 블록2: 오전 대비 비교 (도로주행 근무자만, 신규 인원만 표시)
             morning_auto_names = set(st.session_state.get("morning_auto_names", []))
-            afternoon_auto_names = set(auto_a)
+            afternoon_auto_names = set(auto_a_people)
             afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
 
             added = sorted(list(afternoon_auto_names - morning_auto_names))
