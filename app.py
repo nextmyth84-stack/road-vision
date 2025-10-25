@@ -695,6 +695,7 @@ with tab2:
 
             if sud_a:
                 for nm in auto_m:
+                    lines.append("")
                     lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
 
                 if sudong_count == 2 and len(sud_a) < 2:
@@ -704,7 +705,9 @@ with tab2:
 
             # === NEW: 오후에도 1종 자동 차량 출력 (오전과 동일차량) ===
             if st.session_state.get("today_auto1"):
+                lines.append("")
                 lines.append(f"1종자동 차량: {st.session_state['today_auto1']}")
+                lines.append("")
 
             if auto_a:
                 lines.append("2종자동:")
