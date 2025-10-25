@@ -544,13 +544,8 @@ with tab1:
             st.session_state.morning_auto_names = auto_m + sud_m
 
             # === 출력 ===
-            lines = []
-            if today_key: lines.append(f"열쇠: {today_key}")
-                          lines.append("")
-                          
-            if gy1: lines.append(f"1교시: {gy1}")
-            if gy2: lines.append(f"2교시: {gy2}")
-            if gy1 or gy2:lines.append("")
+          
+            # === 출력 ===
 
             if sud_m:
                 for nm in sud_m:
