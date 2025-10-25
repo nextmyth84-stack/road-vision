@@ -776,7 +776,7 @@ with tab2:
                     missing.append(nm)
 
             if added:
-                comp.append(" • 추가 인원: " + ", ".join(added))
+                comp.append(" • 추가 인원: " + ", ".join(newly_joined))
             if missing:
                 comp.append(" • 제외 인원: " + ", ".join(missing))
 
