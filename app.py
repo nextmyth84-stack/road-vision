@@ -720,7 +720,7 @@ with tab2:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
-            # 🚫 미배정 차량
+            # 🚫 마감 차량
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
             pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
@@ -729,7 +729,7 @@ with tab2:
             un2 = sorted([c for c in am_c2 if c and c not in pm_c2])
             if un1 or un2:
                 lines.append("")
-                lines.append("🚫 미배정 차량:")
+                lines.append("🚫 마감 차량:")
                 if un1:
                     lines.append(" [1종 수동]")
                     for c in un1: lines.append(f"  • {c} 마감")
