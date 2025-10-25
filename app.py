@@ -793,7 +793,7 @@ with tab2:
                 save_json(PREV_FILE, {
                     "열쇠": today_key,
                     "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
-                    "1종수동": (sud_a[-1] if sud_a else prev_sudong)
+                    "1종수동": (sud_a[-1] if sud_a else prev_sudong),
                     "1종자동": (auto1_next if 'auto1_next' in locals() else prev_auto1)
                 })
                 st.success("전일근무.json 업데이트 완료 ✅")
