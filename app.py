@@ -720,20 +720,6 @@ with tab2:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
-            # 🔍 오전 대비 비교
-            lines.append("")
-            lines.append("🔍 오전 대비 비교:")
-            morning_auto_names = set(st.session_state.get("morning_auto_names", []))
-            afternoon_auto_names = set(auto_a)
-            afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
-
-            added = sorted(list(afternoon_auto_names - morning_auto_names))
-            missing = []
-            for nm in morning_auto_names:
-                n_norm = normalize_name(nm)
-                if n_norm not in afternoon_auto_names and n_norm not in afternoon_sudong_norms:
-                    missing.append(nm)
-            
             # 🚫 미배정 차량
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
@@ -750,6 +736,20 @@ with tab2:
                 if un2:
                     lines.append(" [2종 자동]")
                     for c in un2: lines.append(f"  • {c} 마감")
+
+            # 🔍 오전 대비 비교
+            lines.append("")
+            lines.append("🔍 오전 대비 비교:")
+            morning_auto_names = set(st.session_state.get("morning_auto_names", []))
+            afternoon_auto_names = set(auto_a)
+            afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
+
+            added = sorted(list(afternoon_auto_names - morning_auto_names))
+            missing = []
+            for nm in morning_auto_names:
+                n_norm = normalize_name(nm)
+                if n_norm not in afternoon_auto_names and n_norm not in afternoon_sudong_norms:
+                    missing.append(nm)
 
             newly_joined = sorted([
                 x for x in a_list
