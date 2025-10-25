@@ -753,18 +753,25 @@ with tab2:
             block1_text = "\n".join(lines).strip()
 
             # 🔍 블록2: 오전 대비 비교 (도로주행 근무자만, 신규 인원만 표시)
-            compare_lines = []
-            compare_lines.append("🔍 오전 대비 비교:")
-            morning_auto_names = {normalize_name(x) for x in st.session_state.get("morning_auto_names", [])}
-            afternoon_auto_names = {normalize_name(x) for x in auto_a_people}
-            # 신규 인원(오전 도로주행 아니었는데 오후엔 도로주행)
-            newly_joined = sorted([x for x in a_list if normalize_name(x) in (afternoon_auto_names - morning_auto_names)])
-            if newly_joined:
-                compare_lines.append(" • 신규 인원: " + ", ".join(newly_joined))
-            else:
-                compare_lines.append(" • 신규 인원: 없음")
+            morning_auto_names = set(st.session_state.get("morning_auto_names", []))
+            afternoon_auto_names = set(auto_a)
+            afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
 
-            block2_text = "\n".join(compare_lines).strip()
+            added = sorted(list(afternoon_auto_names - morning_auto_names))
+            missing = []
+            for nm in morning_auto_names:
+                n_norm = normalize_name(nm)
+                if n_norm not in afternoon_auto_names and n_norm not in afternoon_sudong_norms:
+                    missing.append(nm)
+
+            newly_joined = sorted([
+                x for x in a_list
+                if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
+            ])
+            
+            if added:        lines.append(" • 추가 인원: " + ", ".join(added))
+            if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
+            if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
             # === 출력 ===
             st.markdown("#### 🌇 오후 근무 결과 (블록 1)")
