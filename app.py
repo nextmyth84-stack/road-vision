@@ -685,6 +685,7 @@ with tab2:
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
              # === 출력 ===
+             
             lines = []
             if today_key: 
                 lines.append(f"열쇠: {today_key}")
@@ -698,6 +699,7 @@ with tab2:
             if sud_a:
                 for nm in sud_a:
                     lines.append(f"1종수동: {nm} {mark_car(get_vehicle(nm, veh1_map), repair_cars)}")
+                    lines.append("")
                 if sudong_count == 2 and len(sud_a) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
