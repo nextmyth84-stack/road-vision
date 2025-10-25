@@ -326,15 +326,15 @@ div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정 메뉴</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>📂 데이터 관리</h3>", unsafe_allow_html=True)
 
 # =====================================
 # 🗓 전일 근무자
 # =====================================
 with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     prev_key = st.text_input("🔑 전일 열쇠 담당", prev_key)
-    prev_gyoyang5 = st.text_input("📘 전일 교양(5교시)", prev_gyoyang5)
-    prev_sudong = st.text_input("🧰 전일 1종 수동", prev_sudong)
+    prev_gyoyang5 = st.text_input("🕓 전일 교양(5교시)", prev_gyoyang5)
+    prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong)
     if st.button("💾 전일 근무자 저장"):
         save_json(PREV_FILE, {
             "열쇠": prev_key,
@@ -344,9 +344,9 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
         st.sidebar.success("전일근무.json 저장 완료 ✅")
 
 # =====================================
-# 🔑 순번표 / 차량표 / 근무자
+# 🔢 순번표 / 차량표 / 근무자
 # =====================================
-with st.sidebar.expander("🔑 순번표 관리", expanded=False):
+with st.sidebar.expander("🔢 순번표 관리", expanded=False):
     st.markdown("<div class='sidebar-subtitle'>열쇠 순번</div>", unsafe_allow_html=True)
     t1 = st.text_area("", "\n".join(key_order), height=150)
     st.markdown("<div class='sidebar-subtitle'>교양 순번</div>", unsafe_allow_html=True)
@@ -517,7 +517,7 @@ with tab1:
                     today_key = [x for x in key_order if normalize_name(x) == norm_list[0]][0]
             st.session_state.today_key = today_key
 
-            # 🧑‍🏫 교양 1·2교시
+            # 🕓 교양 1·2교시
             gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
             if gy1 and not can_attend_period_morning(gy1, 1, late_start):
                 gy1 = pick_next_from_cycle(gyoyang_order, gy1, m_norms)
@@ -525,7 +525,7 @@ with tab1:
             gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - used_norm)
             st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
 
-            # 🔧 1종 수동
+            # 🚚 1종 수동
             sud_m, last = [], prev_sudong
             for _ in range(sudong_count):
                 pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
@@ -563,11 +563,11 @@ with tab1:
                 for nm in auto_m:
                     lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
 
-            # 🧭 코스점검 결과
+            #  코스점검
             course_records = st.session_state.get("course_records", [])
             if course_records:
                 lines.append("")
-                lines.append("🧭 코스점검 결과:")
+                lines.append(" 코스점검 :")
                 for c in ["A", "B"]:
                     passed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "합격"]
                     failed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "불합격"]
@@ -642,7 +642,7 @@ with tab2:
 
             early_leave = st.session_state.get("early_leave", [])
 
-            # 🧑‍🏫 교양 3~5교시
+            # 🕓 교양 3~5교시
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
@@ -659,7 +659,7 @@ with tab2:
                         used.add(normalize_name(pick))
                         break
 
-            # 🔧 1종 수동
+            # 🚚 1종 수동
             sud_a, last = [], sud_base
             for _ in range(sudong_count):
                 pick = pick_next_from_cycle(sudong_order, last, a_norms)
