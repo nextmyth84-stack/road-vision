@@ -739,6 +739,7 @@ with tab2:
 
             # 🔍 오전 대비 비교
             lines.append("")
+            lines.append("🔍 오전 대비 비교:")
             morning_auto_names = set(st.session_state.get("morning_auto_names", []))
             afternoon_auto_names = set(auto_a)
             afternoon_sudong_norms = {normalize_name(x) for x in sud_a}
