@@ -549,7 +549,7 @@ with tab1:
 
             if sud_m:
                 for nm in sud_m:
-                   car = mark_car(get_vehicle(nm, veh1_map), repair_cars)
+                    car = mark_car(get_vehicle(nm, veh1_map), repair_cars)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
                 if sudong_count == 2 and len(sud_m) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
