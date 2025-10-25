@@ -624,7 +624,7 @@ with tab2:
     excluded_set = {normalize_name(x) for x in st.session_state.get("excluded_auto", [])}
     a_norms = {normalize_name(x) for x in a_list} - excluded_set
 
-    save_check = st.checkbox("전일근무.json 자동 저장", value=True)
+    save_check = st.checkbox("전일근무자(열쇠,5교시,1종수동) 자동 저장", value=True)
 
     st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
     if st.button("📋 오후 배정 생성"):
