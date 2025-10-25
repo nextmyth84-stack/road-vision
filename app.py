@@ -544,6 +544,7 @@ with tab1:
             st.session_state.morning_auto_names = auto_m + sud_m
           
            # === 출력 ===
+           
             lines = []
             if today_key:
                 lines.append(f"열쇠: {today_key}")
@@ -555,8 +556,6 @@ with tab1:
                 lines.append(f"2교시: {gy2}")
             if gy1 or gy2:
                 lines.append("")
-
-
 
             if sud_m:
                 for nm in sud_m:
@@ -571,6 +570,7 @@ with tab1:
 
             # === NEW: 1종 자동 차량 출력 (1종수동 바로 아래) ===
             if st.session_state.get("today_auto1"):
+                lines.append("")
                 lines.append(f"1종자동: {st.session_state['today_auto1']}")
                 lines.append("")
             if auto_m:
