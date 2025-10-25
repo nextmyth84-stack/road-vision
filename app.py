@@ -702,6 +702,14 @@ with tab2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
                 lines.append("1종수동: (배정자 없음)")
+                if sudong_count >= 1:
+                    lines.append("※ 수동 가능 인원이 0명입니다.")
+
+            # === NEW: 1종 자동 차량 출력 (1종수동 바로 아래) ===
+            if st.session_state.get("today_auto1"):
+                lines.append(f"1종자동 차량: {st.session_state['today_auto1']}")
+                lines.append("")
+
 
             if auto_a:
                 lines.append("2종자동:")
