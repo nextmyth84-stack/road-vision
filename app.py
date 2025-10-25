@@ -738,8 +738,10 @@ with tab2:
                 x for x in a_list
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
-
-
+            
+            if added:        lines.append(" • 추가 인원: " + ", ".join(added))
+            if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
+            if newly_joined: lines.append(" • 신규 도로주행 인원: " + ", ".join(newly_joined))
 
             # 🚫 미배정 차량
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
@@ -758,32 +760,33 @@ with tab2:
                     lines.append(" [2종 자동]")
                     for c in un2: lines.append(f"  • {c} 마감")
                     
-            # 첫 번째 블록: 오후 근무 결과 (열쇠~미배정 차량)
-            result_lines = []
-            for line in lines:
-                if not line.startswith("🔍 오전 대비 비교:"):
-                    result_lines.append(line)
-            pm_result_text = "\n".join(result_lines)
+            # === 전체 결과 구성 ===
+            pm_text_all = "\n".join(lines)
 
+            # 🔹 🚫 미배정 차량까지 포함하는 첫 번째 블록
+            split_idx = None
+            for i, line in enumerate(lines):
+                if line.startswith("🔍 오전 대비 비교:"):
+                    split_idx = i
+                    break
+
+            if split_idx is not None:
+                pm_result_text = "\n".join(lines[:split_idx]).strip()
+                pm_compare_text = "\n".join(lines[split_idx:]).strip()
+            else:
+                pm_result_text = pm_text_all
+                pm_compare_text = ""
+
+            # === 출력 ===
             st.markdown("#### 🌇 오후 근무 결과")
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
-
-            # 두 번째 블록: 오전 대비 비교
-            compare_lines = []
-            is_compare = False
-            for line in lines:
-                if line.startswith("🔍 오전 대비 비교:"):
-                    is_compare = True
-                if is_compare:
-                    compare_lines.append(line)
-
-            if compare_lines:
-                pm_compare_text = "\n".join(compare_lines)
+            if pm_compare_text:
                 st.markdown("#### 🔍 오전 대비 비교")
                 st.code(pm_compare_text, language="text")
-                clipboard_copy_button("📋 비교 결과 복사하기", pm_compare_text)
+                clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
+
 
             # ✅ 전일 저장
             if save_check:
