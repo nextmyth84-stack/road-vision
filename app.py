@@ -681,8 +681,9 @@ with tab2:
             if gy5: lines.append(f"5교시: {gy5}")
 
             if sud_a:
-                for nm in sud_a:
-                    lines.append(f"1종수동: {mark_car(get_vehicle(nm, veh1_map) {nm}, repair_cars)}")
+                for nm in auto_m:
+                    lines.append(f" • {nm} {mark_car(get_vehicle(nm, veh2_map), repair_cars)}")
+
                 if sudong_count == 2 and len(sud_a) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
@@ -695,8 +696,8 @@ with tab2:
             if auto_a:
                 lines.append("2종자동:")
                 for nm in auto_a:
-                    lines.append(f" • {mark_car(get_vehicle(nm, veh2_map ) {nm}, repair_cars)}")
-
+                    car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
+                    lines.append(f" • {car} {nm}" if car else f" • {nm}")
             # 🔍 오전 대비 비교
             lines.append("")
             lines.append("🔍 오전 대비 비교:")
