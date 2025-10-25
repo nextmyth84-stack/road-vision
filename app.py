@@ -627,7 +627,7 @@ with tab2:
     save_check = st.checkbox("전일근무.json 자동 저장", value=True)
 
     st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
-    if st.button("🌇 오후 배정 생성"):
+    if st.button("📋 오후 배정 생성"):
         try:
             gyoyang_order = st.session_state.get("gyoyang_order", [])
             sudong_order = st.session_state.get("sudong_order", [])
