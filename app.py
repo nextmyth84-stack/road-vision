@@ -505,6 +505,7 @@ with tab1:
                 elif norm_list:
                     today_key = [x for x in key_order if normalize_name(x) == norm_list[0]][0]
             st.session_state.today_key = today_key
+          
 
             # 🧑‍🏫 교양 1·2교시
             gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
@@ -513,6 +514,7 @@ with tab1:
             used_norm = {normalize_name(gy1)} if gy1 else set()
             gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - used_norm)
             st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
+            
 
             # 🚚 1종 수동
             sud_m, last = [], prev_sudong
@@ -544,8 +546,10 @@ with tab1:
             # === 출력 ===
             lines = []
             if today_key: lines.append(f"열쇠: {today_key}")
+             lines.append("")
             if gy1: lines.append(f"1교시: {gy1}")
             if gy2: lines.append(f"2교시: {gy2}")
+             lines.append("")
 
             if sud_m:
                 for nm in sud_m:
