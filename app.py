@@ -549,7 +549,7 @@ st.session_state.update({
 # -----------------------
 # 탭 UI 구성 (오전 / 오후)
 # -----------------------
-tab1, tab2 = st.tabs(["🌅 오전 근무", "🌇 오후 근무"])
+tab1, tab2 = st.tabs([" 오전 근무", " 오후 근무"])
 
 st.markdown("""
     <style>
@@ -662,7 +662,7 @@ with tab1:
     excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
-    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'> 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220)
     m_list = [x.strip() for x in morning_text.splitlines() if x.strip()]
 
@@ -670,7 +670,7 @@ with tab1:
     late_start = st.session_state.get("late_start", [])
     m_norms = {normalize_name(x) for x in m_list} - excluded_set
 
-    st.markdown("<h4 style='font-size:18px;'>🚗 오전 근무 배정</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'> 오전 근무 배정</h4>", unsafe_allow_html=True)
     if st.button("📋 오전 배정 생성"):
         try:
             key_order     = st.session_state.get("key_order", [])
@@ -846,7 +846,7 @@ with tab2:
                 st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
                 
-    st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'> 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     afternoon_text = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220)
     a_list = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
 
@@ -857,7 +857,7 @@ with tab2:
     save_check = st.checkbox("전일근무자 자동 저장", value=True)
     st.caption("(열쇠, 5교시교양, 1종수동, 1종자동)")
 
-    st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'> 오후 근무 배정</h4>", unsafe_allow_html=True)
     if st.button("📋 오후 배정 생성"):
         try:
             gyoyang_order = st.session_state.get("gyoyang_order", [])
