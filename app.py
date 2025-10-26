@@ -581,6 +581,9 @@ with tab1:
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
+    st.sidebar.caption("한글 이미지 분석이 정확하지 않을 수 있습니다. GPT 인식 후 필히 실제 근무자와 비교하세요.")
+    st.sidebar.caption("실제근무자와 다를 경우(오타,근무자X) 수정해야 합니다.")
+
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
