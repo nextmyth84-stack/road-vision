@@ -571,12 +571,36 @@ _session_entries = {
     "cutoff": cutoff,                    # float
     "auto1_order": auto1_order,          # list
 }
+# 세션 최신화 — 위젯 키는 건너뛴다
+WIDGET_LOCKED_KEYS = {"sudong_count", "cutoff"}  # 이미 위젯이 잡고 있는 키
+
+_session_entries = {
+    "key_order": key_order,
+    "gyoyang_order": gyoyang_order,
+    "sudong_order": sudong_order,
+    "veh1": veh1_map,
+    "veh2": veh2_map,
+    "employee_list": employee_list,
+    # "sudong_count": sudong_count,   # ← 위젯이 관리하므로 제외
+    "repair_1s": repair_saved["1종수동"],
+    "repair_1a": repair_saved["1종자동"],
+    "repair_2a": repair_saved["2종자동"],
+    "repair_cars": repair_union,
+    # "cutoff": cutoff,               # ← 위젯이 관리하므로 제외
+    "auto1_order": auto1_order,
+}
+
 for _k, _v in _session_entries.items():
+    if _k in WIDGET_LOCKED_KEYS:
+        continue
     try:
+        # 이미 같은 값이면 굳이 재할당 안함(불필요한 렌더링 방지)
+        if st.session_state.get(_k, _v) is _v or st.session_state.get(_k) == _v:
+            continue
         st.session_state[_k] = _v
     except Exception as _e:
-        # 어떤 키가 문제인지 바로 보이도록 경고만 띄우고 계속 진행
         st.warning(f"세션 키 설정 실패: '{_k}' → {_e}")
+
 
 # -----------------------
 # 탭 UI 구성 (오전 / 오후) + 결과 미리보기 도구
