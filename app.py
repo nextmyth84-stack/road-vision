@@ -805,6 +805,7 @@ with tab2:
             # === NEW: 1종 자동 차량 출력 (1종수동 바로 아래) ===
             if st.session_state.get("today_auto1"):
                 a1 = mark_car(st.session_state["today_auto1"], repair_1a)
+                lines.append("")
                 lines.append(f"1종자동: {a1}")
                 lines.append("")
 
