@@ -344,6 +344,12 @@ div.stButton > button:hover { background-color: #1d4ed8; }
     border-radius: 8px;
     color: #7c2d12;
     font-size: 13px;
+
+.big-label {
+    font-size: 22px;   /* ← 원하는 크기 */
+    font-weight: 700;
+    color: #1f2937;
+    margin: 6px 0 4px;
 }
 </style>
 """, unsafe_allow_html=True)
