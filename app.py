@@ -11,7 +11,7 @@ def kst_result_header(period_label: str) -> str:
     """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
     dt = datetime.now(ZoneInfo("Asia/Seoul"))
     yoil = "월화수목금토일"[dt.weekday()]
-    return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 차량 배정 및 교양"
+    return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 교양순서 및 차량배정"
 
 
 st.set_page_config(layout="wide")
