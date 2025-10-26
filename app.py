@@ -716,11 +716,6 @@ with tab1:
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
-            # 이하 기존 그대로...
-
-            if today_key:
-                lines.append(f"열쇠: {today_key}")
-                lines.append("")
 
             if gy1: lines.append(f"1교시: {gy1}")
             if gy2: lines.append(f"2교시: {gy2}")
