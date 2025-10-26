@@ -899,10 +899,10 @@ with tab2:
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
             if pm_compare_text:
-            st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
-            st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)  # [PATCH]
-            st.code(pm_compare_text, language="text")
-            clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
+                st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
+                st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)  # [PATCH]
+                st.code(pm_compare_text, language="text")
+                clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
             # ✅ 전일 저장
             if save_check:
