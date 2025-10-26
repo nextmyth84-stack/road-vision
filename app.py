@@ -662,8 +662,8 @@ with tab1:
     excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
-    st.markdown("<h4 style='font-size:18px;'> 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
-    morning_text = st.text_area("🌅오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220)
+    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    morning_text = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220)
     m_list = [x.strip() for x in morning_text.splitlines() if x.strip()]
 
     early_leave = st.session_state.get("early_leave", [])
