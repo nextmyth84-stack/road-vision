@@ -117,7 +117,7 @@ def get_vehicle(name, veh_map):
     for car, nm in veh_map.items():
         if normalize_name(nm) == nkey:
             return car
-    return ""
+    return None
 
 def mark_car(car, repair_cars):
     return f"{car}{' (정비)' if car in repair_cars else ''}" if car else ""
@@ -654,10 +654,11 @@ with tab1:
                 if car:
                     am_assigned_map[normalize_name(nm)] = car
             for nm in auto_m:  # 2종 자동 인원
-                    car = get_vehicle(nm, veh2_map)
-                    if car:
-                        am_assigned_map[normalize_name(nm)] = car
+                car = get_vehicle(nm, veh2_map)
+                if car:
+                    am_assigned_map[normalize_name(nm)] = car
             st.session_state.am_assigned_map = am_assigned_map
+
             # 오전 1종 수동 마지막 담당자 저장 (오후 순번용)
             if sud_m:
                 st.session_state["sudong_base_for_pm"] = sud_m[-1]
