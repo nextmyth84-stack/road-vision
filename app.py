@@ -825,10 +825,10 @@ with tab2:
                 used_norms.add(normalize_name(pick))
                 last = pick
 
-            # 오전 사람→차량 매핑
+            # === 오후 차량 배정 ===
             am_assigned_map = st.session_state.get("am_assigned_map", {})
 
-            # 차량 배정 (오전차 우선, 정비 제외)
+            # 1종 수동
             veh1_taken_pm = set()
             sud_a_with_car = []
             for nm in sud_a:
@@ -843,11 +843,31 @@ with tab2:
 
             veh2_taken_pm = set()
             auto_a_with_car = []
+
             for nm in auto_a:
-                car = assign_vehicle_pm(
-                    nm, veh2_map, am_assigned_map, veh2_taken_pm, set(repair_veh2)
-                )
-                auto_a_with_car.append((nm, car))
+                n_norm = normalize_name(nm)
+                assigned_car = ""
+
+                # 1️⃣ 오전에도 근무한 사람 → 오전 차량 그대로 사용
+                if n_norm in am_assigned_map:
+                    am_car = am_assigned_map[n_norm]
+                    if am_car:
+                        assigned_car = am_car
+                        veh2_taken_pm.add(am_car)
+                        auto_a_with_car.append((nm, assigned_car))
+                        continue
+
+                # 2️⃣ 오전 없던 사람 → 담당차량 or 랜덤
+                my_car = get_vehicle(nm, veh2_map)
+                if my_car and my_car not in repair_veh2 and my_car not in veh2_taken_pm:
+                    assigned_car = my_car
+                    veh2_taken_pm.add(my_car)
+                else:
+                    pool = [c for c in veh2_map.keys() if c not in veh2_taken_pm and c not in repair_veh2]
+                    if pool:
+                        assigned_car = random.choice(pool)
+                        veh2_taken_pm.add(assigned_car)
+                auto_a_with_car.append((nm, assigned_car))
 
             # === 출력 블록 1 ===
             lines = []
