@@ -3,7 +3,7 @@
 # =====================================
 import streamlit as st
 from openai import OpenAI
-+import base64, re, json, os, difflib, html   # [PATCH] 색상 렌더용
+import base64, re, json, os, difflib, html   # [PATCH] 색상 렌더용
 
 st.markdown("""
 <h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무 자동 배정 </h3>
