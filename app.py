@@ -1,17 +1,22 @@
 # =====================================
-# app.py — 도로주행 근무 자동 배정 v7.42 (모바일/버튼/UI 개선)
+# app.py — 도로주행 근무 자동 배정 v7.41+
 # =====================================
 import streamlit as st
 from openai import OpenAI
-import base64, re, json, os, difflib, html
+import base64, re, json, os, difflib, html  # [PATCH] html 추가
 from datetime import datetime
-from zoneinfo import ZoneInfo  # py>=3.9
+from zoneinfo import ZoneInfo  # Python 3.9+
 
-# 페이지 설정 (모바일 가독성에 유리)
-st.set_page_config(layout="wide", page_title="도로주행 배정", page_icon="🚗")
+def kst_result_header(period_label: str) -> str:
+    """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
+    dt = datetime.now(ZoneInfo("Asia/Seoul"))
+    yoil = "월화수목금토일"[dt.weekday()]
+    return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 교양순서 및 차량배정"
 
+
+st.set_page_config(layout="wide")
 st.markdown("""
-<h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무 자동 배정 </h3>
+<h3 style='text-align:center; color:#1e3a8a;'> &nbsp;&nbsp;&nbsp; 도로주행 근무 자동 배정 </h3>
 <p style='text-align:center; font-size:6px; color:#64748b; margin-top:-6px;'>
     Developed by <b>wook</b>
 </p>
@@ -70,10 +75,11 @@ def clipboard_copy_button(label, text):
           alert('복사가 지원되지 않는 브라우저입니다. 텍스트를 길게 눌러 복사하세요.');
         }}
       }});
-    }})();
+    }} )();
     </script>
     """
     st.components.v1.html(html_js, height=52)
+
 
 # -----------------------
 # 이름 정규화 / 차량 / 교정 / 순번
@@ -84,17 +90,17 @@ def normalize_name(s):
 
 def get_vehicle(name, veh_map):
     nkey = normalize_name(name)
-    for car, nm in (veh_map or {}).items():
+    for car, nm in veh_map.items():
         if normalize_name(nm) == nkey:
             return car
     return ""
-
+    
 def _norm_car_id(s: str) -> str:
-    """차량 아이디 비교용 정규화: 공백 제거"""
+    """차량 아이디 비교용 정규화: 공백 제거, 전각/반각 공백 제거"""
     if not s:
         return ""
     return re.sub(r"\s+", "", str(s)).strip()
-
+    
 def mark_car(car, repair_cars):
     """
     차량아이디 표기 + (정비중) 태그
@@ -106,8 +112,8 @@ def mark_car(car, repair_cars):
     repairs_norm = {_norm_car_id(x) for x in (repair_cars or [])}
     return f"{car}{' (정비중)' if car_norm in repairs_norm else ''}"
 
+# [PATCH] 차량 번호 정렬용 키 (작은 수 → 큰 수)
 def car_num_key(car_id: str):
-    """차량 문자열에서 숫자 추출해 정렬 키로 사용"""
     m = re.search(r"(\d+)", car_id or "")
     return int(m.group(1)) if m else 10**9
 
@@ -194,6 +200,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         early_leave = js.get("early_leave", []) if want_early else []
         late_start = js.get("late_start", []) if want_late else []
 
+        # 숫자 캐스팅
         def to_float(x):
             try:
                 return float(x)
@@ -248,8 +255,8 @@ files = {
     "veh1": "1종차량표.json",
     "veh2": "2종차량표.json",
     "employees": "전체근무자.json",
-    "1종자동": "1종자동순번.json",   # 1종 자동 차량 순번
-    "repair": "정비차량.json",      # 정비차량(종별)
+    "1종자동": "1종자동순번.json",  # NEW
+    "repair": "정비차량.json",       # [PATCH]
 }
 for k, v in files.items():
     files[k] = os.path.join(DATA_DIR, v)
@@ -260,9 +267,9 @@ default_data = {
     "1종":  ["권한솔","김남균","김성연","김주현","이호석","조정래"],
     "veh1": {"2호":"조정래","5호":"권한솔","7호":"김남균","8호":"이호석","9호":"김주현","10호":"김성연"},
     "veh2": {"4호":"김남균","5호":"김병욱","6호":"김지은","12호":"안유미","14호":"김면정","15호":"이호석","17호":"김성연","18호":"권한솔","19호":"김주현","22호":"조정래"},
-    "employees": ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조윤영","조정래","김병욱","김주현"],
+    "employees": ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조정래","김병욱","김주현"],
     "1종자동": ["21호", "22호", "23호", "24호"],
-    "repair": {"1종수동": [], "1종자동": [], "2종자동": []},
+    "repair": {"1종수동": [], "1종자동": [], "2종자동": []},  # [PATCH]
 }
 for k, v in files.items():
     if not os.path.exists(v):
@@ -279,9 +286,9 @@ sudong_order  = load_json(files["1종"])
 veh1_map      = load_json(files["veh1"])
 veh2_map      = load_json(files["veh2"])
 employee_list = load_json(files["employees"])
-auto1_order   = load_json(files["1종자동"])
+auto1_order   = load_json(files["1종자동"])  # NEW
 
-# 정비 차량 로드 (하위호환: list ⇒ 3종 공통 처리)
+# [PATCH] 정비 차량 로드 (하위호환: list ⇒ 3종 공통)
 _repair_raw = load_json(files["repair"])
 if isinstance(_repair_raw, dict):
     repair_saved = {
@@ -293,12 +300,13 @@ elif isinstance(_repair_raw, list):
     repair_saved = {"1종수동": _repair_raw, "1종자동": _repair_raw, "2종자동": _repair_raw}
 else:
     repair_saved = {"1종수동": [], "1종자동": [], "2종자동": []}
+# 합산 보기(읽기 전용)
 repair_union = sorted(set(repair_saved["1종수동"] + repair_saved["1종자동"] + repair_saved["2종자동"]), key=car_num_key)
 
 # -----------------------
-# 전일 근무자 로드 (data/로 이동)
+# 전일 근무자 로드
 # -----------------------
-PREV_FILE = os.path.join(DATA_DIR, "전일근무.json")
+PREV_FILE = "전일근무.json"
 
 def load_prev_data():
     if os.path.exists(PREV_FILE):
@@ -315,106 +323,60 @@ prev_gyoyang5 = prev_data.get("교양_5교시", "")
 prev_sudong = prev_data.get("1종수동", "")
 prev_auto1 = prev_data.get("1종자동", "")
 # =====================================
-# 💄 전역/사이드바 스타일 (모바일/버튼/가독성)
+# 💄 사이드바 디자인 개선
 # =====================================
-# 전역 스타일 (본문/버튼/모바일 대응)
-st.markdown("""
-<style>
-/* ====== 모바일 가독성 / 반응형 ====== */
-html, body, [data-testid="stAppViewContainer"] { font-size: 15px; line-height: 1.5; }
-.result-pre { font-size: 15px; line-height: 1.6; }
 
-/* 작은 화면(폰)에서 컬럼 → 세로 스택, 버튼 풀폭 */
-@media (max-width: 640px) {
-  div[data-testid="stHorizontalBlock"]{ flex-direction: column; gap: 8px !important; }
-  div[data-testid="column"]{ width: 100% !important; padding-right: 0 !important; }
-  .result-pre { font-size: 14px; }
-  div.stButton > button{ width: 100%; padding: 12px 16px; font-size: 16px; }
-  textarea, input, .stTextArea textarea { font-size: 15px !important; }
-}
-
-/* ====== 공통 버튼 미니멀 컬러링(모바일 터치 타겟 확대) ====== */
-div.stButton > button{
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  color: #fff; border: none; border-radius: 12px;
-  padding: 10px 16px; font-weight: 700; font-size: 15px;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, .25);
-  transition: transform .02s ease, filter .15s ease;
-}
-div.stButton > button:hover{ filter: brightness(1.03); }
-div.stButton > button:active{ transform: translateY(1px); }
-
-/* 복사 버튼(클립보드)도 동일 톤으로 */
-button[id^="btn_"]{
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  border-radius: 10px !important; font-weight: 700 !important;
-}
-
-/* (정비중) 강조 색 */
-.repair-tag { color: #ef4444; font-weight: 800; }
-
-/* GPT 설명 텍스트 */
-.gpt-desc { font-size: 13px; color: #475569; margin-top: 6px; line-height: 1.5; }
-
-/* 탭 스타일 */
-.stTabs [data-baseweb="tab-list"] { gap: 12px; }
-.stTabs [data-baseweb="tab"] {
-    font-size: 20px; padding: 16px 40px;
-    border-radius: 10px 10px 0 0; background-color: #d1d5db;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #2563eb !important; color: white !important; font-weight: 700;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# 사이드바 스타일
 st.sidebar.markdown("""
 <style>
+/* === 사이드바 최소/고정 폭 설정 === */
 section[data-testid="stSidebar"] {
     background-color: #f8fafc;
     padding: 10px;
     border-right: 1px solid #e5e7eb;
 
-    /* 최소/기본 폭 */
+    /* ▼ 핵심: 최소/기본 폭 지정 */
     min-width: 340px;
     width: 340px;
     flex: 0 0 340px;
 }
+
+/* 화면 크기에 따라 유연하게 */
 @media (min-width: 1200px) {
   section[data-testid="stSidebar"] { width: 360px; flex: 0 0 360px; }
+}
+@media (min-width: 992px) and (max-width: 1199px) {
+  section[data-testid="stSidebar"] { width: 340px; flex: 0 0 340px; }
 }
 @media (max-width: 991px) {
   section[data-testid="stSidebar"] { min-width: 280px; width: 85vw; flex: 0 0 auto; }
 }
 
+/* 이하 기존 스타일 유지 */
 .streamlit-expanderHeader { font-weight: 700 !important; color: #1e3a8a !important; font-size: 15px !important; }
 textarea, input { font-size: 14px !important; }
+div.stButton > button { background-color: #2563eb; color: white; border: none; border-radius: 8px; padding: 6px 12px; margin-top: 6px; font-weight: 600; }
 div.stButton > button:hover { background-color: #1d4ed8; }
 .sidebar-subtitle { font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px; }
+.repair-box { border: 1px solid #fdba74; background: #fff7ed; padding: 8px 10px; border-radius: 8px; color: #7c2d12; font-size: 13px; }
 
-.repair-box {
-    border: 1px solid #fdba74;
-    background: #fff7ed;
-    padding: 8px 10px;
-    border-radius: 8px;
-    color: #7c2d12;
+.btn-desc{
     font-size: 13px;
+    color: #475569;
+    margin-top: 6px;
+    line-height: 1.5;
 }
-.big-label { font-size: 18px; font-weight: 800; color: #1f2937; margin: 6px 0 4px; }
 </style>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>📂 데이터 관리</h3>", unsafe_allow_html=True)
-
+st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 근무자 설정 </h3>", unsafe_allow_html=True)
 # =====================================
-# 🗓 전일 근무자
+# 🗓 전일 근무자 (1종자동 포함 저장)
 # =====================================
 with st.sidebar.expander("🗓 전일 근무자", expanded=True):
-    prev_key = st.text_input("🔑 전일 열쇠 담당", prev_key, key="prev_key")
-    prev_gyoyang5 = st.text_input("🧑‍🏫 전일 교양(5교시)", prev_gyoyang5, key="prev_g5")
-    prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong, key="prev_1s")
-    prev_auto1 = st.text_input("🚗 전일 1종 자동", prev_auto1, key="prev_1a")
+    prev_key = st.text_input("🔑 전일 열쇠 담당", prev_key)
+    prev_gyoyang5 = st.text_input("🧑‍🏫 전일 교양(5교시)", prev_gyoyang5)
+    prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong)
+    prev_auto1 = st.text_input("🚗 전일 1종 자동", prev_auto1)  # NEW
 
     if st.button("💾 전일 근무자 저장", key="btn_prev_save"):
         save_json(PREV_FILE, {
@@ -426,29 +388,30 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
         st.sidebar.success("전일근무.json 저장 완료 ✅")
 
 # =====================================
-# 🗂 데이터 관리 (그룹) — 내부에 3개 섹션 묶기
+# 📂 데이터 관리 (그룹) — 내부에 3개 메뉴 묶기
 # =====================================
-with st.sidebar.expander("🗂 데이터 관리", expanded=False):
+with st.sidebar.expander("📂 데이터 관리", expanded=False):
+
     # 🔢 순번표 관리
     with st.expander("🔢 순번표 관리", expanded=False):
         st.markdown("<div class='sidebar-subtitle'>열쇠 순번</div>", unsafe_allow_html=True)
-        t1 = st.text_area("", "\n".join(key_order), height=150, key="ta_order_key")
+        t1 = st.text_area("", "\n".join(key_order), height=150)
         st.markdown("<div class='sidebar-subtitle'>교양 순번</div>", unsafe_allow_html=True)
-        t2 = st.text_area("", "\n".join(gyoyang_order), height=150, key="ta_order_g")
+        t2 = st.text_area("", "\n".join(gyoyang_order), height=150)
         st.markdown("<div class='sidebar-subtitle'>1종 수동 순번</div>", unsafe_allow_html=True)
-        t3 = st.text_area("", "\n".join(sudong_order), height=120, key="ta_order_1s")
+        t3 = st.text_area("", "\n".join(sudong_order), height=120)
         st.markdown("<div class='sidebar-subtitle'>1종 자동 순번</div>", unsafe_allow_html=True)
-        t4 = st.text_area("", "\n".join(auto1_order or []), height=100, key="ta_order_1a")
+        t4 = st.text_area("", "\n".join(auto1_order or []), height=100)
 
         if st.button("💾 순번표 저장", key="btn_save_orders"):
             save_json(files["열쇠"], [x.strip() for x in t1.splitlines() if x.strip()])
             save_json(files["교양"], [x.strip() for x in t2.splitlines() if x.strip()])
             save_json(files["1종"], [x.strip() for x in t3.splitlines() if x.strip()])
             save_json(files["1종자동"], [x.strip() for x in (t4.splitlines() if t4 else []) if x.strip()])
-            key_order[:]     = load_json(files["열쇠"])
+            key_order[:] = load_json(files["열쇠"])
             gyoyang_order[:] = load_json(files["교양"])
-            sudong_order[:]  = load_json(files["1종"])
-            auto1_order[:]   = load_json(files["1종자동"])
+            sudong_order[:] = load_json(files["1종"])
+            auto1_order[:] = load_json(files["1종자동"])
             st.success("순번표 저장 완료 ✅")
 
     # 🚘 차량 담당 관리
@@ -458,13 +421,13 @@ with st.sidebar.expander("🗂 데이터 관리", expanded=False):
             for line in text.splitlines():
                 p = line.strip().split()
                 if len(p) >= 2:
-                    m[p[0]] = " ".join(p[1:])
+                    m[p[0]] = " ".join(p[1:])  # car -> name
             return m
 
         st.markdown("<div class='sidebar-subtitle'>1종 수동 차량표</div>", unsafe_allow_html=True)
-        t1v = st.text_area("", "\n".join([f"{car} {nm}" for car, nm in (veh1_map or {}).items()]), height=130, key="ta_veh1")
+        t1v = st.text_area("", "\n".join([f"{car} {nm}" for car, nm in veh1_map.items()]), height=130)
         st.markdown("<div class='sidebar-subtitle'>2종 자동 차량표</div>", unsafe_allow_html=True)
-        t2v = st.text_area("", "\n".join([f"{car} {nm}" for car, nm in (veh2_map or {}).items()]), height=160, key="ta_veh2")
+        t2v = st.text_area("", "\n".join([f"{car} {nm}" for car, nm in veh2_map.items()]), height=160)
 
         if st.button("💾 차량표 저장", key="btn_save_veh"):
             veh1_new, veh2_new = {}, {}
@@ -483,40 +446,39 @@ with st.sidebar.expander("🗂 데이터 관리", expanded=False):
     # 👥 전체 근무자
     with st.expander("👥 전체 근무자", expanded=False):
         st.markdown("<div class='sidebar-subtitle'>근무자 목록</div>", unsafe_allow_html=True)
-        t_emp = st.text_area("", "\n".join(employee_list), height=180, key="ta_emp")
+        t_emp = st.text_area("", "\n".join(employee_list), height=180)
         if st.button("💾 근무자 저장", key="btn_save_emp"):
             save_json(files["employees"], [x.strip() for x in t_emp.splitlines() if x.strip()])
             employee_list = load_json(files["employees"])
             st.success("근무자 명단 저장 완료 ✅")
 
 # =====================================
-# ⚙️ 추가 설정 + 정비 차량 관리
+# ⚙️ 추가 설정 + 정비차량 그룹
 # =====================================
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
-st.sidebar.markdown("<div class='big-label'>1종 수동 인원 수</div>", unsafe_allow_html=True)
-sudong_count = st.sidebar.radio(label="", options=[1, 2], index=0, key="sudong_count", label_visibility="collapsed")
+sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_union or []), disabled=True, key="repair_ro")
 st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 목록’에서 관리하세요.")
 
+# === 🛠 정비 차량 목록 (그룹으로 한 번 더 묶기) ===
 # 옵션 (숫자 오름차순)
-opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)
-opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)
-opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)
+opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)                                    # 1종 수동
+opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)  # 1종 자동
+opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)                                    # 2종 자동
 
 def _defaults(saved_list, opts):
     s = set(saved_list or [])
     return [x for x in opts if x in s]
 
-with st.sidebar.expander("🧰 정비 차량 목록", expanded=False):
-    with st.expander("🛠 1종 수동 정비", expanded=False):
+with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
+    with st.expander(" 1종 수동 정비", expanded=False):
         sel_1s = st.multiselect("정비 차량 (1종 수동)", options=opt_1s,
                                 default=_defaults(repair_saved["1종수동"], opt_1s), key="repair_sel_1s")
-    with st.expander("🛠 1종 자동 정비", expanded=False):
+    with st.expander(" 1종 자동 정비", expanded=False):
         sel_1a = st.multiselect("정비 차량 (1종 자동)", options=opt_1a,
                                 default=_defaults(repair_saved["1종자동"], opt_1a), key="repair_sel_1a")
-    with st.expander("🛠 2종 자동 정비", expanded=False):
+    with st.expander(" 2종 자동 정비", expanded=False):
         sel_2a = st.multiselect("정비 차량 (2종 자동)", options=opt_2a,
                                 default=_defaults(repair_saved["2종자동"], opt_2a), key="repair_sel_2a")
 
@@ -528,7 +490,6 @@ with st.sidebar.expander("🧰 정비 차량 목록", expanded=False):
     if st.button("💾 정비 차량 저장", key="repair_save_btn"):
         save_json(files["repair"], payload)
         repair_saved = payload
-        # 세션 즉시 반영
         st.session_state["repair_1s"] = payload["1종수동"]
         st.session_state["repair_1a"] = payload["1종자동"]
         st.session_state["repair_2a"] = payload["2종자동"]
@@ -547,7 +508,7 @@ with st.sidebar.expander("🧰 정비 차량 목록", expanded=False):
         unsafe_allow_html=True
     )
 
-cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05, key="cutoff")
+cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
 st.sidebar.markdown("""
 <p style='text-align:center; font-size:8px; color:#94a3b8;'>
@@ -555,69 +516,63 @@ st.sidebar.markdown("""
 </p>
 """, unsafe_allow_html=True)
 
-# 세션 최신화 — 안전하게 키별로 설정
-_session_entries = {
-    "key_order": key_order,
-    "gyoyang_order": gyoyang_order,
-    "sudong_order": sudong_order,
-    "veh1": veh1_map,
-    "veh2": veh2_map,
-    "employee_list": employee_list,
-    "sudong_count": sudong_count,        # 위젯 키와 동일 타입(int) 유지
-    "repair_1s": repair_saved["1종수동"],
-    "repair_1a": repair_saved["1종자동"],
-    "repair_2a": repair_saved["2종자동"],
-    "repair_cars": repair_union,         # list
-    "cutoff": cutoff,                    # float
-    "auto1_order": auto1_order,          # list
-}
-# 세션 최신화 — 위젯 키는 건너뛴다
-WIDGET_LOCKED_KEYS = {"sudong_count", "cutoff"}  # 이미 위젯이 잡고 있는 키
-
-_session_entries = {
-    "key_order": key_order,
-    "gyoyang_order": gyoyang_order,
-    "sudong_order": sudong_order,
-    "veh1": veh1_map,
-    "veh2": veh2_map,
-    "employee_list": employee_list,
-    # "sudong_count": sudong_count,   # ← 위젯이 관리하므로 제외
+# 세션 최신화
+st.session_state.update({
+    "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
+    "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
+    "sudong_count": sudong_count,
+    # 종별 정비 목록 + 합산(호환용)
     "repair_1s": repair_saved["1종수동"],
     "repair_1a": repair_saved["1종자동"],
     "repair_2a": repair_saved["2종자동"],
     "repair_cars": repair_union,
-    # "cutoff": cutoff,               # ← 위젯이 관리하므로 제외
-    "auto1_order": auto1_order,
-}
-
-for _k, _v in _session_entries.items():
-    if _k in WIDGET_LOCKED_KEYS:
-        continue
-    try:
-        # 이미 같은 값이면 굳이 재할당 안함(불필요한 렌더링 방지)
-        if st.session_state.get(_k, _v) is _v or st.session_state.get(_k) == _v:
-            continue
-        st.session_state[_k] = _v
-    except Exception as _e:
-        st.warning(f"세션 키 설정 실패: '{_k}' → {_e}")
-
+    "cutoff": cutoff,
+    "auto1_order": auto1_order,  # NEW
+})
 
 # -----------------------
-# 탭 UI 구성 (오전 / 오후) + 결과 미리보기 도구
+# 탭 UI 구성 (오전 / 오후)
 # -----------------------
-tab1, tab2 = st.tabs(["🌅 오전 근무", "🌇 오후 근무"])
+tab1, tab2 = st.tabs([" 오전 근무", " 오후 근무"])
 
+st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 20px; padding: 16px 40px;
+        border-radius: 10px 10px 0 0; background-color: #d1d5db;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2563eb !important; color: white !important; font-weight: 700;
+    }
+    .result-pre {
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        background: #0b1021;
+        color: #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #1f2937;
+    }
+    .repair-tag { color: #ef4444; font-weight: 700; }
+    .btn-desc{
+        font-size: 13px;
+        color: #475569;
+        margin-top: 6px;
+        line-height: 1.5;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# (정비중) 강조 렌더 함수
 def render_result_with_repair_color(text: str) -> str:
     esc = html.escape(text or "")
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
     return f"<pre class='result-pre'>{esc}</pre>"
-
-def kst_result_header(period_label: str) -> str:
-    """예: '25.10.21(화) 오전 차량 배정 및 교양'"""
-    dt = datetime.now(ZoneInfo("Asia/Seoul"))
-    yoil = "월화수목금토일"[dt.weekday()]
-    return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 차량 배정 및 교양"
-
 # =====================================
 # 🌅 오전 근무 탭
 # =====================================
@@ -632,13 +587,16 @@ with tab1:
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
-        run_m = st.button("☀️ 오전 GPT 인식", key="btn_m_ocr_main",
-                          help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다.")
+        run_m = st.button(
+            "오전 GPT 인식",
+            key="btn_m_ocr",
+            help="근무표에서 도로주행 근무자/제외자를 추출합니다."
+        )
     with col_desc:
         st.markdown(
-            """<div class='gpt-desc'>
-            업로드한 오전 근무표에서 <b>도로주행 근무자/제외자/지각/조퇴</b>를 인식합니다.<br>
-            표가 흐리면 인식률이 떨어질 수 있어요. 가능하면 <b>해상도 높게</b> 찍어 주세요.
+            """<div class='btn-desc'>
+            GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
             </div>""",
             unsafe_allow_html=True
         )
@@ -658,34 +616,82 @@ with tab1:
                 for l in late:
                     l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
+                # ✅ 코스점검 이름 교정 + 중복 제거
+                def _fix_course_records(course_records, employees, cutoff):
+                    out = []
+                    seen = set()
+                    for r in course_records or []:
+                        nm_raw = r.get("name", "")
+                        nm_fixed = correct_name_v2(nm_raw, employees, cutoff=cutoff)
+                        course = r.get("course")
+                        result = r.get("result")
+                        key = (normalize_name(nm_fixed), course, result)
+                        if not normalize_name(nm_fixed) or key in seen:
+                            continue
+                        out.append({"name": nm_fixed, "course": course, "result": result})
+                        seen.add(key)
+                    return out
+
+                course_fixed = _fix_course_records(
+                    course, 
+                    st.session_state["employee_list"], 
+                    cutoff=st.session_state["cutoff"]
+                )
+
+                # 결과 반영 + ✅ 입력창(text_area) 키들도 동기화
                 st.session_state.m_names_raw = fixed
-                st.session_state.course_records = course
+                st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
                 st.session_state.early_leave = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
+
+                # ✅ 라벨 숨김 text_area 동기화
+                st.session_state["ta_morning_list"] = "\n".join(fixed)
+                st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
+
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (자동 추출 후 수정 가능)</h4>", unsafe_allow_html=True)
-    excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120, key="ta_m_ex")
-    excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
+    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    excluded_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("excluded_auto", [])),
+        height=120,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="예: 안유미, 김지은, 조정래",
+        key="ta_excluded",
+    )
 
-    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
-    morning_text = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220, key="ta_m_list")
-    m_list = [x.strip() for x in morning_text.splitlines() if x.strip()]
+    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    morning_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("m_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="오전 근무자 입력(줄바꿈으로 구분)",
+        key="ta_morning_list",
+    )
+
+    # ✅ 입력은 세션 키에서 파싱 (사용자 수정 반영)
+    m_list = [x.strip() for x in st.session_state.get("ta_morning_list", "").splitlines() if x.strip()]
+    excluded_set = {
+        normalize_name(x)
+        for x in st.session_state.get("ta_excluded", "").splitlines()
+        if x.strip()
+    }
 
     early_leave = st.session_state.get("early_leave", [])
     late_start = st.session_state.get("late_start", [])
     m_norms = {normalize_name(x) for x in m_list} - excluded_set
 
     st.markdown("<h4 style='font-size:18px;'>🚗 오전 근무 배정</h4>", unsafe_allow_html=True)
-    if st.button("📋 오전 배정 생성", key="btn_m_assign"):
+    if st.button("📋 오전 배정 생성"):
         try:
-            key_order = st.session_state.get("key_order", [])
+            key_order     = st.session_state.get("key_order", [])
             gyoyang_order = st.session_state.get("gyoyang_order", [])
-            sudong_order = st.session_state.get("sudong_order", [])
-            veh1_map = st.session_state.get("veh1", {})
-            veh2_map = st.session_state.get("veh2", {})
-            sudong_count = st.session_state.get("sudong_count", 1)
+            sudong_order  = st.session_state.get("sudong_order", [])
+            veh1_map      = st.session_state.get("veh1", {})
+            veh2_map      = st.session_state.get("veh2", {})
+            sudong_count  = st.session_state.get("sudong_count", 1)
             repair_1s = st.session_state.get("repair_1s", [])
             repair_1a = st.session_state.get("repair_1a", [])
             repair_2a = st.session_state.get("repair_2a", [])
@@ -709,6 +715,7 @@ with tab1:
                         if normalize_name(cand) not in excluded_set:
                             today_key = cand
                             break
+
             st.session_state.today_key = today_key
 
             # 🧑‍🏫 교양 1·2교시
@@ -741,16 +748,18 @@ with tab1:
                     today_auto1 = auto1_order[0]
             st.session_state.today_auto1 = today_auto1
 
-            # 오전 차량 기록 (오후 마감 계산용)
+            # 오전 차량 기록
             st.session_state.morning_assigned_cars_1 = [get_vehicle(x, veh1_map) for x in sud_m if get_vehicle(x, veh1_map)]
             st.session_state.morning_assigned_cars_2 = [get_vehicle(x, veh2_map) for x in auto_m if get_vehicle(x, veh2_map)]
             st.session_state.morning_auto_names = auto_m + sud_m
 
             # === 출력 ===
             lines = [kst_result_header("오전"), ""]
+
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
+
             if gy1: lines.append(f"1교시: {gy1}")
             if gy2: lines.append(f"2교시: {gy2}")
             if gy1 or gy2: lines.append("")
@@ -759,11 +768,11 @@ with tab1:
                 for nm in sud_m:
                     car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
-                if st.session_state.get("sudong_count", 1) == 2 and len(sud_m) < 2:
+                if sudong_count == 2 and len(sud_m) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
                 lines.append("1종수동: (배정자 없음)")
-                if st.session_state.get("sudong_count", 1) >= 1:
+                if sudong_count >= 1:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
 
             if st.session_state.get("today_auto1"):
@@ -780,7 +789,6 @@ with tab1:
 
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
-            st.markdown(render_result_with_repair_color(am_text), unsafe_allow_html=True)
             st.code(am_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", am_text)
 
@@ -801,17 +809,20 @@ with tab2:
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
-        run_a = st.button("🌇 오후 GPT 인식", key="btn_a_ocr_main",
-                          help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다.")
+        run_a = st.button(
+            "오후 GPT 인식",
+            key="btn_a_ocr",
+            help="근무표에서 도로주행 근무자를 추출합니다."
+        )
     with col_desc:
         st.markdown(
-            """<div class='gpt-desc'>
-            업로드한 오후 근무표에서 <b>도로주행 근무자/제외자/지각/조퇴</b>를 인식합니다.<br>
-            표가 흐리면 인식률이 떨어질 수 있어요. 가능하면 <b>해상도 높게</b> 찍어 주세요.
+            """<div class='btn-desc'>
+            GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
             </div>""",
             unsafe_allow_html=True
         )
-
+        
     if run_a:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
@@ -831,36 +842,50 @@ with tab2:
                 st.session_state.excluded_auto_pm = excluded_fixed
                 st.session_state.early_leave_pm = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
+
+                # ✅ 라벨 숨김 text_area 동기화
+                st.session_state["ta_afternoon_list"] = "\n".join(fixed)
+
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
+                
+    st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    afternoon_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("a_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="오후 근무자 입력(줄바꿈으로 구분)",
+        key="ta_afternoon_list",
+    )
+    # ✅ 오후 입력은 세션 키에서 파싱
+    a_list = [x.strip() for x in st.session_state.get("ta_afternoon_list", "").splitlines() if x.strip()]
 
-    st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (수정 가능)</h4>", unsafe_allow_html=True)
-    afternoon_text = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220, key="ta_a_list")
-    a_list = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
-
-    # 오후도 오전 제외자 그대로 사용
-    excluded_set = {normalize_name(x) for x in st.session_state.get("excluded_auto", [])}
+    # 오후도 오전 제외자 그대로 사용 (세션 키에서 읽기)
+    excluded_set = {
+        normalize_name(x)
+        for x in st.session_state.get("ta_excluded", "").splitlines()
+        if x.strip()
+    }
     a_norms = {normalize_name(x) for x in a_list} - excluded_set
 
-    # 전일 자동 저장 체크박스 + 설명
-    save_check = st.checkbox("전일근무자 자동 저장", value=True, key="chk_save_prev")
-    st.caption("(열쇠)")
+    save_check = st.checkbox("전일근무자 자동 저장", value=True)
+    st.caption("(열쇠, 5교시교양, 1종수동, 1종자동)")
 
     st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
-    if st.button("📋 오후 배정 생성", key="btn_a_assign"):
+    if st.button("📋 오후 배정 생성"):
         try:
             gyoyang_order = st.session_state.get("gyoyang_order", [])
-            sudong_order = st.session_state.get("sudong_order", [])
-            veh1_map = st.session_state.get("veh1", {})
-            veh2_map = st.session_state.get("veh2", {})
-            sudong_count = st.session_state.get("sudong_count", 1)
+            sudong_order  = st.session_state.get("sudong_order", [])
+            veh1_map      = st.session_state.get("veh1", {})
+            veh2_map      = st.session_state.get("veh2", {})
+            sudong_count  = st.session_state.get("sudong_count", 1)
             repair_1s = st.session_state.get("repair_1s", [])
             repair_1a = st.session_state.get("repair_1a", [])
             repair_2a = st.session_state.get("repair_2a", [])
 
             today_key = st.session_state.get("today_key", prev_key)
-            gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5) or (gyoyang_order[0] if gyoyang_order else "")
-            sud_base = st.session_state.get("sudong_base_for_pm", prev_sudong)
-
+            gy_start  = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5) or (gyoyang_order[0] if gyoyang_order else "")
+            sud_base  = st.session_state.get("sudong_base_for_pm", prev_sudong)
             early_leave = st.session_state.get("early_leave", [])
 
             # 🧑‍🏫 교양 3~5교시
@@ -893,6 +918,7 @@ with tab2:
 
             # === 출력 ===
             lines = [kst_result_header("오후"), ""]
+
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
@@ -907,13 +933,14 @@ with tab2:
                     car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
                     lines.append("")
-                if st.session_state.get("sudong_count", 1) == 2 and len(sud_a) < 2:
+                if sudong_count == 2 and len(sud_a) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
             else:
                 lines.append("1종수동: (배정자 없음)")
-                if st.session_state.get("sudong_count", 1) >= 1:
+                if sudong_count >= 1:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
 
+            # 1종 자동 (정비중 표기 반영)
             if st.session_state.get("today_auto1"):
                 a1 = mark_car(st.session_state["today_auto1"], repair_1a)
                 lines.append(f"1종자동: {a1}")
@@ -925,7 +952,7 @@ with tab2:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
-            # 🚫 마감 차량
+            # 🚫 마감 차량 (오전→오후)
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
             pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
@@ -961,38 +988,35 @@ with tab2:
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
 
-            if added:        lines.append(" • 추가 인원: " + ", ".join(added))
             if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
             if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
-            # === 블록 분리 ===
+            # === 결과 텍스트 블록 분리 ===
             try:
                 split_idx = next(i for i, line in enumerate(lines) if line.startswith("🔍 오전 대비 비교:"))
             except StopIteration:
                 split_idx = None
 
             if split_idx is not None:
-                pm_result_text = "\n".join(lines[:split_idx]).strip()   # ① 열쇠~마감차량
-                pm_compare_text = "\n".join(lines[split_idx:]).strip()  # ② 오전 대비 비교
+                pm_result_text = "\n".join(lines[:split_idx]).strip()
+                pm_compare_text = "\n".join(lines[split_idx:]).strip()
             else:
                 pm_result_text = "\n".join(lines).strip()
                 pm_compare_text = ""
 
             # === 출력 ①: 오후 근무 결과(열쇠~마감차량) ===
             st.markdown("#### 🌇 오후 근무 결과")
-            st.markdown(render_result_with_repair_color(pm_result_text), unsafe_allow_html=True)
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
-            # === 출력 ②: 오전 대비 비교 ===
+            # === 출력 ②: 오전 대비 비교 (있을 때만) ===
             if pm_compare_text:
                 st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
-                st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)
                 st.code(pm_compare_text, language="text")
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
-            # ✅ 전일 저장 (세션 키 기반)
-            if st.session_state.get("chk_save_prev", True):
+            # ✅ 전일 저장
+            if save_check:
                 save_json(PREV_FILE, {
                     "열쇠": today_key,
                     "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
@@ -1000,6 +1024,6 @@ with tab2:
                     "1종자동": (st.session_state.get("today_auto1") or prev_auto1)
                 })
                 st.success("전일근무.json 업데이트 완료 ✅")
-
+                
         except Exception as e:
             st.error(f"오후 오류: {e}")
