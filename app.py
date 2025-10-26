@@ -931,7 +931,7 @@ with tab2:
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
 
-            if added:        lines.append(" • 추가 인원: " + ", ".join(added))
+            
             if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
             if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
