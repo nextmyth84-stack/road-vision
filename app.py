@@ -788,16 +788,17 @@ with tab2:
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
 
-             # ✅ 전일 저장
-             if save_check:
-                 save_json(PREV_FILE, {
-                     "열쇠": today_key,
-                     "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
-                     "1종수동": (sud_a[-1] if sud_a else prev_sudong),
-                     "1종자동": (auto1_next if 'auto1_next' in locals() else prev_auto1)
-                     # [PATCH] today_auto1 계산값이 있으면 사용, 없으면 전일값 유지
-                     "1종자동": (st.session_state.get("today_auto1") or prev_auto1)
-                 })
-                 st.success("전일근무.json 업데이트 완료 ✅")
+            # ✅ 전일 저장
+            if save_check:
+                save_json(PREV_FILE, {
+                    "열쇠": today_key,
+                    "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
+                    "1종수동": (sud_a[-1] if sud_a else prev_sudong),
+                    "1종자동": (auto1_next if 'auto1_next' in locals() else prev_auto1)
+                })
+                st.success("전일근무.json 업데이트 완료 ✅")
+
         except Exception as e:
             st.error(f"오후 오류: {e}")
+
+
