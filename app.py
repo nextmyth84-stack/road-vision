@@ -621,17 +621,17 @@ with tab1:
             random.shuffle(veh1_free)
             random.shuffle(veh2_free)
 
-           def get_vehicle_random_safe(name, veh_map, free_list, repair_list):
+            def get_vehicle_random_safe(name, veh_map, free_list, repair_list):
                 """이름으로 차량 찾고, 없거나 정비 중이면 랜덤 대체"""
                 target_norm = normalize_name(name)
                 for car, nm in veh_map.items():
                     if normalize_name(nm) == target_norm and car not in repair_list:
                         return car  # 정상 배정자 차량 그대로 사용
 
-            # 🚫 해당 차량이 정비 중이거나 매핑 안된 경우 → 랜덤 배정
-            if free_list:
-                return free_list.pop(0)
-            return None
+                # 🚫 해당 차량이 정비 중이거나 매핑 안된 경우 → 랜덤 배정
+                if free_list:
+                    return free_list.pop(0)
+                return None
 
 
             morning_assigned_cars_1 = []
