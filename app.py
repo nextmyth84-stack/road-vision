@@ -427,8 +427,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-# 읽기 전용 합산 보기
-st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_union or []), disabled=True)
+
 st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 목록’에서 관리하세요.")
 
 # === 🛠 정비 차량 목록 (그룹으로 한 번 더 묶기) ===
