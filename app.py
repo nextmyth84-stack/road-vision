@@ -336,6 +336,7 @@ div.stButton > button:hover { background-color: #1d4ed8; }
 .sidebar-subtitle {
     font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px;
 }
+
 /* 결과 박스 */
 .repair-box {
     border: 1px solid #fdba74;
@@ -344,7 +345,14 @@ div.stButton > button:hover { background-color: #1d4ed8; }
     border-radius: 8px;
     color: #7c2d12;
     font-size: 13px;
-
+    
+/* 라벨 크게 */
+.big-label { 
+  font-size: 18px;      /* ← 여기 숫자로 크기 조절 */
+  font-weight: 700;
+  color: #1f2937;       /* slate-800 */
+  margin: 6px 0 4px;
+}
 </style>
 """, unsafe_allow_html=True)
 
