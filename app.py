@@ -581,7 +581,7 @@ with tab1:
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (자동 추출 후 수정 가능)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수! 수정가능)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
