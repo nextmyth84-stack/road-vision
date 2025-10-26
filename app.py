@@ -754,7 +754,7 @@ with tab2:
     with col_btn:
         run_a = st.button(
             "오전 GPT 인식",
-            key="btn_m_ocr",
+            key="btn_a_ocr",
             help="근무표에서 도로주행 근무자/제외자를 추출합니다."
         )
     with col_desc:
