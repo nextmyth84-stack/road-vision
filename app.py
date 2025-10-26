@@ -629,8 +629,30 @@ with tab1:
                 for l in late:
                     l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
+                # ✅ [PATCH] 코스점검 이름 교정 + 중복 제거
+                def _fix_course_records(course_records, employees, cutoff):
+                    out = []
+                    seen = set()
+                    for r in course_records or []:
+                        nm_raw = r.get("name", "")
+                        nm_fixed = correct_name_v2(nm_raw, employees, cutoff=cutoff)
+                        course = r.get("course")
+                        result = r.get("result")
+                        key = (normalize_name(nm_fixed), course, result)
+                        # 이름 비어있거나 동일 키 중복이면 스킵
+                        if not normalize_name(nm_fixed) or key in seen:
+                            continue
+                        out.append({"name": nm_fixed, "course": course, "result": result})
+                        seen.add(key)
+                    return out
+
+                course_fixed = _fix_course_records(
+                    course, 
+                    st.session_state["employee_list"], 
+                    cutoff=st.session_state["cutoff"]
+                )
                 st.session_state.m_names_raw = fixed
-                st.session_state.course_records = course
+                st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
                 st.session_state.early_leave = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
