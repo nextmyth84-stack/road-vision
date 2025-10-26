@@ -5,6 +5,7 @@ import streamlit as st
 from openai import OpenAI
 import base64, re, json, os, difflib, html  # [PATCH] html 추가
 
+st.set_page_config(layout="wide")
 st.markdown("""
 <h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무 자동 배정 </h3>
 <p style='text-align:center; font-size:6px; color:#64748b; margin-top:-6px;'>
@@ -316,26 +317,41 @@ prev_auto1 = prev_data.get("1종자동", "")
 # 💄 사이드바 디자인 개선
 # =====================================
 st.sidebar.markdown("""
+st.sidebar.markdown("""
 <style>
+/* === 사이드바 최소/고정 폭 설정 === */
 section[data-testid="stSidebar"] {
     background-color: #f8fafc;
     padding: 10px;
     border-right: 1px solid #e5e7eb;
+
+    /* ▼ 핵심: 최소/기본 폭 지정 */
+    min-width: 340px;     /* ← 원하는 최소 폭(px)로 변경 */
+    width: 340px;         /* 기본 폭 */
+    flex: 0 0 340px;      /* 부모 flex 레이아웃에서 폭 고정 */
 }
-.streamlit-expanderHeader {
-    font-weight: 700 !important;
-    color: #1e3a8a !important;
-    font-size: 15px !important;
+
+/* 화면 크기에 따라 유연하게 */
+@media (min-width: 1200px) {
+  section[data-testid="stSidebar"] { width: 360px; flex: 0 0 360px; }
 }
+@media (min-width: 992px) and (max-width: 1199px) {
+  section[data-testid="stSidebar"] { width: 340px; flex: 0 0 340px; }
+}
+@media (max-width: 991px) {
+  /* 모바일/태블릿: 너무 크게 고정하지 않도록 */
+  section[data-testid="stSidebar"] { min-width: 280px; width: 85vw; flex: 0 0 auto; }
+}
+
+/* 이하 기존 스타일 유지 */
+.streamlit-expanderHeader { font-weight: 700 !important; color: #1e3a8a !important; font-size: 15px !important; }
 textarea, input { font-size: 14px !important; }
-div.stButton > button {
-    background-color: #2563eb; color: white; border: none; border-radius: 8px;
-    padding: 6px 12px; margin-top: 6px; font-weight: 600;
-}
+div.stButton > button { background-color: #2563eb; color: white; border: none; border-radius: 8px; padding: 6px 12px; margin-top: 6px; font-weight: 600; }
 div.stButton > button:hover { background-color: #1d4ed8; }
-.sidebar-subtitle {
-    font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px;
-}
+.sidebar-subtitle { font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px; }
+.repair-box { border: 1px solid #fdba74; background: #fff7ed; padding: 8px 10px; border-radius: 8px; color: #7c2d12; font-size: 13px; }
+/* (있다면) .big-label, .btn-desc 등 다른 커스텀 클래스도 그대로 둠 */
+
 
 /* 결과 박스 */
 .repair-box {
