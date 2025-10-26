@@ -572,13 +572,13 @@ with tab1:
     with col2:
         pass
 
-      # --- OCR 버튼 + 설명 (가로 배치) ---
+    # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_m = st.button(
             "오전 GPT 인식",
             key="btn_m_ocr",
-            help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다."
+            help="근무표에서 도로주행 근무자/제외자를 추출합니다."
         )
     with col_desc:
         st.markdown(
@@ -749,7 +749,24 @@ with tab2:
     with col2:
         pass
 
-    if st.button("오후 GPT 인식"):
+    # --- OCR 버튼 + 설명 (가로 배치) ---
+    col_btn, col_desc = st.columns([1, 4])
+    with col_btn:
+        run_a = st.button(
+            "오전 GPT 인식",
+            key="btn_m_ocr",
+            help="근무표에서 도로주행 근무자/제외자를 추출합니다."
+        )
+    with col_desc:
+        st.markdown(
+            """<div class='btn-desc'>
+            GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가,오타)</b>
+            </div>""",
+            unsafe_allow_html=True
+        )
+        
+    if run_a:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
@@ -769,7 +786,7 @@ with tab2:
                 st.session_state.early_leave_pm = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
-
+                
     st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     afternoon_text = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220)
     a_list = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
