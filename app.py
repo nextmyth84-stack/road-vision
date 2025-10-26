@@ -45,36 +45,30 @@ def save_json(file, data):
 # 클립보드 복사 (버튼 UI, 모바일 호환)
 # -----------------------
 def clipboard_copy_button(label, text):
-    # f-string 대신 플레이스홀더 치환으로 중괄호 안전 처리
     btn_id = f"btn_{abs(hash(label+text))}"
     safe = (text or "").replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
-    html = """
-    <button id="__BTN_ID__" style="background:#2563eb;color:white;border:none;
+    html = f"""
+    <button id='{btn_id}' style="background:#2563eb;color:white;border:none;
     padding:8px 14px;border-radius:8px;cursor:pointer;margin-top:8px;">
-      __LABEL__
+      {label}
     </button>
     <script>
-    (function(){
-      var b=document.getElementById('__BTN_ID__');
+    (function(){{
+      var b=document.getElementById('{btn_id}');
       if(!b)return;
-      b.addEventListener('click', async function(){
-        try{
-          await navigator.clipboard.writeText("__SAFE__");
+      b.addEventListener('click', async function(){{
+        try{{
+          await navigator.clipboard.writeText("{safe}");
           var t=b.innerText; b.innerText="✅ 복사됨!";
           setTimeout(()=>b.innerText=t, 1800);
-        }catch(e){
+        }}catch(e){{
           alert('복사가 지원되지 않는 브라우저입니다. 텍스트를 길게 눌러 복사하세요.');
-        }
-      });
-    })();
+        }}
+      }});
+    }})();
     </script>
     """
-    html = (html
-            .replace("__BTN_ID__", btn_id)
-            .replace("__LABEL__", str(label))
-            .replace("__SAFE__", safe))
     st.components.v1.html(html, height=52)
-
 
 # -----------------------
 # 이름 정규화 / 차량 / 교정 / 순번
@@ -253,8 +247,8 @@ default_data = {
     "employees": ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조윤영","조정래","김병욱","김주현"],
     # === NEW: 1종 자동 순번 기본값 ===
     "1종자동": ["21호", "22호", "23호", "24호"],
-    # [PATCH] 정비 차량 기본값
-    "repair": [],
+    # [PATCH] 정비차량 종별 기본값
+    "repair": {"1종수동": [], "1종자동": [], "2종자동": []},
 }
 for k, v in files.items():
     if not os.path.exists(v):
@@ -273,8 +267,20 @@ veh2_map    = load_json(files["veh2"])
 employee_list = load_json(files["employees"])
 # === NEW: 1종 자동 순번 로드 ===
 auto1_order = load_json(files["1종자동"])
-# [PATCH] 정비 차량 로드
-repair_saved = load_json(files["repair"]) or []
+# [PATCH] 정비 차량 로드 (하위호환: list ⇒ 3종 공통 처리)
+_repair_raw = load_json(files["repair"])
+if isinstance(_repair_raw, dict):
+    repair_saved = {
+        "1종수동": _repair_raw.get("1종수동", []),
+        "1종자동": _repair_raw.get("1종자동", []),
+        "2종자동": _repair_raw.get("2종자동", []),
+    }
+elif isinstance(_repair_raw, list):
+    repair_saved = {"1종수동": _repair_raw, "1종자동": _repair_raw, "2종자동": _repair_raw}
+else:
+    repair_saved = {"1종수동": [], "1종자동": [], "2종자동": []}
+# 합산 보기(읽기 전용)
+repair_union = sorted(set(repair_saved["1종수동"] + repair_saved["1종자동"] + repair_saved["2종자동"]), key=car_num_key)
 
 # -----------------------
 # 전일 근무자 로드
@@ -427,17 +433,16 @@ st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
 # [PATCH] 정비 차량: 읽기 전용 표시(선택/저장은 아래 확장 UI에서)
-repair_cars = repair_saved  # 로직에서 사용할 값은 저장값 그대로
-st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_saved or []), disabled=True)
-st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 선택’에서 관리하세요.")  # [PATCH]
+st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_union or []), disabled=True)
+st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 선택’에서 관리하세요.")  # 안내
 
 # =====================================
 # 🛠 정비 차량 선택 (세로 확장형)  [PATCH]
 # =====================================
 # 옵션 (숫자 오름차순)
-opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)                           # 1종 수동
-opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)  # 1종 자동
-opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)                           # 2종 자동
+opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)                                   # 1종 수동
+opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key) # 1종 자동
+opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)                                   # 2종 자동
 
 def _defaults(saved_list, opts):
     s = set(saved_list or [])
@@ -445,27 +450,37 @@ def _defaults(saved_list, opts):
 
 with st.sidebar.expander("🛠 1종 수동 정비", expanded=False):
     sel_1s = st.multiselect("정비 차량 (1종 수동)", options=opt_1s,
-                            default=_defaults(repair_saved, opt_1s), key="repair_sel_1s")
+                            default=_defaults(repair_saved["1종수동"], opt_1s), key="repair_sel_1s")
 with st.sidebar.expander("🛠 1종 자동 정비", expanded=False):
     sel_1a = st.multiselect("정비 차량 (1종 자동)", options=opt_1a,
-                            default=_defaults(repair_saved, opt_1a), key="repair_sel_1a")
+                            default=_defaults(repair_saved["1종자동"], opt_1a), key="repair_sel_1a")
 with st.sidebar.expander("🛠 2종 자동 정비", expanded=False):
     sel_2a = st.multiselect("정비 차량 (2종 자동)", options=opt_2a,
-                            default=_defaults(repair_saved, opt_2a), key="repair_sel_2a")
+                            default=_defaults(repair_saved["2종자동"], opt_2a), key="repair_sel_2a")
 
 # 통합 저장 버튼 + 결과 박스
-selected_repairs_all = sorted(set((sel_1s or []) + (sel_1a or []) + (sel_2a or [])), key=car_num_key)
+payload = {
+    "1종수동": sorted(set(sel_1s or []), key=car_num_key),
+    "1종자동": sorted(set(sel_1a or []), key=car_num_key),
+    "2종자동": sorted(set(sel_2a or []), key=car_num_key),
+}
 if st.sidebar.button("💾 정비 차량 저장", key="repair_save_btn"):
-    save_json(files["repair"], selected_repairs_all)
-    st.session_state["repair_cars"] = selected_repairs_all
-    repair_saved = selected_repairs_all
+    save_json(files["repair"], payload)
+    repair_saved = payload
+    # 세션 즉시 반영
+    st.session_state["repair_1s"] = payload["1종수동"]
+    st.session_state["repair_1a"] = payload["1종자동"]
+    st.session_state["repair_2a"] = payload["2종자동"]
+    st.session_state["repair_cars"] = sorted(set(payload["1종수동"] + payload["1종자동"] + payload["2종자동"]), key=car_num_key)
     st.sidebar.success("정비 차량 저장 완료 ✅")
 
 # 결과 가시성 높은 박스
 st.sidebar.markdown(
     f"""<div class="repair-box">
-    <b>현재 정비 차량 ({len(repair_saved)}대)</b><br>
-    {("<br>".join(map(str, sorted(repair_saved, key=car_num_key)))) if repair_saved else "없음"}
+    <b>현재 정비 차량</b><br>
+    [1종 수동] {", ".join(repair_saved["1종수동"]) if repair_saved["1종수동"] else "없음"}<br>
+    [1종 자동] {", ".join(repair_saved["1종자동"]) if repair_saved["1종자동"] else "없음"}<br>
+    [2종 자동] {", ".join(repair_saved["2종자동"]) if repair_saved["2종자동"] else "없음"}
     </div>""",
     unsafe_allow_html=True
 )
@@ -482,7 +497,13 @@ st.sidebar.markdown("""
 st.session_state.update({
     "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
     "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
-    "sudong_count": sudong_count, "repair_cars": repair_cars, "cutoff": cutoff,
+    "sudong_count": sudong_count,
+    # [PATCH] 종별 정비 목록 + 합산(호환용)
+    "repair_1s": repair_saved["1종수동"],
+    "repair_1a": repair_saved["1종자동"],
+    "repair_2a": repair_saved["2종자동"],
+    "repair_cars": repair_union,
+    "cutoff": cutoff,
     # === NEW: 1종 자동 순번 세션 전달 ===
     "auto1_order": auto1_order,
 })
@@ -558,7 +579,10 @@ with tab1:
             veh1_map = st.session_state.get("veh1", {})
             veh2_map = st.session_state.get("veh2", {})
             sudong_count = st.session_state.get("sudong_count", 1)
-            repair_cars = st.session_state.get("repair_cars", [])
+            # [PATCH] 종별 정비 목록
+            repair_1s = st.session_state.get("repair_1s", [])
+            repair_1a = st.session_state.get("repair_1a", [])
+            repair_2a = st.session_state.get("repair_2a", [])
             auto1_order = st.session_state.get("auto1_order", [])  # NEW
 
             # 🔑 열쇠
@@ -623,7 +647,7 @@ with tab1:
 
             if sud_m:
                 for nm in sud_m:
-                    car = mark_car(get_vehicle(nm, veh1_map), repair_cars)
+                    car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
                 if sudong_count == 2 and len(sud_m) < 2:
                     lines.append("※ 수동 가능 인원이 1명입니다.")
@@ -633,16 +657,16 @@ with tab1:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
 
             # === NEW: 1종 자동 차량 출력 (1종수동 바로 아래) ===
-            if st.session_state.get("today_auto1"):  # [PATCH] (정비중) 표기 적용
+            if st.session_state.get("today_auto1"):
                 lines.append("")
-                a1 = mark_car(st.session_state["today_auto1"], repair_cars)
+                a1 = mark_car(st.session_state["today_auto1"], repair_1a)
                 lines.append(f"1종자동: {a1}")
                 lines.append("")
 
             if auto_m:
                 lines.append("2종자동:")
                 for nm in auto_m:
-                    car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
+                    car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
             #  코스점검
@@ -714,7 +738,10 @@ with tab2:
             veh1_map = st.session_state.get("veh1", {})
             veh2_map = st.session_state.get("veh2", {})
             sudong_count = st.session_state.get("sudong_count", 1)
-            repair_cars = st.session_state.get("repair_cars", [])
+            # [PATCH] 종별 정비 목록
+            repair_1s = st.session_state.get("repair_1s", [])
+            repair_1a = st.session_state.get("repair_1a", [])
+            repair_2a = st.session_state.get("repair_2a", [])
 
             today_key = st.session_state.get("today_key", prev_key)
             gy_start = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5) or (gyoyang_order[0] if gyoyang_order else "")
@@ -763,7 +790,7 @@ with tab2:
 
             if sud_a:
                 for nm in sud_a:
-                    car = mark_car(get_vehicle(nm, veh1_map), repair_cars)
+                    car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
                     lines.append("")
                 if sudong_count == 2 and len(sud_a) < 2:
@@ -774,18 +801,18 @@ with tab2:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
 
             # === NEW: 1종 자동 차량 출력 (1종수동 바로 아래) ===
-            if st.session_state.get("today_auto1"):  # [PATCH] (정비중) 표기 적용
-                a1 = mark_car(st.session_state["today_auto1"], repair_cars)
+            if st.session_state.get("today_auto1"):
+                a1 = mark_car(st.session_state["today_auto1"], repair_1a)
                 lines.append(f"1종자동: {a1}")
                 lines.append("")
 
             if auto_a:
                 lines.append("2종자동:")
                 for nm in auto_a:
-                    car = mark_car(get_vehicle(nm, veh2_map), repair_cars)
+                    car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
 
-            # 🚫 마감 차량
+            # 🚫 마감 차량 (오전→오후)
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
             pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
