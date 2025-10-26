@@ -799,3 +799,5 @@ with tab2:
                      "1종자동": (st.session_state.get("today_auto1") or prev_auto1)
                  })
                  st.success("전일근무.json 업데이트 완료 ✅")
+        except Exception as e:
+            st.error(f"오후 오류: {e}")
