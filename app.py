@@ -335,7 +335,7 @@ div.stButton > button:hover { background-color: #1d4ed8; }
 </style>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설 정 </h3>", unsafe_allow_html=True)
 
 # =====================================
 # 🗓 전일 근무자 (1종자동 포함 저장)
