@@ -784,7 +784,7 @@ with tab2:
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_a = st.button(
-            "오전 GPT 인식",
+            "오후후 GPT 인식",
             key="btn_a_ocr",
             help="근무표에서 도로주행 근무자를 추출합니다."
         )
@@ -877,11 +877,6 @@ with tab2:
 
            # === 출력 ===
             lines = [kst_result_header("오후"), ""]  # ✅ 헤더 추가
-
-            if today_key:
-                lines.append(f"열쇠: {today_key}")
-                lines.append("")
-            # 이하 기존 그대로...
 
             if today_key:
                 lines.append(f"열쇠: {today_key}")
