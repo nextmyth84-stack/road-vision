@@ -47,7 +47,7 @@ def save_json(file, data):
 def clipboard_copy_button(label, text):
     btn_id = f"btn_{abs(hash(label+text))}"
     safe = (text or "").replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
-    html_btn = f"""
+    html_js = f"""
     <button id='{btn_id}' style="background:#2563eb;color:white;border:none;
     padding:8px 14px;border-radius:8px;cursor:pointer;margin-top:8px;">
       {label}
@@ -65,10 +65,11 @@ def clipboard_copy_button(label, text):
           alert('복사가 지원되지 않는 브라우저입니다. 텍스트를 길게 눌러 복사하세요.');
         }}
       }});
-    })();
+    }} )();
     </script>
     """
-    st.components.v1.html(html_btn, height=52)
+    st.components.v1.html(html_js, height=52)
+
 
 # -----------------------
 # 이름 정규화 / 차량 / 교정 / 순번
