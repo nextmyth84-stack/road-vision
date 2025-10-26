@@ -553,7 +553,11 @@ tab1, tab2 = st.tabs([" 오전 근무", " 오후 근무"])
 
 st.markdown("""
     <style>
-    .stTabs [data-baseweb="tab-list"] { gap: 15px; }
+    .stTabs [data-baseweb="tab-list"] {
+        display: flex;          /* 안전하게 명시 */
+        justify-content: center;/* ✅ 가운데 정렬 */
+        gap: 12px;
+    }
     .stTabs [data-baseweb="tab"] {
         font-size: 20px; padding: 16px 40px;
         border-radius: 10px 10px 0 0; background-color: #d1d5db;
