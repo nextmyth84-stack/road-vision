@@ -345,7 +345,14 @@ div.stButton > button:hover { background-color: #1d4ed8; }
     border-radius: 8px;
     color: #7c2d12;
     font-size: 13px;
-    
+
+.btn-desc{
+    font-size: 13px;
+    color: #475569;   /* slate-600 */
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -559,7 +566,23 @@ with tab1:
     with col2:
         pass
 
-    if st.button("오전 GPT 인식"):
+   c_btn, c_desc = st.columns([1, 4])
+   with c_btn:
+       run_m = st.button(
+            "오전 GPT 인식",
+            key="btn_m_ocr",
+            help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다."  # (옵션) 툴팁도 함께
+        )
+    with c_desc:
+        st.markdown(
+            """<div class='btn-desc'>
+            업로드한 오전 근무표에서 <b>도로주행 근무자/제외자/지각/조퇴</b>를 인식합니다.<br>
+            표가 흐리면 인식률이 떨어질 수 있어요. 가능하면 <b>해상도 높게</b> 찍어 주세요.
+            </div>""",
+            unsafe_allow_html=True
+        )
+
+    if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
