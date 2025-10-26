@@ -45,30 +45,36 @@ def save_json(file, data):
 # 클립보드 복사 (버튼 UI, 모바일 호환)
 # -----------------------
 def clipboard_copy_button(label, text):
+    # f-string 대신 플레이스홀더 치환으로 중괄호 안전 처리
     btn_id = f"btn_{abs(hash(label+text))}"
     safe = (text or "").replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
-    html = f"""
-    <button id='{btn_id}' style="background:#2563eb;color:white;border:none;
+    html = """
+    <button id="__BTN_ID__" style="background:#2563eb;color:white;border:none;
     padding:8px 14px;border-radius:8px;cursor:pointer;margin-top:8px;">
-      {label}
+      __LABEL__
     </button>
     <script>
-    (function(){{
-      var b=document.getElementById('{btn_id}');
+    (function(){
+      var b=document.getElementById('__BTN_ID__');
       if(!b)return;
-      b.addEventListener('click', async function(){{
-        try{{
-          await navigator.clipboard.writeText("{safe}");
+      b.addEventListener('click', async function(){
+        try{
+          await navigator.clipboard.writeText("__SAFE__");
           var t=b.innerText; b.innerText="✅ 복사됨!";
           setTimeout(()=>b.innerText=t, 1800);
-        }}catch(e){{
+        }catch(e){
           alert('복사가 지원되지 않는 브라우저입니다. 텍스트를 길게 눌러 복사하세요.');
-        }}
-      }});
+        }
+      });
     })();
     </script>
     """
+    html = (html
+            .replace("__BTN_ID__", btn_id)
+            .replace("__LABEL__", str(label))
+            .replace("__SAFE__", safe))
     st.components.v1.html(html, height=52)
+
 
 # -----------------------
 # 이름 정규화 / 차량 / 교정 / 순번
