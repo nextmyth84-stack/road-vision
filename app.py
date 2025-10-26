@@ -587,7 +587,6 @@ with tab1:
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
-        st.markdown("<div id='am-btn-anchor'></div>", unsafe_allow_html=True)  # ✅ 앵커
         run_m = st.button(
             "오전 GPT 인식",
             key="btn_m_ocr",
@@ -601,20 +600,6 @@ with tab1:
             </div>""",
             unsafe_allow_html=True
         )
-    
-    st.markdown("""
-    <style>
-    /* 오전 GPT 인식 버튼만 커스텀 색상 */
-    #am-btn-anchor + div button {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; /* 에메랄드 */
-      box-shadow: 0 6px 14px rgba(16, 185, 129, .25) !important;
-    }
-    /* 호버/액티브 감도 */
-    #am-btn-anchor + div button:hover { filter: brightness(1.03) !important; }
-    #am-btn-anchor + div button:active { transform: translateY(1px) !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
 
     if run_m:
         if not m_file:
