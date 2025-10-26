@@ -3,7 +3,7 @@
 # =====================================
 import streamlit as st
 from openai import OpenAI
-import base64, re, json, os, difflib, html   # [PATCH] 색상 렌더용
+import base64, re, json, os, difflib
 
 st.markdown("""
 <h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무 자동 배정 </h3>
@@ -523,29 +523,9 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #2563eb !important; color: white !important; font-weight: 700;
     }
-    /* [PATCH] 결과 미리보기용 스타일 */
-    .result-pre {
-        white-space: pre-wrap;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        background: #0b1021;
-        color: #e5e7eb;
-        border-radius: 8px;
-        padding: 12px;
-        border: 1px solid #1f2937;
-    }
-    .repair-tag {
-        color: #ef4444; /* red-500 */
-        font-weight: 700;
-    }
+    
     </style>
 """, unsafe_allow_html=True)
-
-# [PATCH] (정비중) 강조 렌더 함수
-def render_result_with_repair_color(text: str) -> str:
-    """텍스트 결과에서 '(정비중)'만 색상 강조하여 HTML <pre>로 반환"""
-    esc = html.escape(text or "")
-    esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
-    return f"<pre class='result-pre'>{esc}</pre>"
 
 # =====================================
 # 🌅 오전 근무 탭
@@ -704,8 +684,7 @@ with tab1:
 
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
-            st.markdown(render_result_with_repair_color(am_text), unsafe_allow_html=True)  # [PATCH] 색상 강조 미리보기
-            st.code(am_text, language="text")  # 원본 텍스트(복사용)
+            st.code(am_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", am_text)
 
         except Exception as e:
@@ -894,13 +873,11 @@ with tab2:
 
             # === 출력 ===
             st.markdown("#### 🌇 오후 근무 결과")
-            st.markdown(render_result_with_repair_color(pm_result_text), unsafe_allow_html=True)  # [PATCH]
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
             if pm_compare_text:
                 st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
-                st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)  # [PATCH]
                 st.code(pm_compare_text, language="text")
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
