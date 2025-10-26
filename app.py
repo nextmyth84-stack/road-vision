@@ -939,7 +939,6 @@ with tab2:
             # === 결과 텍스트 구성 완료 후, 여기서부터 교체 ===
 
             # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
-            # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
             try:
                 split_idx = next(i for i, line in enumerate(lines) if line.startswith("🔍 오전 대비 비교:"))
             except StopIteration:
@@ -955,14 +954,12 @@ with tab2:
 
             # === 출력 ①: 오후 근무 결과(열쇠~마감차량) ===
             st.markdown("#### 🌇 오후 근무 결과")
-            st.markdown(render_result_with_repair_color(pm_result_text), unsafe_allow_html=True)
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
             # === 출력 ②: 오전 대비 비교 (있을 때만) ===
             if pm_compare_text:
                 st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
-                st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)
                 st.code(pm_compare_text, language="text")
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
