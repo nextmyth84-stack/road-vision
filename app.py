@@ -687,7 +687,6 @@ with tab1:
 
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
-            st.markdown(render_result_with_repair_color(am_text), unsafe_allow_html=True)  # [PATCH] 색상 미리보기
             st.code(am_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", am_text)
 
@@ -861,7 +860,6 @@ with tab2:
             pm_result_text = "\n".join(lines)
 
             st.markdown("#### 🌇 오후 근무 결과")
-            st.markdown(render_result_with_repair_color(pm_result_text), unsafe_allow_html=True)  # [PATCH]
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
