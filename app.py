@@ -600,7 +600,7 @@ with tab1:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가,오타)</b>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
             </div>""",
             unsafe_allow_html=True
         )
@@ -777,7 +777,7 @@ with tab2:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가,오타)</b>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
             </div>""",
             unsafe_allow_html=True
         )
@@ -811,7 +811,7 @@ with tab2:
     excluded_set = {normalize_name(x) for x in st.session_state.get("excluded_auto", [])}
     a_norms = {normalize_name(x) for x in a_list} - excluded_set
 
-    save_check = st.checkbox("전일근무자(열쇠,5교시,1종수동,1종자동) 자동 저장", value=True)
+    save_check = st.checkbox("전일근무자 자동 저장""/n""(열쇠,5교시,1종수동,1종자동)", value=True)
 
     st.markdown("<h4 style='font-size:18px;'>🚘 오후 근무 배정</h4>", unsafe_allow_html=True)
     if st.button("📋 오후 배정 생성"):
