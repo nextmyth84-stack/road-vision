@@ -335,7 +335,7 @@ div.stButton > button:hover { background-color: #1d4ed8; }
 </style>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>📂 데이터 관리</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 설정</h3>", unsafe_allow_html=True)
 
 # =====================================
 # 🗓 전일 근무자 (1종자동 포함 저장)
@@ -356,9 +356,9 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
         st.sidebar.success("전일근무.json 저장 완료 ✅")
 
 # =====================================
-# 🗂 데이터 관리 (그룹) — 내부에 3개 메뉴 묶기
+# 📂 데이터 관리 (그룹) — 내부에 3개 메뉴 묶기
 # =====================================
-with st.sidebar.expander("🗂 데이터 관리", expanded=False):
+with st.sidebar.expander("📂 데이터 관리", expanded=False):
 
     # 🔢 순번표 관리
     with st.expander("🔢 순번표 관리", expanded=False):
