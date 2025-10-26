@@ -936,11 +936,35 @@ with tab2:
             if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
             # === 출력 ===
-            pm_result_text = "\n".join(lines)
+            # === 결과 텍스트 구성 완료 후, 여기서부터 교체 ===
 
+            # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
+            split_idx = None
+            for i, line in enumerate(lines):
+                if line.startswith("🔍 오전 대비 비교:"):
+                split_idx = i
+                break
+
+            if split_idx is not None:
+                pm_result_text = "\n".join(lines[:split_idx]).strip()   # ① 열쇠~마감차량
+                pm_compare_text = "\n".join(lines[split_idx:]).strip()  # ② 오전 대비 비교
+            else:
+                pm_result_text = "\n".join(lines).strip()
+                pm_compare_text = ""
+
+            # === 출력 ①: 오후 근무 결과(열쇠~마감차량) ===
             st.markdown("#### 🌇 오후 근무 결과")
+            st.markdown(render_result_with_repair_color(pm_result_text), unsafe_allow_html=True)
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
+
+            # === 출력 ②: 오전 대비 비교 (있을 때만) ===
+            if pm_compare_text:
+                st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
+                st.markdown(render_result_with_repair_color(pm_compare_text), unsafe_allow_html=True)
+                st.code(pm_compare_text, language="text")
+                clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
+
 
         except Exception as e:
             st.error(f"오후 오류: {e}")
