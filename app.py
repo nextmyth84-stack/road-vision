@@ -438,14 +438,8 @@ with st.sidebar.expander("📂 데이터 관리", expanded=False):
 # =====================================
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
-st.sidebar.markdown("<div class='big-label'>1종 수동 인원 수</div>", unsafe_allow_html=True)
-sudong_count = st.sidebar.radio(
-    label="",
-    options=[1, 2],
-    index=0,
-    key="sudong_count",
-    label_visibility="collapsed",   # ← 기본 라벨 숨김
-)
+sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
+
 
 
 st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 목록’에서 관리하세요.")
