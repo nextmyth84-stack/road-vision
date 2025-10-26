@@ -559,9 +559,6 @@ with tab1:
     with col2:
         pass
 
-    st.sidebar.caption("한글 이미지 분석이 정확하지 않을 수 있습니다. GPT 인식 후 필히 실제 근무자와 비교하세요.")
-    st.sidebar.caption("실제근무자와 다를 경우(오타,근무자X) 수정해야 합니다.")
-
     if st.button("오전 GPT 인식"):
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
