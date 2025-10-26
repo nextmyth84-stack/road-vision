@@ -348,7 +348,7 @@ div.stButton > button:hover { background-color: #1d4ed8; }
     
 /* 라벨 크게 */
 .big-label { 
-  font-size: 18px;      /* ← 여기 숫자로 크기 조절 */
+  font-size: 22px;      /* ← 여기 숫자로 크기 조절 */
   font-weight: 700;
   color: #1f2937;       /* slate-800 */
   margin: 6px 0 4px;
