@@ -499,7 +499,7 @@ with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
         unsafe_allow_html=True
     )
 
-cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
+cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (건드리지마세요)", 0.4, 0.9, 0.6, 0.05)
 
 st.sidebar.markdown("""
 <p style='text-align:center; font-size:8px; color:#94a3b8;'>
