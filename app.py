@@ -65,7 +65,7 @@ def clipboard_copy_button(label, text):
           alert('복사가 지원되지 않는 브라우저입니다. 텍스트를 길게 눌러 복사하세요.');
         }}
       }});
-    }})();
+    })();
     </script>
     """
     st.components.v1.html(html, height=52)
@@ -86,6 +86,11 @@ def get_vehicle(name, veh_map):
 
 def mark_car(car, repair_cars):  # [PATCH] 결과 표기: (정비중)
     return f"{car}{' (정비중)' if car in repair_cars else ''}" if car else ""
+
+# [PATCH] 차량 번호 정렬용 키 (작은 수 → 큰 수)
+def car_num_key(car_id: str):
+    m = re.search(r"(\d+)", car_id or "")
+    return int(m.group(1)) if m else 10**9
 
 def pick_next_from_cycle(cycle, last, allowed_norms: set):
     if not cycle:
@@ -310,51 +315,19 @@ div.stButton > button:hover { background-color: #1d4ed8; }
 .sidebar-subtitle {
     font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px;
 }
+/* [PATCH] 정비차량 결과 박스 */
+.repair-box {
+    border: 1px solid #fdba74;
+    background: #fff7ed;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #7c2d12;
+    font-size: 13px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>📂 데이터 관리</h3>", unsafe_allow_html=True)
-
-# =====================================
-# 🧰 정비 차량 선택/저장 (종별 탭 + 1종 자동 포함)  [PATCH]
-# =====================================
-with st.sidebar.expander("🛠 정비 차량 선택", expanded=False):
-    # 종별 옵션
-    opt_1s = sorted(list((veh1_map or {}).keys()))                           # 1종 수동
-    opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])))  # 1종 자동
-    opt_2a = sorted(list((veh2_map or {}).keys()))                           # 2종 자동
-
-    # 저장된 값 → 종별 기본값 분할
-    def _defaults(saved_list, opts):
-        s = set(saved_list or [])
-        return [x for x in opts if x in s]
-
-    tab_rs, tab_ra, tab_r2 = st.tabs(["1종 수동", "1종 자동", "2종 자동"])
-    with tab_rs:
-        sel_1s = st.multiselect("정비 차량 (1종 수동)", options=opt_1s,
-                                default=_defaults(repair_saved, opt_1s), key="repair_sel_1s")
-    with tab_ra:
-        sel_1a = st.multiselect("정비 차량 (1종 자동)", options=opt_1a,
-                                default=_defaults(repair_saved, opt_1a), key="repair_sel_1a")
-    with tab_r2:
-        sel_2a = st.multiselect("정비 차량 (2종 자동)", options=opt_2a,
-                                default=_defaults(repair_saved, opt_2a), key="repair_sel_2a")
-
-    # 통합 저장
-    selected_repairs_all = sorted(set((sel_1s or []) + (sel_1a or []) + (sel_2a or [])))
-    if st.button("💾 정비 차량 저장"):
-        save_json(files["repair"], selected_repairs_all)
-        st.session_state["repair_cars"] = selected_repairs_all
-        repair_saved = selected_repairs_all
-        st.sidebar.success("정비 차량 저장 완료 ✅")
-
-    st.markdown(
-        f"현재 정비 차량: "
-        f"1종수동 {len(_defaults(repair_saved, opt_1s))}대, "
-        f"1종자동 {len(_defaults(repair_saved, opt_1a))}대, "
-        f"2종자동 {len(_defaults(repair_saved, opt_2a))}대"
-    )
-    st.caption(", ".join(repair_saved) if repair_saved else "없음")
 
 # =====================================
 # 🗓 전일 근무자 (1종자동 포함 저장)
@@ -447,10 +420,49 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-# [PATCH] 정비 차량: 읽기 전용 표시(추가/삭제는 상단 탭에서만)
+# [PATCH] 정비 차량: 읽기 전용 표시(선택/저장은 아래 확장 UI에서)
 repair_cars = repair_saved  # 로직에서 사용할 값은 저장값 그대로
 st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_saved or []), disabled=True)
-st.sidebar.caption("정비차량 추가/삭제는 상단 ‘정비 차량 선택’ 탭에서 관리하세요.")
+st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 선택’에서 관리하세요.")  # [PATCH]
+
+# =====================================
+# 🛠 정비 차량 선택 (세로 확장형)  [PATCH]
+# =====================================
+# 옵션 (숫자 오름차순)
+opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)                           # 1종 수동
+opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)  # 1종 자동
+opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)                           # 2종 자동
+
+def _defaults(saved_list, opts):
+    s = set(saved_list or [])
+    return [x for x in opts if x in s]
+
+with st.sidebar.expander("🛠 1종 수동 정비", expanded=False):
+    sel_1s = st.multiselect("정비 차량 (1종 수동)", options=opt_1s,
+                            default=_defaults(repair_saved, opt_1s), key="repair_sel_1s")
+with st.sidebar.expander("🛠 1종 자동 정비", expanded=False):
+    sel_1a = st.multiselect("정비 차량 (1종 자동)", options=opt_1a,
+                            default=_defaults(repair_saved, opt_1a), key="repair_sel_1a")
+with st.sidebar.expander("🛠 2종 자동 정비", expanded=False):
+    sel_2a = st.multiselect("정비 차량 (2종 자동)", options=opt_2a,
+                            default=_defaults(repair_saved, opt_2a), key="repair_sel_2a")
+
+# 통합 저장 버튼 + 결과 박스
+selected_repairs_all = sorted(set((sel_1s or []) + (sel_1a or []) + (sel_2a or [])), key=car_num_key)
+if st.sidebar.button("💾 정비 차량 저장", key="repair_save_btn"):
+    save_json(files["repair"], selected_repairs_all)
+    st.session_state["repair_cars"] = selected_repairs_all
+    repair_saved = selected_repairs_all
+    st.sidebar.success("정비 차량 저장 완료 ✅")
+
+# 결과 가시성 높은 박스
+st.sidebar.markdown(
+    f"""<div class="repair-box">
+    <b>현재 정비 차량 ({len(repair_saved)}대)</b><br>
+    {("<br>".join(map(str, sorted(repair_saved, key=car_num_key)))) if repair_saved else "없음"}
+    </div>""",
+    unsafe_allow_html=True
+)
 
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
@@ -772,8 +784,8 @@ with tab2:
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
             pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
             pm_c2 = {get_vehicle(x, veh2_map) for x in auto_a if get_vehicle(x, veh2_map)}
-            un1 = sorted([c for c in am_c1 if c and c not in pm_c1])
-            un2 = sorted([c for c in am_c2 if c and c not in pm_c2])
+            un1 = sorted([c for c in am_c1 if c and c not in pm_c1], key=car_num_key)
+            un2 = sorted([c for c in am_c2 if c and c not in pm_c2], key=car_num_key)
             if un1 or un2:
                 lines.append("")
                 lines.append("🚫 마감 차량:")
