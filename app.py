@@ -84,10 +84,23 @@ def get_vehicle(name, veh_map):
         if normalize_name(nm) == nkey:
             return car
     return ""
-
+    
+def _norm_car_id(s: str) -> str:
+    """차량 아이디 비교용 정규화: 공백 제거, 전각/반각 공백 제거"""
+    if not s:
+        return ""
+    return re.sub(r"\s+", "", str(s)).strip()
+    
 def mark_car(car, repair_cars):
-    """차량 문자열에 정비중 표기 추가"""
-    return f"{car}{' (정비중)' if car in repair_cars else ''}" if car else ""
+    """
+    차량아이디 표기 + (정비중) 태그
+    - 차량 아이디를 정규화해서 리스트와 비교 (공백/표기차 무시)
+    """
+    if not car:
+        return ""
+    car_norm = _norm_car_id(car)
+    repairs_norm = {_norm_car_id(x) for x in (repair_cars or [])}
+    return f"{car}{' (정비중)' if car_norm in repairs_norm else ''}"
 
 # [PATCH] 차량 번호 정렬용 키 (작은 수 → 큰 수)
 def car_num_key(car_id: str):
