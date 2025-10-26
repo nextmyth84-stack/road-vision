@@ -547,6 +547,12 @@ st.markdown("""
         border: 1px solid #1f2937;
     }
     .repair-tag { color: #ef4444; font-weight: 700; }
+    .btn-desc{
+        font-size: 13px;
+        color: #475569;   /* slate-600 */
+        margin-top: 6px;
+        line-height: 1.5;
+    }
     </style>
 """, unsafe_allow_html=True)
 
