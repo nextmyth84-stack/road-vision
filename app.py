@@ -4,6 +4,15 @@
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os, difflib, html  # [PATCH] html 추가
+from datetime import datetime
+from zoneinfo import ZoneInfo  # Python 3.9+
+
+def kst_result_header(period_label: str) -> str:
+    """예: '25.10.21(화) 오전 차량 배정 및 교양'"""
+    dt = datetime.now(ZoneInfo("Asia/Seoul"))
+    yoil = "월화수목금토일"[dt.weekday()]
+    return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 차량 배정 및 교양"
+
 
 st.set_page_config(layout="wide")
 st.markdown("""
@@ -702,7 +711,13 @@ with tab1:
             st.session_state.morning_auto_names = auto_m + sud_m
 
             # === 출력 ===
-            lines = []
+            lines = [kst_result_header("오전"), ""]  # ✅ 헤더 추가
+
+            if today_key:
+                lines.append(f"열쇠: {today_key}")
+                lines.append("")
+            # 이하 기존 그대로...
+
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
@@ -860,8 +875,14 @@ with tab2:
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-            # === 출력 ===
-            lines = []
+           # === 출력 ===
+            lines = [kst_result_header("오후"), ""]  # ✅ 헤더 추가
+
+            if today_key:
+                lines.append(f"열쇠: {today_key}")
+                lines.append("")
+            # 이하 기존 그대로...
+
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
