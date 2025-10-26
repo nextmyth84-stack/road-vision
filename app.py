@@ -40,6 +40,38 @@ def save_json(file, data):
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         st.error(f"저장 실패: {e}")
+import random  # 없으면 추가
+
+def available_cars(veh_map: dict, taken: set, repair_set: set) -> list:
+    """해당 종별의 가용 차량 목록(정비/배정 제외)을 반환"""
+    return [c for c in veh_map.keys() if c not in taken and c not in repair_set]
+
+def assign_vehicle_pm(name: str,
+                      veh_map: dict,
+                      am_assigned_map: dict,
+                      taken: set,
+                      repair_set: set) -> str:
+    """
+    오후 차량 배정:
+      - 오전에 이 사람이 배정받은 차량이 있으면 그 차량 우선(정비/점유 아닌 가정)
+      - 없으면 가용 차량 중 랜덤
+    반환값: 차량번호(str) 또는 ""(없음)
+    """
+    nn = normalize_name(name)
+    # 1) 오전 배정 차량 우선
+    if nn in am_assigned_map:
+        car = am_assigned_map[nn]
+        if car and (car not in taken) and (car not in repair_set):
+            taken.add(car)
+            return car
+
+    # 2) 없으면 가용 차량 랜덤
+    pool = available_cars(veh_map, taken, repair_set)
+    if not pool:
+        return ""
+    car = random.choice(pool)
+    taken.add(car)
+    return car
 
 # -----------------------
 # 클립보드 복사 (버튼 UI, 모바일 호환)
@@ -189,24 +221,30 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     except Exception as e:
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
+# -----------------------
+# 교양 시간 제한 규칙
+# -----------------------
+def can_attend_period_morning(name_pure: str, period:int, late_list):
+    """오전 교양: 1=9:00~10:30, 2=10:30~12:00. 10시 이후 출근자는 1교시 불가."""
+    tmap = {1: 9.0, 2: 10.5}
+    nn = normalize_name(name_pure)
+    for e in late_list or []:
+        if normalize_name(e.get("name","")) == nn:
+            t = e.get("time", 99) or 99
+            try: t = float(t)
+            except: t = 99
+            return t <= tmap[period]
+    return True
+
 def can_attend_period_afternoon(name_pure: str, period:int, early_list):
-    """
-    오후 교양 시간 가능 여부:
-      - 3교시: 13:00
-      - 4교시: 14:30
-      - 5교시: 16:00
-    해당 시각 '이전'에 조퇴가 잡혀 있으면 그 교시는 불가.
-    """
+    """오후 교양: 3=13:00, 4=14:30, 5=16:00. 해당 시각 이전 조퇴면 해당 교시 불가."""
     tmap = {3: 13.0, 4: 14.5, 5: 16.0}
     nn = normalize_name(name_pure)
-    for e in (early_list or []):
-        if normalize_name(e.get("name", "")) == nn:
+    for e in early_list or []:
+        if normalize_name(e.get("name","")) == nn:
             t = e.get("time", 0)
-            try:
-                t = float(t)
-            except:
-                t = 0
-            # 조퇴 시간이 교시 시작시각 이하(=이전/동일)면 해당 교시 불가
+            try: t = float(t)
+            except: t = 0
             return t > tmap[period]
     return True
 
@@ -604,6 +642,17 @@ with tab1:
             st.session_state.morning_assigned_cars_1 = morning_assigned_cars_1
             st.session_state.morning_assigned_cars_2 = morning_assigned_cars_2
             st.session_state.morning_auto_names = auto_m + sud_m
+            # 오전 배정 마지막에 (2종 자동과 1종 수동 모두 포함해 사람→차량 맵을 저장)
+            am_assigned_map = {}
+            for nm in sud_m:  # 1종 수동 인원
+                car = get_vehicle(nm, veh1_map)
+                if car:
+                    am_assigned_map[normalize_name(nm)] = car
+            for nm in auto_m:  # 2종 자동 인원
+                    car = get_vehicle(nm, veh2_map)
+                    if car:
+                        am_assigned_map[normalize_name(nm)] = car
+            st.session_state.am_assigned_map = am_assigned_map
 
             # === 출력 ===
             lines = []
