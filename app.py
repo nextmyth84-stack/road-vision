@@ -189,7 +189,32 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     except Exception as e:
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
+# -----------------------
+# 교양 시간 제한 규칙
+# -----------------------
+def can_attend_period_morning(name_pure: str, period:int, late_list):
+    """오전 교양: 1=9:00~10:30, 2=10:30~12:00. 10시 이후 출근자는 1교시 불가."""
+    tmap = {1: 9.0, 2: 10.5}
+    nn = normalize_name(name_pure)
+    for e in late_list or []:
+        if normalize_name(e.get("name","")) == nn:
+            t = e.get("time", 99) or 99
+            try: t = float(t)
+            except: t = 99
+            return t <= tmap[period]
+    return True
 
+def can_attend_period_afternoon(name_pure: str, period:int, early_list):
+    """오후 교양: 3=13:00, 4=14:30, 5=16:00. 해당 시각 이전 조퇴면 해당 교시 불가."""
+    tmap = {3: 13.0, 4: 14.5, 5: 16.0}
+    nn = normalize_name(name_pure)
+    for e in early_list or []:
+        if normalize_name(e.get("name","")) == nn:
+            t = e.get("time", 0)
+            try: t = float(t)
+            except: t = 0
+            return t > tmap[period]
+    return True
 # -----------------------
 # JSON 기반 순번 / 차량 / 근무자 관리
 # -----------------------
