@@ -431,7 +431,7 @@ sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 st.sidebar.text_input("정비 차량 (읽기 전용)", ", ".join(repair_union or []), disabled=True)
 st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 목록’에서 관리하세요.")
 
-# === 🧰 정비 차량 목록 (그룹으로 한 번 더 묶기) ===
+# === 🛠 정비 차량 목록 (그룹으로 한 번 더 묶기) ===
 # 옵션 (숫자 오름차순)
 opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)                                    # 1종 수동
 opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)  # 1종 자동
@@ -441,14 +441,14 @@ def _defaults(saved_list, opts):
     s = set(saved_list or [])
     return [x for x in opts if x in s]
 
-with st.sidebar.expander("🧰 정비 차량 목록", expanded=False):
-    with st.expander("🛠 1종 수동 정비", expanded=False):
+with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
+    with st.expander(" 1종 수동 정비", expanded=False):
         sel_1s = st.multiselect("정비 차량 (1종 수동)", options=opt_1s,
                                 default=_defaults(repair_saved["1종수동"], opt_1s), key="repair_sel_1s")
-    with st.expander("🛠 1종 자동 정비", expanded=False):
+    with st.expander(" 1종 자동 정비", expanded=False):
         sel_1a = st.multiselect("정비 차량 (1종 자동)", options=opt_1a,
                                 default=_defaults(repair_saved["1종자동"], opt_1a), key="repair_sel_1a")
-    with st.expander("🛠 2종 자동 정비", expanded=False):
+    with st.expander(" 2종 자동 정비", expanded=False):
         sel_2a = st.multiselect("정비 차량 (2종 자동)", options=opt_2a,
                                 default=_defaults(repair_saved["2종자동"], opt_2a), key="repair_sel_2a")
 
