@@ -653,6 +653,12 @@ with tab1:
                     if car:
                         am_assigned_map[normalize_name(nm)] = car
             st.session_state.am_assigned_map = am_assigned_map
+            # 오전 1종 수동 마지막 담당자 저장 (오후 순번용)
+            if sud_m:
+                st.session_state["sudong_base_for_pm"] = sud_m[-1]
+            else:
+                st.session_state["sudong_base_for_pm"] = prev_sudong
+
 
             # === 출력 ===
             lines = []
