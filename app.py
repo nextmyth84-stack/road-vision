@@ -524,28 +524,28 @@ st.markdown("""
         background-color: #2563eb !important; color: white !important; font-weight: 700;
     }
     /* [PATCH] 결과 미리보기용 스타일 */
-+    .result-pre {
-+        white-space: pre-wrap;
-+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-+        background: #0b1021;
-+        color: #e5e7eb;
-+        border-radius: 8px;
-+        padding: 12px;
-+        border: 1px solid #1f2937;
-+    }
-+    .repair-tag {
-+        color: #ef4444; /* red-500 */
-+        font-weight: 700;
-+    }
+    .result-pre {
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        background: #0b1021;
+        color: #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #1f2937;
+    }
+    .repair-tag {
+        color: #ef4444; /* red-500 */
+        font-weight: 700;
+    }
     </style>
 """, unsafe_allow_html=True)
-+
-+# [PATCH] (정비중) 강조 렌더 함수
-+def render_result_with_repair_color(text: str) -> str:
-+    """텍스트 결과에서 '(정비중)'만 색상 강조하여 HTML <pre>로 반환"""
-+    esc = html.escape(text or "")
-+    esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
-+    return f"<pre class='result-pre'>{esc}</pre>"
+
+# [PATCH] (정비중) 강조 렌더 함수
+def render_result_with_repair_color(text: str) -> str:
+    """텍스트 결과에서 '(정비중)'만 색상 강조하여 HTML <pre>로 반환"""
+    esc = html.escape(text or "")
+    esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
+    return f"<pre class='result-pre'>{esc}</pre>"
 
 # =====================================
 # 🌅 오전 근무 탭
