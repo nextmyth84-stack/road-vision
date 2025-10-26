@@ -674,7 +674,15 @@ with tab1:
     excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
 
     st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
-    morning_text = st.text_area("\n".join(st.session_state.get("m_names_raw", [])), height=220)
+    morning_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("m_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",
+        placeholder="오전 근무자 입력(줄바꿈으로 구분)",
+        key="ta_morning_list",   # 키 충돌 방지용
+    )
+
     m_list = [x.strip() for x in morning_text.splitlines() if x.strip()]
 
     early_leave = st.session_state.get("early_leave", [])
