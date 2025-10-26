@@ -662,7 +662,7 @@ with tab1:
         key="ta_excluded",
     )
 
-    st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
         label="",
         value="\n".join(st.session_state.get("m_names_raw", [])),
