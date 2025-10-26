@@ -787,7 +787,18 @@ with tab1:
                 for nm in auto_m:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
-
+                    
+            # 코스점검
+            course_records = st.session_state.get("course_records", [])
+            if course_records:
+                lines.append("")
+                lines.append(" 코스점검 :")
+                for c in ["A", "B"]:
+                    passed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "합격"]
+                    failed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "불합격"]
+                    if passed: lines.append(f" • {c}코스 합격: {', '.join(passed)}")
+                    if failed: lines.append(f" • {c}코스 불합격: {', '.join(failed)}")
+                    
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
             st.code(am_text, language="text")
