@@ -590,7 +590,7 @@ with tab1:
         run_m = st.button(
             "오전 GPT 인식",
             key="btn_m_ocr",
-            help="근무표에서 도로주행 근무자/제외자를 추출합니다."
+        
         )
     with col_desc:
         st.markdown(
