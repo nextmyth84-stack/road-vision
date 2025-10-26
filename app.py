@@ -555,18 +555,29 @@ st.sidebar.markdown("""
 </p>
 """, unsafe_allow_html=True)
 
-# 세션 최신화
-st.session_state.update({
-    "key_order": key_order, "gyoyang_order": gyoyang_order, "sudong_order": sudong_order,
-    "veh1": veh1_map, "veh2": veh2_map, "employee_list": employee_list,
-    "sudong_count": sudong_count,
+# 세션 최신화 — 안전하게 키별로 설정
+_session_entries = {
+    "key_order": key_order,
+    "gyoyang_order": gyoyang_order,
+    "sudong_order": sudong_order,
+    "veh1": veh1_map,
+    "veh2": veh2_map,
+    "employee_list": employee_list,
+    "sudong_count": sudong_count,        # 위젯 키와 동일 타입(int) 유지
     "repair_1s": repair_saved["1종수동"],
     "repair_1a": repair_saved["1종자동"],
     "repair_2a": repair_saved["2종자동"],
-    "repair_cars": repair_union,
-    "cutoff": cutoff,
-    "auto1_order": auto1_order,
-})
+    "repair_cars": repair_union,         # list
+    "cutoff": cutoff,                    # float
+    "auto1_order": auto1_order,          # list
+}
+for _k, _v in _session_entries.items():
+    try:
+        st.session_state[_k] = _v
+    except Exception as _e:
+        # 어떤 키가 문제인지 바로 보이도록 경고만 띄우고 계속 진행
+        st.warning(f"세션 키 설정 실패: '{_k}' → {_e}")
+
 # -----------------------
 # 탭 UI 구성 (오전 / 오후) + 결과 미리보기 도구
 # -----------------------
