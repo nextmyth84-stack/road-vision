@@ -587,6 +587,7 @@ with tab1:
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
+        st.markdown("<div id='am-btn-anchor'></div>", unsafe_allow_html=True)  # ✅ 앵커
         run_m = st.button(
             "오전 GPT 인식",
             key="btn_m_ocr",
