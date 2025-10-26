@@ -42,9 +42,10 @@ def save_json(file, data):
         st.error(f"저장 실패: {e}")
 
 # -----------------------
-# 이름/차량 처리
+# 이름 정규화 / 차량 / 교정 / 순번
 # -----------------------
 def normalize_name(s):
+    """괄호·공백·특수문자 제거 → 순수 한글 이름"""
     return re.sub(r"[^가-힣]", "", re.sub(r"\(.*?\)", "", s or ""))
 
 def get_vehicle(name, veh_map):
@@ -70,6 +71,7 @@ def pick_next_from_cycle(cycle, last, allowed_norms: set):
     return None
 
 def correct_name_v2(name, employee_list, cutoff=0.6):
+    """전체 근무자와 유사도 비교로 OCR 오타 교정"""
     name_norm = normalize_name(name)
     if not name_norm:
         return name
@@ -79,6 +81,109 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
         if score > best_score:
             best_score, best = score, cand
     return best if best and best_score >= cutoff else name
+
+# -----------------------
+# OCR (이름/코스/제외자/지각/조퇴)
+# -----------------------
+def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
+    """
+    반환: names(괄호 제거), course_records, excluded, early_leave, late_start
+    - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
+    - excluded = ["김OO", ...]
+    - early_leave = [{"name":"김OO","time":14.5}, ...]
+    - late_start = [{"name":"김OO","time":10.0}, ...]
+    """
+    b64 = base64.b64encode(img_bytes).decode()
+    user = (
+        "이 이미지는 운전면허시험 근무표입니다.\n"
+        "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
+        "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
+        "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
+        "4) '지각/10시 출근/외출' 등 표기에서 오전 시작시간(예:10 또는 10.5)을 late_start 로.\n"
+        "5) '조퇴' 표기에서 오후 시간(13/14.5/16 등)을 early_leave 로.\n"
+        "JSON 예시: {\n"
+        "  \"names\": [\"김성연(B합)\",\"김병욱(A불)\"],\n"
+        "  \"excluded\": [\"안유미\"],\n"
+        "  \"early_leave\": [{\"name\":\"김병욱\",\"time\":14.5}],\n"
+        "  \"late_start\": [{\"name\":\"김성연\",\"time\":10}]\n"
+        "}"
+    )
+    try:
+        res = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                ]}
+            ],
+        )
+        raw = res.choices[0].message.content
+        js = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
+
+        raw_names = js.get("names", [])
+        names, course_records = [], []
+        for n in raw_names:
+            m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
+            if m:
+                name = m.group(1).strip()
+                detail = re.sub(r"[^A-Za-z가-힣]", "", m.group(2)).upper()
+                course = "A" if "A" in detail else ("B" if "B" in detail else None)
+                result = "합격" if "합" in detail else ("불합격" if "불" in detail else None)
+                if course and result:
+                    course_records.append({"name": name, "course": f"{course}코스", "result": result})
+                names.append(name)
+            else:
+                names.append(n.strip())
+
+        excluded = js.get("excluded", []) if want_excluded else []
+        early_leave = js.get("early_leave", []) if want_early else []
+        late_start = js.get("late_start", []) if want_late else []
+
+        # 숫자 캐스팅
+        def to_float(x):
+            try:
+                return float(x)
+            except:
+                return None
+        for e in early_leave:
+            e["time"] = to_float(e.get("time"))
+        for l in late_start:
+            l["time"] = to_float(l.get("time"))
+
+        return names, course_records, excluded, early_leave, late_start
+    except Exception as e:
+        st.error(f"OCR 실패: {e}")
+        return [], [], [], [], []
+
+# -----------------------
+# 교양 시간 제한 규칙
+# -----------------------
+def can_attend_period_morning(name_pure: str, period:int, late_list):
+    """오전 교양: 1=9:00~10:30, 2=10:30~12:00. 10시 이후 출근자는 1교시 불가."""
+    tmap = {1: 9.0, 2: 10.5}
+    nn = normalize_name(name_pure)
+    for e in late_list or []:
+        if normalize_name(e.get("name","")) == nn:
+            t = e.get("time", 99) or 99
+            try: t = float(t)
+            except: t = 99
+            return t <= tmap[period]
+    return True
+
+def can_attend_period_afternoon(name_pure: str, period:int, early_list):
+    """오후 교양: 3=13:00, 4=14:30, 5=16:00. 해당 시각 이전 조퇴면 해당 교시 불가."""
+    tmap = {3: 13.0, 4: 14.5, 5: 16.0}
+    nn = normalize_name(name_pure)
+    for e in early_list or []:
+        if normalize_name(e.get("name","")) == nn:
+            t = e.get("time", 0)
+            try: t = float(t)
+            except: t = 0
+            return t > tmap[period]
+    return True
+
 # -----------------------
 # JSON 기반 순번 / 차량 / 근무자 관리 (+ 1종자동 순번)
 # -----------------------
