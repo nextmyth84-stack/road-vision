@@ -794,8 +794,8 @@ with tab2:
                      "열쇠": today_key,
                      "교양_5교시": gy5 or gy4 or gy3 or prev_gyoyang5,
                      "1종수동": (sud_a[-1] if sud_a else prev_sudong),
--                    "1종자동": (auto1_next if 'auto1_next' in locals() else prev_auto1)
-+                    # [PATCH] today_auto1 계산값이 있으면 사용, 없으면 전일값 유지
-+                    "1종자동": (st.session_state.get("today_auto1") or prev_auto1)
+                     "1종자동": (auto1_next if 'auto1_next' in locals() else prev_auto1)
+                     # [PATCH] today_auto1 계산값이 있으면 사용, 없으면 전일값 유지
+                     "1종자동": (st.session_state.get("today_auto1") or prev_auto1)
                  })
                  st.success("전일근무.json 업데이트 완료 ✅")
