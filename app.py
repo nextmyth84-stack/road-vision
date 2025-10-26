@@ -572,14 +572,15 @@ with tab1:
     with col2:
         pass
 
-   c_btn, c_desc = st.columns([1, 4])
-   with c_btn:
-       run_m = st.button(
+      # --- OCR 버튼 + 설명 (가로 배치) ---
+    col_btn, col_desc = st.columns([1, 4])
+    with col_btn:
+        run_m = st.button(
             "오전 GPT 인식",
             key="btn_m_ocr",
-            help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다."  # (옵션) 툴팁도 함께
+            help="근무표에서 도로주행 근무자/제외자/지각/조퇴를 추출합니다."
         )
-    with c_desc:
+    with col_desc:
         st.markdown(
             """<div class='btn-desc'>
             업로드한 오전 근무표에서 <b>도로주행 근무자/제외자/지각/조퇴</b>를 인식합니다.<br>
@@ -609,7 +610,6 @@ with tab1:
                 st.session_state.early_leave = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
-
 
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
