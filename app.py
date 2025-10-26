@@ -778,16 +778,30 @@ with tab2:
                         used.add(normalize_name(pick))
                         break
 
-            # 🚚 1종 수동
+           # === 오후 1종 수동 (순번 엄격 적용: 전일자 다음 + 중복방지 + 제외자/오후근무자 필터) ===
             sud_a, last = [], sud_base
-            available_norms = a_norms.copy()
+            used_norms = set()
             for _ in range(sudong_count):
-                pick = pick_next_from_cycle(sudong_order, last, available_norms)
+                pick = pick_next_from_cycle(sudong_order, last, a_norms - used_norms)
                 if not pick:
                     break
-                sud_a.append(pick)
-                available_norms.discard(normalize_name(pick))
-                last = pick
+            sud_a.append(pick)
+            used_norms.add(normalize_name(pick))
+            last = pick
+
+            # === 차량 표기(오후 규칙): 오전 배정차 우선, 없으면 랜덤 가용차 ===
+            repair_set_1 = set(st.session_state.get("repair_cars_1", []))  # 사이드바에서 받는 1종 정비 세트
+            veh1_taken_pm = set()  # 오후에 점유된 1종 차량(중복 방지)
+
+            am_assigned_map = st.session_state.get("am_assigned_map", {})  # 오전 사람→차량 맵
+
+            sud_a_with_car = []   # [(이름, 차량번호 or "")]
+            for nm in sud_a:
+                car = assign_vehicle_pm(
+                nm, veh1_map, am_assigned_map, veh1_taken_pm, repair_set_1
+                )
+                sud_a_with_car.append((nm, car))
+
 
             # 🚗 2종 자동 근무자
             sud_a_norms = {normalize_name(x) for x in sud_a}
@@ -836,11 +850,18 @@ with tab2:
                 lines.append(f"5교시: {gy5}")
             lines.append("")
 
-            if sud_a:
-                for nm in sud_a:
-                    car = get_vehicle_pm(nm, veh1_map, morning_cars_1, veh1_free, repair_veh1)
-                    lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
-                lines.append("")
+            if sud_a_with_car:
+                for nm, car in sud_a_with_car:
+                    if car:
+                        lines.append(f"1종수동: {car} {nm}")
+                    else:
+                        lines.append(f"1종수동: {nm}")
+                if sudong_count == 2 and len(sud_a_with_car) < 2:
+                    lines.append("※ 수동 가능 인원이 1명입니다.")
+            else:
+                lines.append("1종수동: (배정자 없음)")
+                if sudong_count >= 1:
+                    lines.append("※ 수동 가능 인원이 0명입니다.")
 
             if today_auto1:
                 lines.append(f"1종자동: {today_auto1}")
@@ -856,7 +877,7 @@ with tab2:
             # 🚫 마감 차량
             am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
             am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
-            pm_c1 = set(pm_cars_1)
+            pm_c1 = set([car for _, car in sud_a_with_car if car])
             pm_c2 = set(pm_cars_2)
 
             un1 = sorted([c for c in am_c1 if c and c not in pm_c1])
