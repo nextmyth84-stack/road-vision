@@ -294,6 +294,29 @@ gyoyang_order = load_json(files["교양"])
 sudong_order  = load_json(files["1종"])
 veh1_map    = load_json(files["veh1"])
 veh2_map    = load_json(files["veh2"])
+import re
+
+def _is_car_label(s: str) -> bool:
+    return bool(re.match(r"^\d+호$", (s or "").strip()))
+
+def _looks_reversed(m: dict) -> bool:
+    if not isinstance(m, dict) or not m:
+        return False
+    # 키가 이름이고 값이 'nn호'인 항목이 과반이면 뒤집힌 것으로 판단
+    rev = sum(1 for k, v in m.items() if (not _is_car_label(k)) and _is_car_label(v))
+    return rev > (len(m) / 2)
+
+def _fix_vehicle_map_if_needed(m: dict) -> dict:
+    if _looks_reversed(m):
+        return {v: k for k, v in m.items()}
+    return m
+
+# 로드 후 교정 & 저장
+veh1_map = _fix_vehicle_map_if_needed(veh1_map or {})
+veh2_map = _fix_vehicle_map_if_needed(veh2_map or {})
+save_json(files["veh1"], veh1_map)
+save_json(files["veh2"], veh2_map)
+
 employee_list = load_json(files["employees"])
 auto1_order = load_json(files["1종자동"])
 repair_veh1 = load_json(files["정비_1종수동"])
@@ -615,38 +638,39 @@ with tab1:
             sud_norms = {normalize_name(x) for x in sud_m}
             auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
 
-            # 🚗 차량 배정 — 정비 차량은 랜덤 대체
+            # 차량 배정 — 정비 차량은 랜덤 대체 (기존 코드 유지)
             veh1_free = [c for c in veh1_map.keys() if c not in repair_veh1]
             veh2_free = [c for c in veh2_map.keys() if c not in repair_veh2]
-            random.shuffle(veh1_free)
-            random.shuffle(veh2_free)
+            random.shuffle(veh1_free); random.shuffle(veh2_free)
 
             def get_vehicle_random_safe(name, veh_map, free_list, repair_list):
-                """이름으로 차량 찾고, 없거나 정비 중이면 랜덤 대체"""
-                target_norm = normalize_name(name)
-                for car, nm in veh_map.items():
-                    if normalize_name(nm) == target_norm and car not in repair_list:
-                        return car  # 정상 배정자 차량 그대로 사용
+                v = get_vehicle(name, veh_map)
+                if v and v not in repair_list:
+                    return v
+                return free_list.pop(0) if free_list else None
 
-                # 🚫 해당 차량이 정비 중이거나 매핑 안된 경우 → 랜덤 배정
-                if free_list:
-                    return free_list.pop(0)
-                return None
-
+            # ✅ 오전 ‘사람→차량’ 매핑을 실제 배정 결과로 저장
+            am_assigned_map = {}
 
             morning_assigned_cars_1 = []
             for nm in sud_m:
                 car = get_vehicle_random_safe(nm, veh1_map, veh1_free, repair_veh1)
-                if car: morning_assigned_cars_1.append(car)
+                if car:
+                    morning_assigned_cars_1.append(car)
+                    am_assigned_map[normalize_name(nm)] = car   # ← 실제 선택된 차량
 
             morning_assigned_cars_2 = []
             for nm in auto_m:
                 car = get_vehicle_random_safe(nm, veh2_map, veh2_free, repair_veh2)
-                if car: morning_assigned_cars_2.append(car)
+                if car:
+                morning_assigned_cars_2.append(car)
+                am_assigned_map[normalize_name(nm)] = car   # ← 실제 선택된 차량
 
             st.session_state.morning_assigned_cars_1 = morning_assigned_cars_1
             st.session_state.morning_assigned_cars_2 = morning_assigned_cars_2
             st.session_state.morning_auto_names = auto_m + sud_m
+            st.session_state.am_assigned_map = am_assigned_map  # ✅ 오후에서 이걸 그대로 사용
+
             # 오전 배정 마지막에 (2종 자동과 1종 수동 모두 포함해 사람→차량 맵을 저장)
             am_assigned_map = {}
             for nm in sud_m:  # 1종 수동 인원
