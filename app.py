@@ -583,8 +583,8 @@ with tab1:
     with col_desc:
         st.markdown(
             """<div class='btn-desc'>
-            업로드한 오전 근무표에서 <b>도로주행 근무자/제외자/지각/조퇴</b>를 인식합니다.<br>
-            표가 흐리면 인식률이 떨어질 수 있어요. 가능하면 <b>해상도 높게</b> 찍어 주세요.
+            GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가,오타)</b>
             </div>""",
             unsafe_allow_html=True
         )
