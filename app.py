@@ -663,16 +663,27 @@ with tab1:
             repair_2a = st.session_state.get("repair_2a", [])
             auto1_order = st.session_state.get("auto1_order", [])
 
-            # 🔑 열쇠
+           # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
             today_key = ""
             if key_order:
-                norm_list = [normalize_name(x) for x in key_order if normalize_name(x) not in excluded_set]
+                ko_norm = [normalize_name(x) for x in key_order]
                 prev_norm = normalize_name(prev_key)
-                if prev_norm in norm_list:
-                    idx = (norm_list.index(prev_norm) + 1) % len(norm_list)
-                    today_key = [x for x in key_order if normalize_name(x) == norm_list[idx]][0]
-                elif norm_list:
-                    today_key = [x for x in key_order if normalize_name(x) == norm_list[0]][0]
+
+                if prev_norm in ko_norm:
+                    start = ko_norm.index(prev_norm)
+                    # prev 바로 다음부터 한 바퀴 돌며 제외자 아닌 첫 후보 선택
+                    for step in range(1, len(key_order) + 1):
+                        cand = key_order[(start + step) % len(key_order)]
+                        if normalize_name(cand) not in excluded_set:
+                            today_key = cand
+                            break
+                else:
+                    # 전일자가 순번에 없으면: 제외자 아닌 첫 사람
+                    for cand in key_order:
+                        if normalize_name(cand) not in excluded_set:
+                            today_key = cand
+                            break
+
             st.session_state.today_key = today_key
 
             # 🧑‍🏫 교양 1·2교시
