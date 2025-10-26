@@ -663,8 +663,8 @@ with tab1:
             for nm in auto_m:
                 car = get_vehicle_random_safe(nm, veh2_map, veh2_free, repair_veh2)
                 if car:
-                morning_assigned_cars_2.append(car)
-                am_assigned_map[normalize_name(nm)] = car   # ← 실제 선택된 차량
+                    morning_assigned_cars_2.append(car)
+                    am_assigned_map[normalize_name(nm)] = car   # ← 실제 선택된 차량
 
             st.session_state.morning_assigned_cars_1 = morning_assigned_cars_1
             st.session_state.morning_assigned_cars_2 = morning_assigned_cars_2
