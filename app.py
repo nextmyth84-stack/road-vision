@@ -335,9 +335,9 @@ section[data-testid="stSidebar"] {
     border-right: 1px solid #e5e7eb;
 
     /* ▼ 핵심: 최소/기본 폭 지정 */
-    min-width: 340px;     /* ← 원하는 최소 폭(px)로 변경 */
-    width: 340px;         /* 기본 폭 */
-    flex: 0 0 340px;      /* 부모 flex 레이아웃에서 폭 고정 */
+    min-width: 340px;
+    width: 340px;
+    flex: 0 0 340px;
 }
 
 /* 화면 크기에 따라 유연하게 */
@@ -348,7 +348,6 @@ section[data-testid="stSidebar"] {
   section[data-testid="stSidebar"] { width: 340px; flex: 0 0 340px; }
 }
 @media (max-width: 991px) {
-  /* 모바일/태블릿: 너무 크게 고정하지 않도록 */
   section[data-testid="stSidebar"] { min-width: 280px; width: 85vw; flex: 0 0 auto; }
 }
 
@@ -359,30 +358,17 @@ div.stButton > button { background-color: #2563eb; color: white; border: none; b
 div.stButton > button:hover { background-color: #1d4ed8; }
 .sidebar-subtitle { font-weight: 600; color: #334155; margin-top: 10px; margin-bottom: 4px; }
 .repair-box { border: 1px solid #fdba74; background: #fff7ed; padding: 8px 10px; border-radius: 8px; color: #7c2d12; font-size: 13px; }
-/* (있다면) .big-label, .btn-desc 등 다른 커스텀 클래스도 그대로 둠 */
-
-
-/* 결과 박스 */
-.repair-box {
-    border: 1px solid #fdba74;
-    background: #fff7ed;
-    padding: 8px 10px;
-    border-radius: 8px;
-    color: #7c2d12;
-    font-size: 13px;
 
 .btn-desc{
     font-size: 13px;
-    color: #475569;   /* slate-600 */
+    color: #475569;
     margin-top: 6px;
     line-height: 1.5;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
 st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 근무자 설정 </h3>", unsafe_allow_html=True)
-
 # =====================================
 # 🗓 전일 근무자 (1종자동 포함 저장)
 # =====================================
@@ -473,8 +459,6 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-
-
 st.sidebar.caption("정비차량 추가/삭제는 아래 ‘정비 차량 목록’에서 관리하세요.")
 
 # === 🛠 정비 차량 목록 (그룹으로 한 번 더 묶기) ===
@@ -554,8 +538,8 @@ tab1, tab2 = st.tabs([" 오전 근무", " 오후 근무"])
 st.markdown("""
     <style>
     .stTabs [data-baseweb="tab-list"] {
-        display: flex;          /* 안전하게 명시 */
-        justify-content: center;/* ✅ 가운데 정렬 */
+        display: flex;
+        justify-content: center;
         gap: 12px;
     }
     .stTabs [data-baseweb="tab"] {
@@ -565,7 +549,6 @@ st.markdown("""
     .stTabs [aria-selected="true"] {
         background-color: #2563eb !important; color: white !important; font-weight: 700;
     }
-    /* [PATCH] 결과 미리보기(색상 강조) */
     .result-pre {
         white-space: pre-wrap;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -578,14 +561,14 @@ st.markdown("""
     .repair-tag { color: #ef4444; font-weight: 700; }
     .btn-desc{
         font-size: 13px;
-        color: #475569;   /* slate-600 */
+        color: #475569;
         margin-top: 6px;
         line-height: 1.5;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# [PATCH] (정비중) 강조 렌더 함수
+# (정비중) 강조 렌더 함수
 def render_result_with_repair_color(text: str) -> str:
     esc = html.escape(text or "")
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
@@ -633,7 +616,7 @@ with tab1:
                 for l in late:
                     l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # ✅ [PATCH] 코스점검 이름 교정 + 중복 제거
+                # ✅ 코스점검 이름 교정 + 중복 제거
                 def _fix_course_records(course_records, employees, cutoff):
                     out = []
                     seen = set()
@@ -643,7 +626,6 @@ with tab1:
                         course = r.get("course")
                         result = r.get("result")
                         key = (normalize_name(nm_fixed), course, result)
-                        # 이름 비어있거나 동일 키 중복이면 스킵
                         if not normalize_name(nm_fixed) or key in seen:
                             continue
                         out.append({"name": nm_fixed, "course": course, "result": result})
@@ -655,21 +637,47 @@ with tab1:
                     st.session_state["employee_list"], 
                     cutoff=st.session_state["cutoff"]
                 )
+
+                # 결과 반영 + ✅ 입력창(text_area) 키들도 동기화
                 st.session_state.m_names_raw = fixed
                 st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
                 st.session_state.early_leave = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start = [l for l in late if l.get("time") is not None]
+
+                # ✅ 라벨 숨김 text_area 동기화
+                st.session_state["ta_morning_list"] = "\n".join(fixed)
+                st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
+
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
-    excluded_text = st.text_area("근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), height=120)
-    excluded_set = {normalize_name(x) for x in excluded_text.splitlines() if x.strip()}
+    excluded_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("excluded_auto", [])),
+        height=120,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="예: 안유미, 김지은, 조정래",
+        key="ta_excluded",
+    )
 
     st.markdown("<h4 style='font-size:18px;'>🌅 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
-    morning_text = st.text_area("오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), height=220)
+    morning_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("m_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="오전 근무자 입력(줄바꿈으로 구분)",
+        key="ta_morning_list",
+    )
 
-    m_list = [x.strip() for x in morning_text.splitlines() if x.strip()]
+    # ✅ 입력은 세션 키에서 파싱 (사용자 수정 반영)
+    m_list = [x.strip() for x in st.session_state.get("ta_morning_list", "").splitlines() if x.strip()]
+    excluded_set = {
+        normalize_name(x)
+        for x in st.session_state.get("ta_excluded", "").splitlines()
+        if x.strip()
+    }
 
     early_leave = st.session_state.get("early_leave", [])
     late_start = st.session_state.get("late_start", [])
@@ -684,13 +692,12 @@ with tab1:
             veh1_map      = st.session_state.get("veh1", {})
             veh2_map      = st.session_state.get("veh2", {})
             sudong_count  = st.session_state.get("sudong_count", 1)
-            # [PATCH] 종별 정비 목록
             repair_1s = st.session_state.get("repair_1s", [])
             repair_1a = st.session_state.get("repair_1a", [])
             repair_2a = st.session_state.get("repair_2a", [])
             auto1_order = st.session_state.get("auto1_order", [])
 
-           # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
+            # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
             today_key = ""
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
@@ -698,14 +705,12 @@ with tab1:
 
                 if prev_norm in ko_norm:
                     start = ko_norm.index(prev_norm)
-                    # prev 바로 다음부터 한 바퀴 돌며 제외자 아닌 첫 후보 선택
                     for step in range(1, len(key_order) + 1):
                         cand = key_order[(start + step) % len(key_order)]
                         if normalize_name(cand) not in excluded_set:
                             today_key = cand
                             break
                 else:
-                    # 전일자가 순번에 없으면: 제외자 아닌 첫 사람
                     for cand in key_order:
                         if normalize_name(cand) not in excluded_set:
                             today_key = cand
@@ -749,7 +754,7 @@ with tab1:
             st.session_state.morning_auto_names = auto_m + sud_m
 
             # === 출력 ===
-            lines = [kst_result_header("오전"), ""]  # ✅ 헤더 추가
+            lines = [kst_result_header("오전"), ""]
 
             if today_key:
                 lines.append(f"열쇠: {today_key}")
@@ -770,7 +775,6 @@ with tab1:
                 if sudong_count >= 1:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
 
-            # 1종 자동 (정비중 표기 반영)
             if st.session_state.get("today_auto1"):
                 lines.append("")
                 a1 = mark_car(st.session_state["today_auto1"], repair_1a)
@@ -782,17 +786,6 @@ with tab1:
                 for nm in auto_m:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
-
-            # 코스점검
-            course_records = st.session_state.get("course_records", [])
-            if course_records:
-                lines.append("")
-                lines.append(" 코스점검 :")
-                for c in ["A", "B"]:
-                    passed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "합격"]
-                    failed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "불합격"]
-                    if passed: lines.append(f" • {c}코스 합격: {', '.join(passed)}")
-                    if failed: lines.append(f" • {c}코스 불합격: {', '.join(failed)}")
 
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
@@ -849,14 +842,30 @@ with tab2:
                 st.session_state.excluded_auto_pm = excluded_fixed
                 st.session_state.early_leave_pm = [e for e in early if e.get("time") is not None]
                 st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
+
+                # ✅ 라벨 숨김 text_area 동기화
+                st.session_state["ta_afternoon_list"] = "\n".join(fixed)
+
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
                 
     st.markdown("<h4 style='font-size:18px;'>🌇 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
-    afternoon_text = st.text_area("오후 근무자", "\n".join(st.session_state.get("a_names_raw", [])), height=220)
-    a_list = [x.strip() for x in afternoon_text.splitlines() if x.strip()]
+    afternoon_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("a_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="오후 근무자 입력(줄바꿈으로 구분)",
+        key="ta_afternoon_list",
+    )
+    # ✅ 오후 입력은 세션 키에서 파싱
+    a_list = [x.strip() for x in st.session_state.get("ta_afternoon_list", "").splitlines() if x.strip()]
 
-    # 오후도 오전 제외자 그대로 사용
-    excluded_set = {normalize_name(x) for x in st.session_state.get("excluded_auto", [])}
+    # 오후도 오전 제외자 그대로 사용 (세션 키에서 읽기)
+    excluded_set = {
+        normalize_name(x)
+        for x in st.session_state.get("ta_excluded", "").splitlines()
+        if x.strip()
+    }
     a_norms = {normalize_name(x) for x in a_list} - excluded_set
 
     save_check = st.checkbox("전일근무자 자동 저장", value=True)
@@ -870,7 +879,6 @@ with tab2:
             veh1_map      = st.session_state.get("veh1", {})
             veh2_map      = st.session_state.get("veh2", {})
             sudong_count  = st.session_state.get("sudong_count", 1)
-            # 종별 정비 목록
             repair_1s = st.session_state.get("repair_1s", [])
             repair_1a = st.session_state.get("repair_1a", [])
             repair_2a = st.session_state.get("repair_2a", [])
@@ -908,8 +916,8 @@ with tab2:
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
-           # === 출력 ===
-            lines = [kst_result_header("오후"), ""]  # ✅ 헤더 추가
+            # === 출력 ===
+            lines = [kst_result_header("오후"), ""]
 
             if today_key:
                 lines.append(f"열쇠: {today_key}")
@@ -980,26 +988,21 @@ with tab2:
                 if normalize_name(x) not in {normalize_name(y) for y in st.session_state.get("morning_auto_names", [])}
             ])
 
-            
             if missing:      lines.append(" • 제외 인원: " + ", ".join(missing))
             if newly_joined: lines.append(" • 신규 인원: " + ", ".join(newly_joined))
 
-            # === 출력 ===
-            # === 결과 텍스트 구성 완료 후, 여기서부터 교체 ===
-
-            # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
+            # === 결과 텍스트 블록 분리 ===
             try:
                 split_idx = next(i for i, line in enumerate(lines) if line.startswith("🔍 오전 대비 비교:"))
             except StopIteration:
                 split_idx = None
 
             if split_idx is not None:
-                pm_result_text = "\n".join(lines[:split_idx]).strip()   # ① 열쇠~마감차량
-                pm_compare_text = "\n".join(lines[split_idx:]).strip()  # ② 오전 대비 비교
+                pm_result_text = "\n".join(lines[:split_idx]).strip()
+                pm_compare_text = "\n".join(lines[split_idx:]).strip()
             else:
                 pm_result_text = "\n".join(lines).strip()
                 pm_compare_text = ""
-
 
             # === 출력 ①: 오후 근무 결과(열쇠~마감차량) ===
             st.markdown("#### 🌇 오후 근무 결과")
