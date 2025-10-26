@@ -822,7 +822,8 @@ with tab2:
             </div>""",
             unsafe_allow_html=True
         )
-        
+        # ✅ 빈 줄(여백) 추가
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)    
     if run_a:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
