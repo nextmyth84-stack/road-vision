@@ -939,11 +939,11 @@ with tab2:
             # === 결과 텍스트 구성 완료 후, 여기서부터 교체 ===
 
             # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
-            split_idx = None
-            for i, line in enumerate(lines):
-                if line.startswith("🔍 오전 대비 비교:"):
-                split_idx = i
-                break
+            # 블록 분할: "🔍 오전 대비 비교:" 시작 지점을 기준으로 분리
+            try:
+                split_idx = next(i for i, line in enumerate(lines) if line.startswith("🔍 오전 대비 비교:"))
+            except StopIteration:
+                split_idx = None
 
             if split_idx is not None:
                 pm_result_text = "\n".join(lines[:split_idx]).strip()   # ① 열쇠~마감차량
@@ -951,6 +951,7 @@ with tab2:
             else:
                 pm_result_text = "\n".join(lines).strip()
                 pm_compare_text = ""
+
 
             # === 출력 ①: 오후 근무 결과(열쇠~마감차량) ===
             st.markdown("#### 🌇 오후 근무 결과")
