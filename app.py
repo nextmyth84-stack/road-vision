@@ -1023,7 +1023,7 @@ with tab2:
 
             # === 출력 ②: 오전 대비 비교 (있을 때만) ===
             if pm_compare_text:
-                st.markdown("#### 🔍 오전 대비 도로주행 근무자 비교")
+                st.markdown("#### 🔍 오전 대비 근무자 비교")
                 st.code(pm_compare_text, language="text")
                 clipboard_copy_button("📋 비교 복사하기", pm_compare_text)
 
