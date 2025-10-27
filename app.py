@@ -658,7 +658,7 @@ with tab1:
         value="\n".join(st.session_state.get("excluded_auto", [])),
         height=120,
         label_visibility="collapsed",            # ✅ 라벨 숨김
-        placeholder="예: 안유미, 김지은, 조정래",
+        placeholder="여기 이름 들어가면 열쇠, 교 제외",
         key="ta_excluded",
     )
 
