@@ -517,6 +517,31 @@ with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
         </div>""",
         unsafe_allow_html=True
     )
+# =====================================
+# 📝 메모장 (정비 차량 목록 아래)
+# =====================================
+MEMO_FILE = os.path.join(DATA_DIR, "메모장.json")
+
+# 기존 메모 불러오기
+memo_text = ""
+if os.path.exists(MEMO_FILE):
+    try:
+        with open(MEMO_FILE, "r", encoding="utf-8") as f:
+            memo_text = json.load(f).get("memo", "")
+    except:
+        memo_text = ""
+
+with st.sidebar.expander("📝 메모장", expanded=False):
+    st.markdown("<div class='sidebar-subtitle'>운영 메모 / 특이사항 기록</div>", unsafe_allow_html=True)
+    memo_input = st.text_area("", memo_text, height=140, placeholder="예: 10월 27일 - 5호차 브레이크 경고등 점등")
+
+    if st.button("💾 메모 저장", key="btn_save_memo"):
+        try:
+            with open(MEMO_FILE, "w", encoding="utf-8") as f:
+                json.dump({"memo": memo_input}, f, ensure_ascii=False, indent=2)
+            st.success("메모 저장 완료 ✅")
+        except Exception as e:
+            st.error(f"메모 저장 실패: {e}")
 
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
