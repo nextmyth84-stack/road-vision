@@ -408,11 +408,21 @@ with st.sidebar.expander("📂 데이터 관리", expanded=False):
             save_json(files["교양"], [x.strip() for x in t2.splitlines() if x.strip()])
             save_json(files["1종"], [x.strip() for x in t3.splitlines() if x.strip()])
             save_json(files["1종자동"], [x.strip() for x in (t4.splitlines() if t4 else []) if x.strip()])
+
+            # 파일 재로드
             key_order[:] = load_json(files["열쇠"])
             gyoyang_order[:] = load_json(files["교양"])
             sudong_order[:] = load_json(files["1종"])
             auto1_order[:] = load_json(files["1종자동"])
-            st.success("순번표 저장 완료 ✅")
+
+            # ✅ 세션 즉시 갱신 (오후 탭 반영용)
+            st.session_state["key_order"] = key_order
+            st.session_state["gyoyang_order"] = gyoyang_order
+            st.session_state["sudong_order"] = sudong_order
+            st.session_state["auto1_order"] = auto1_order
+
+            st.success("순번표 저장 완료 ✅ (오후 탭 즉시 반영)")
+
 
     # 🚘 차량 담당 관리
     with st.expander("🚘 차량 담당 관리", expanded=False):
