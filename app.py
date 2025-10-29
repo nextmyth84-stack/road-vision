@@ -171,10 +171,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
 
     try:
         res = client.chat.completions.create(
-            model="gpt-5",
-            temperature=0.0,
-            max_output_tokens=500,
-            response_format={"type": "json_object"},
+            model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
                 {"role": "user", "content": [
