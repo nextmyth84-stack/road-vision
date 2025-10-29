@@ -172,7 +172,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     try:
         res = client.chat.completions.create(
             model=MODEL_NAME,
-            temperature=0.0,
             max_completion_tokens=500,         # ✅ 중간세대은 이 키워드만 인식
             messages=[
                 {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
