@@ -145,7 +145,13 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
-
+    """
+    반환: names(괄호 제거), course_records, excluded, early_leave, late_start
+    - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
+    - excluded = ["김OO", ...]
+    - early_leave = [{"name":"김OO","time":14.5}, ...]
+    - late_start = [{"name":"김OO","time":10.0}, ...]
+    """
     # 🧩 ① 이미지 리사이즈 & 압축
     try:
         img = Image.open(io.BytesIO(img_bytes))
@@ -155,13 +161,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         img_bytes = buf.getvalue()                  # 🔹 다시 바이트로 변환
     except Exception as e:
         st.warning(f"이미지 압축 실패: {e}")
-    """
-    반환: names(괄호 제거), course_records, excluded, early_leave, late_start
-    - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
-    - excluded = ["김OO", ...]
-    - early_leave = [{"name":"김OO","time":14.5}, ...]
-    - late_start = [{"name":"김OO","time":10.0}, ...]
-    """
     b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지를 분석하되, 추론 없이 단순 인식만 수행하세요.\n"
