@@ -865,7 +865,7 @@ with tab1:
 # =====================================
 # 🌇 오후 근무 탭
 # =====================================
-with tab2:
+import os, json, streamlit as st
 
 MORNING_FILE = os.path.join(os.path.dirname(__file__), "data", "오전결과.json")
 
@@ -880,6 +880,8 @@ if os.path.exists(MORNING_FILE):
         st.error(f"파일 읽기 오류 ❌: {e}")
 else:
     st.error(f"파일 없음 ❌: {MORNING_FILE}")
+
+with tab2:
 
     # ✅ 오전결과 자동 복원 (세션 유실 방지)
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
