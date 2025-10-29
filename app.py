@@ -152,15 +152,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
-    # 🧩 ① 이미지 리사이즈 & 압축
-    try:
-        img = Image.open(io.BytesIO(img_bytes))
-        img.thumbnail((1200, 1200))                 # 🔹 해상도 줄이기
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=80)    # 🔹 품질 80%로 압축
-        img_bytes = buf.getvalue()                  # 🔹 다시 바이트로 변환
-    except Exception as e:
-        st.warning(f"이미지 압축 실패: {e}")
+   
     b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지를 분석하되, 추론 없이 단순 인식만 수행하세요.\n"
