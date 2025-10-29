@@ -30,7 +30,7 @@ try:
 except Exception:
     st.error("⚠️ OPENAI_API_KEY 설정 필요")
     st.stop()
-MODEL_NAME = "gpt-4o"
+MODEL_NAME = "gpt-5"
 
 # -----------------------
 # JSON 유틸
