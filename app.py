@@ -158,6 +158,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     user = (
         "이 이미지를 분석하되, 추론 없이 단순 인식만 수행하세요.\n"
         "이 이미지는 운전면허시험 근무표입니다.\n"
+        "설명하지 말고 결과만 JSON 형식으로 출력하세요.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
         "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
         "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
@@ -168,6 +169,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         "  \"excluded\": [\"안유미\"],\n"
         "  \"early_leave\": [{\"name\":\"김병욱\",\"time\":14.5}],\n"
         "  \"late_start\": [{\"name\":\"김성연\",\"time\":10}]\n"
+        "검증 단계나 재확인은 수행하지 마세요.\n"
         "}"
     )
 
