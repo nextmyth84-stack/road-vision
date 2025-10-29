@@ -3,7 +3,7 @@
 # =====================================
 import streamlit as st
 from openai import OpenAI
-import base64, re, json, os, difflib, html, ramdom  # [PATCH] html 추가
+import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
 
