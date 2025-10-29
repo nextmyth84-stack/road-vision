@@ -172,6 +172,8 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     try:
         res = client.chat.completions.create(
             model=MODEL_NAME,
+            temperature=0.0,
+            max_tokens=500,         # ✅ 구버전은 이 키워드만 인식
             messages=[
                 {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
                 {"role": "user", "content": [
@@ -181,8 +183,13 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
             ],
         )
 
-        raw = res.choices[0].message.content
-        js = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
+        raw = res.choices[0].message["content"] if isinstance(res.choices[0].message, dict) \
+              else res.choices[0].message.content
+
+        try:
+            js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))
+        except Exception:
+            js = {}
 
         raw_names = js.get("names", [])
         names, course_records = [], []
