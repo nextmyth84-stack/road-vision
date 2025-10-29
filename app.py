@@ -1003,6 +1003,17 @@ with tab2:
             sud_a_norms = {normalize_name(x) for x in sud_a}
             auto_a = [x for x in a_list if normalize_name(x) in (a_norms - sud_a_norms)]
 
+            # === 출력 바로 직전 ===
+            st.session_state["today_key"] = today_key
+            st.session_state["gy5"] = gy5
+            st.session_state["gy4"] = gy4
+            st.session_state["gy3"] = gy3
+            st.session_state["sud_a"] = sud_a
+            st.session_state["prev_sudong"] = prev_sudong
+            st.session_state["prev_gyoyang5"] = prev_gyoyang5
+            st.session_state["prev_auto1"] = prev_auto1
+
+
             # === 출력 ===
             lines = [kst_result_header("오후"), ""]
 
