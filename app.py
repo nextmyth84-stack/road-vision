@@ -867,22 +867,6 @@ with tab1:
 # =====================================
 # 🌇 오후 근무 탭
 # =====================================
-import os, json, streamlit as st
-
-MORNING_FILE = os.path.join(os.path.dirname(__file__), "data", "오전결과.json")
-
-st.markdown("#### 🧩 오전결과.json 상태 점검")
-if os.path.exists(MORNING_FILE):
-    st.success(f"파일 존재 ✅: {MORNING_FILE}")
-    try:
-        with open(MORNING_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        st.json(data)
-    except Exception as e:
-        st.error(f"파일 읽기 오류 ❌: {e}")
-else:
-    st.error(f"파일 없음 ❌: {MORNING_FILE}")
-
 with tab2:
 
     # ✅ 오전결과 자동 복원
