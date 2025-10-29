@@ -866,7 +866,6 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-import os, json, streamlit as st
 
 MORNING_FILE = os.path.join(os.path.dirname(__file__), "data", "오전결과.json")
 
