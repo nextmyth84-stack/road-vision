@@ -845,16 +845,18 @@ with tab1:
                 "assigned_cars_1": st.session_state.get("morning_assigned_cars_1", []),
                 "assigned_cars_2": st.session_state.get("morning_assigned_cars_2", []),
                 "auto_names": st.session_state.get("morning_auto_names", []),
+
+                # 🔑 오후 순번 기준값 4종 반드시 저장
+                "today_key": st.session_state.get("today_key", ""),
+                "gy_base_for_pm": st.session_state.get("gyoyang_base_for_pm", ""),
+                "sud_base_for_pm": st.session_state.get("sudong_base_for_pm", ""),
+                "today_auto1": st.session_state.get("today_auto1", ""),
+
                 "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
             }
             save_json(MORNING_FILE, morning_data)
-
-            # ✅ 세션에도 즉시 반영 (새로고침 없이 오후 탭 반영)
-            st.session_state["morning_assigned_cars_1"] = morning_data["assigned_cars_1"]
-            st.session_state["morning_assigned_cars_2"] = morning_data["assigned_cars_2"]
-            st.session_state["morning_auto_names"] = morning_data["auto_names"]
-
             st.info(f"✅ 오전 결과 저장 완료 (갱신 시각: {morning_data['timestamp']})")
+
 
 
             clipboard_copy_button("📋 결과 복사하기", am_text)
