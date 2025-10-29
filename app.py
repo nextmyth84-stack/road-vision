@@ -6,8 +6,6 @@ from openai import OpenAI
 import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
-import openai, streamlit as st
-st.sidebar.info(f"🔹 OpenAI SDK version: {openai.__version__}")
 
 
 
