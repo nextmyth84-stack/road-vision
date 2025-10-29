@@ -1,6 +1,8 @@
-# force rebuild 2025-10-29
-openai==1.42.0
 streamlit>=1.36.0
-pillow
-requests
-jsonschema
+openai>=1.35.3
+pandas>=2.2.2
+Pillow>=10.3.0
+tqdm>=4.66.3
+requests>=2.32.3
+python-dateutil>=2.9.0.post0
+tzdata>=2024.1
