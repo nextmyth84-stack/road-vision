@@ -7,6 +7,7 @@ import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
 from PIL import Image
+import io, base64
 
 def kst_result_header(period_label: str) -> str:
     """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
