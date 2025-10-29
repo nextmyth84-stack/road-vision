@@ -145,6 +145,16 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
+
+    # 🧩 ① 이미지 리사이즈 & 압축
+    try:
+        img = Image.open(io.BytesIO(img_bytes))
+        img.thumbnail((1200, 1200))                 # 🔹 해상도 줄이기
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=80)    # 🔹 품질 80%로 압축
+        img_bytes = buf.getvalue()                  # 🔹 다시 바이트로 변환
+    except Exception as e:
+        st.warning(f"이미지 압축 실패: {e}")
     """
     반환: names(괄호 제거), course_records, excluded, early_leave, late_start
     - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
@@ -154,6 +164,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     """
     b64 = base64.b64encode(img_bytes).decode()
     user = (
+        "이 이미지를 분석하되, 추론 없이 단순 인식만 수행하세요.\n"
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
         "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
@@ -172,6 +183,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     try:
         res = client.chat.completions.create(
             model=MODEL_NAME,
+            stream=True,
             messages=[
                 {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
                 {"role": "user", "content": [
