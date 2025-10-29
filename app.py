@@ -557,7 +557,7 @@ with st.sidebar.expander("📝 메모장", expanded=False):
             st.success("메모 저장 완료 ✅")
         except Exception as e:
             st.error(f"메모 저장 실패: {e}")
-st.write("✅ 실제 사용 모델:", res.model)
+
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
 st.sidebar.markdown("""
