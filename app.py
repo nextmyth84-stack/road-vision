@@ -170,7 +170,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
 
 
     try:
-       res = client.chat.completions.create(
+        res = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
@@ -180,7 +180,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                 ]}
             ],
         )
-
         raw = res.choices[0].message.content
         js = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
 
