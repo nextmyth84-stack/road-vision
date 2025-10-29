@@ -171,16 +171,15 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
 
     try:
         res = client.chat.completions.create(
-            res = client.chat.completions.create(
-                model="gpt-5",                 # ✅ 여기서 모델 변경
-                temperature=0.0,               # ✅ 일관된 결과 위해 고정
-                max_tokens=500,                # ✅ 응답 길이 제한 (속도 향상)
-                response_format={"type": "json_object"},  # ✅ JSON 강제 (OCR 실패 방지)
-                messages=[
-                    {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
-                    {"role": "user", "content": [
-                        {"type": "text", "text": user},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+            model="gpt-5",                 # ✅ 여기서 모델 변경
+            temperature=0.0,               # ✅ 일관된 결과 위해 고정
+            max_tokens=500,                # ✅ 응답 길이 제한 (속도 향상)
+            response_format={"type": "json_object"},  # ✅ JSON 강제 (OCR 실패 방지)
+            messages=[
+                {"role": "system", "content": "근무표에서 이름과 메타데이터를 JSON으로 추출"},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
                 ]}
             ],
         )
