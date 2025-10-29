@@ -246,7 +246,8 @@ def can_attend_period_afternoon(name_pure: str, period:int, early_list):
 # -----------------------
 # JSON 기반 순번 / 차량 / 근무자 관리
 # -----------------------
-DATA_DIR = "data"
+# 절대경로 기반으로 data 폴더 지정
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 files = {
     "열쇠": "열쇠순번.json",
@@ -847,7 +848,14 @@ with tab1:
                 "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
             }
             save_json(MORNING_FILE, morning_data)
+
+            # ✅ 세션에도 즉시 반영 (새로고침 없이 오후 탭 반영)
+            st.session_state["morning_assigned_cars_1"] = morning_data["assigned_cars_1"]
+            st.session_state["morning_assigned_cars_2"] = morning_data["assigned_cars_2"]
+            st.session_state["morning_auto_names"] = morning_data["auto_names"]
+
             st.info(f"✅ 오전 결과 저장 완료 (갱신 시각: {morning_data['timestamp']})")
+
 
             clipboard_copy_button("📋 결과 복사하기", am_text)
 
