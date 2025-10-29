@@ -6,8 +6,7 @@ from openai import OpenAI
 import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
-from PIL import Image
-import io, base64
+
 
 def kst_result_header(period_label: str) -> str:
     """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
@@ -147,16 +146,6 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
-
-    # 🧩 ① 이미지 리사이즈 & 압축
-    try:
-        img = Image.open(io.BytesIO(img_bytes))
-        img.thumbnail((1200, 1200))                 # 🔹 해상도 줄이기
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=80)    # 🔹 품질 80%로 압축
-        img_bytes = buf.getvalue()                  # 🔹 다시 바이트로 변환
-    except Exception as e:
-        st.warning(f"이미지 압축 실패: {e}")
     """
     반환: names(괄호 제거), course_records, excluded, early_leave, late_start
     - course_records = [{name,'A코스'/'B코스','합격'/'불합격'}]
