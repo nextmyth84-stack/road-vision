@@ -2,3 +2,4 @@ openai==1.42.0
 streamlit>=1.36.0
 pillow
 requests
+# force rebuild 2025-10-29
