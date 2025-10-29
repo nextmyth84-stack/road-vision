@@ -181,10 +181,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                     {"role": "user", "content": [
                         {"type": "text", "text": user},
                         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
-        ]}
-    ],
-)
-
                 ]}
             ],
         )
