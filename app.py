@@ -572,7 +572,6 @@ st.session_state.update({
     "repair_1a": repair_saved["1종자동"],
     "repair_2a": repair_saved["2종자동"],
     "repair_cars": repair_union,
-    "cutoff": cutoff,
     "auto1_order": auto1_order,  # NEW
 })
 
