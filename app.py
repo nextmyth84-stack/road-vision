@@ -555,6 +555,8 @@ with st.sidebar.expander("📝 메모장", expanded=False):
             st.success("메모 저장 완료 ✅")
         except Exception as e:
             st.error(f"메모 저장 실패: {e}")
+            
+cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
 st.sidebar.markdown("""
 <p style='text-align:center; font-size:8px; color:#94a3b8;'>
@@ -572,6 +574,7 @@ st.session_state.update({
     "repair_1a": repair_saved["1종자동"],
     "repair_2a": repair_saved["2종자동"],
     "repair_cars": repair_union,
+    "cutoff": cutoff,
     "auto1_order": auto1_order,  # NEW
 })
 
