@@ -654,7 +654,7 @@ with tab1:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
+            with st.spinner("🧩 GPT 이미지 분석 중..."):
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
@@ -921,7 +921,7 @@ with tab2:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
+            with st.spinner("🧩 GPT 이미지 분석 중..."):
                 names, _, excluded, early, late = gpt_extract(
                     a_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
@@ -1026,6 +1026,23 @@ with tab2:
                 for nm in auto_a:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
+
+            # 🚫 마감 차량 (오전→오후)
+            am_c1 = set(st.session_state.get("morning_assigned_cars_1", []))
+            am_c2 = set(st.session_state.get("morning_assigned_cars_2", []))
+            pm_c1 = {get_vehicle(x, veh1_map) for x in sud_a if get_vehicle(x, veh1_map)}
+            pm_c2 = {get_vehicle(x, veh2_map) for x in auto_a if get_vehicle(x, veh2_map)}
+            un1 = sorted([c for c in am_c1 if c and c not in pm_c1], key=car_num_key)
+            un2 = sorted([c for c in am_c2 if c and c not in pm_c2], key=car_num_key)
+            if un1 or un2:
+                lines.append("")
+                lines.append("🚫 마감 차량:")
+                if un1:
+                    lines.append(" [1종 수동]")
+                    for c in un1: lines.append(f"  • {c} 마감")
+                if un2:
+                    lines.append(" [2종 자동]")
+                    for c in un2: lines.append(f"  • {c} 마감")
 
             # 🔍 오전 대비 비교
             lines.append("")
