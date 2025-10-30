@@ -30,7 +30,7 @@ try:
 except Exception:
     st.error("⚠️ OPENAI_API_KEY 설정 필요")
     st.stop()
-MODEL_NAME = "gpt-5"
+MODEL_NAME = "gpt-4o"
 
 # -----------------------
 # JSON 유틸
@@ -650,7 +650,7 @@ with tab1:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
+            with st.spinner("🧩 GPT 이미지 분석 중..."):
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
@@ -917,7 +917,7 @@ with tab2:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
+            with st.spinner("🧩 GPT 이미지 분석 중..."):
                 names, _, excluded, early, late = gpt_extract(
                     a_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
