@@ -7,8 +7,6 @@ import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
 
-
-
 def kst_result_header(period_label: str) -> str:
     """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
     dt = datetime.now(ZoneInfo("Asia/Seoul"))
@@ -32,7 +30,7 @@ try:
 except Exception:
     st.error("⚠️ OPENAI_API_KEY 설정 필요")
     st.stop()
-MODEL_NAME = "gpt-4o"
+MODEL_NAME = "gpt-5"
 
 # -----------------------
 # JSON 유틸
@@ -154,11 +152,9 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
-   
     b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
-        "설명하지 말고 결과만 JSON 형식으로 출력하세요.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
         "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
         "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
@@ -555,7 +551,7 @@ with st.sidebar.expander("📝 메모장", expanded=False):
             st.success("메모 저장 완료 ✅")
         except Exception as e:
             st.error(f"메모 저장 실패: {e}")
-            
+
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 
 st.sidebar.markdown("""
@@ -654,7 +650,7 @@ with tab1:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중..."):
+            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
@@ -921,7 +917,7 @@ with tab2:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중..."):
+            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
                 names, _, excluded, early, late = gpt_extract(
                     a_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
