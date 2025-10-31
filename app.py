@@ -618,25 +618,18 @@ def render_result_with_repair_color(text: str) -> str:
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
     return f"<pre class='result-pre'>{esc}</pre>"
 
+from streamlit_javascript import st_javascript
+from io import BytesIO
+from PIL import Image
+
 # =====================================
-# 🌅 오전 근무 탭 — 반응형 (세로=이미지 위, 가로=옆)
+# 🌅 오전 근무 탭 — 진짜 반응형 (확실히 작동)
 # =====================================
 with tab1:
-    from io import BytesIO
-    from PIL import Image
-
-    # ✅ 화면 폭 감지
-    st.components.v1.html("""
-        <script>
-        const sendWidth = () => {
-          window.parent.postMessage({type: 'resize', isNarrow: window.innerWidth < 700}, '*');
-        };
-        window.addEventListener('resize', sendWidth);
-        sendWidth();
-        </script>
-    """, height=0)
-    if "is_narrow" not in st.session_state:
-        st.session_state["is_narrow"] = False
+    # ✅ 화면 폭 감지 (JS → Python)
+    width = st_javascript("window.innerWidth")
+    is_narrow = width and width < 700
+    st.session_state["is_narrow"] = is_narrow
 
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png","jpg","jpeg"], key="m_upload")
@@ -650,7 +643,7 @@ with tab1:
         except Exception as e:
             st.error(f"이미지 표시 오류: {e}")
 
-    # --- OCR 버튼 + 설명 (가로 배치) ---
+    # GPT 인식 버튼
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_m = st.button("오전 GPT 인식", key="btn_m_ocr")
@@ -663,82 +656,27 @@ with tab1:
         """, unsafe_allow_html=True)
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    # ✅ GPT 인식 처리
-    if run_m:
-        if not m_file:
-            st.warning("오전 이미지를 업로드하세요.")
-        else:
-            with st.spinner("🧩 GPT 이미지 분석 중..."):
-                names, course, excluded, early, late = gpt_extract(
-                    m_file.read(), want_early=True, want_late=True, want_excluded=True
-                )
-                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
-                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
-                for e in early:
-                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                for l in late:
-                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-
-                st.session_state.m_names_raw = fixed
-                st.session_state.excluded_auto = excluded_fixed
-                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
-                st.session_state.late_start = [l for l in late if l.get("time") is not None]
-                st.session_state["ta_morning_list"] = "\n".join(fixed)
-                st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
-                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
-
-    # ==============================
-    # 🚫 근무 제외자 + ☀️ 오전 근무자 + 이미지 미리보기
-    # ==============================
-    if st.session_state["is_narrow"]:
-        # 세로모드 — 이미지 위, 텍스트 아래
+    # === 반응형 렌더링 ===
+    if is_narrow:
+        # 세로모드 → 이미지 위쪽
         if img:
             st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
         else:
             st.info("📸 근무표를 업로드하면 미리보기 표시됩니다.")
-
-        st.markdown("<h4 style='font-size:18px;'>🚫 근무 제외자</h4>", unsafe_allow_html=True)
-        st.text_area(
-            label="",
-            value="\n".join(st.session_state.get("excluded_auto", [])),
-            height=100,
-            label_visibility="collapsed",
-            key="ta_excluded",
-        )
-
-        st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자</h4>", unsafe_allow_html=True)
-        st.text_area(
-            label="",
-            value="\n".join(st.session_state.get("m_names_raw", [])),
-            height=220,
-            label_visibility="collapsed",
-            key="ta_morning_list",
-        )
-
+        st.text_area("🚫 근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), key="ta_excluded")
+        st.text_area("☀️ 오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), key="ta_morning_list")
     else:
-        # 가로모드 — 텍스트 왼쪽, 이미지 오른쪽
+        # 가로모드 → 텍스트 왼쪽, 이미지 오른쪽
         col_left, col_right = st.columns([1.2, 1])
         with col_left:
-            st.markdown("<h4 style='font-size:18px;'>🚫 근무 제외자 / ☀️ 오전 근무자</h4>", unsafe_allow_html=True)
-            st.text_area(
-                label="🚫 근무 제외자",
-                value="\n".join(st.session_state.get("excluded_auto", [])),
-                height=100,
-                key="ta_excluded",
-            )
-            st.text_area(
-                label="☀️ 오전 근무자",
-                value="\n".join(st.session_state.get("m_names_raw", [])),
-                height=220,
-                key="ta_morning_list",
-            )
+            st.text_area("🚫 근무 제외자", "\n".join(st.session_state.get("excluded_auto", [])), key="ta_excluded")
+            st.text_area("☀️ 오전 근무자", "\n".join(st.session_state.get("m_names_raw", [])), key="ta_morning_list")
         with col_right:
             if img:
                 st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
             else:
                 st.info("📸 근무표를 업로드하면 미리보기 표시됩니다.")
 
-    # === 이후 오전 배정 / 저장 로직 그대로 유지 ===
 
 
     # ===============================
