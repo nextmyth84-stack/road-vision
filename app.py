@@ -885,9 +885,11 @@ with tab1:
             st.error(f"오전 오류: {e}")
 
 # =====================================
-# 🌇 오후 근무 탭
+# 🌇 오후 근무 탭 — 모바일 세로모드 최적화
 # =====================================
 with tab2:
+    from io import BytesIO
+    from PIL import Image
 
     # ✅ 오전결과 자동 복원
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
@@ -907,13 +909,28 @@ with tab2:
         if ts:
             st.caption(f"🕒 오전 결과 복원 완료 (저장 시각: {ts})")
 
+    # ------------------------
+    # 📸 이미지 업로드 및 미리보기
+    # ------------------------
     st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        a_file = st.file_uploader("📸 오후 근무표 업로드", type=["png","jpg","jpeg"], key="a_upload")
-    with col2:
-        pass
+    a_file = st.file_uploader("오후 근무표 업로드 (jpg/png)", type=["jpg","jpeg","png"], key="a_upload")
 
+    if a_file is not None:
+        try:
+            img_bytes = a_file.getvalue()
+            st.session_state["a_img_bytes"] = img_bytes
+            img = Image.open(BytesIO(img_bytes))
+            st.image(img, caption="오후 근무표 미리보기", use_column_width=True)
+        except Exception as e:
+            st.error(f"이미지 표시 오류: {e}")
+    else:
+        st.info("📸 근무표를 업로드하면 미리보기로 표시됩니다.")
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ------------------------
+    # 🧩 GPT 인식 버튼 + 안내문
+    # ------------------------
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_a = st.button("오후 GPT 인식", key="btn_a_ocr")
@@ -921,10 +938,14 @@ with tab2:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
-            </div>""", unsafe_allow_html=True)
-        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            다르면 꼭 <b>수정하세요.</b> (인식불가·오타 등)
+            </div>""",
+            unsafe_allow_html=True,
+        )
 
+    # ------------------------
+    # 🧠 GPT 인식 실행
+    # ------------------------
     if run_a:
         if not a_file:
             st.warning("오후 이미지를 업로드하세요.")
@@ -933,8 +954,14 @@ with tab2:
                 names, _, excluded, early, late = gpt_extract(
                     a_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
-                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
-                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
+                fixed = [
+                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                    for n in names
+                ]
+                excluded_fixed = [
+                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                    for n in excluded
+                ]
                 for e in early:
                     e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
                 for l in late:
@@ -942,19 +969,23 @@ with tab2:
 
                 st.session_state.a_names_raw = fixed
                 st.session_state.excluded_auto_pm = excluded_fixed
-                st.session_state.early_leave_pm = [e for e in early if e.get("time") is not None]
-                st.session_state.late_start_pm = [l for l in late if l.get("time") is not None]
+                st.session_state.early_leave_pm = [e for e in early if e.get("time")]
+                st.session_state.late_start_pm = [l for l in late if l.get("time")]
                 st.session_state["ta_afternoon_list"] = "\n".join(fixed)
 
-                st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
+                st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명 / 제외자 {len(excluded_fixed)}명")
 
+    # ------------------------
+    # ☀️ 오후 근무자 입력 (세로 배치)
+    # ------------------------
+    st.markdown("<h4 style='font-size:17px;'>🌥️ 오후 근무자 입력</h4>", unsafe_allow_html=True)
 
-    st.markdown("<h4 style='font-size:18px;'>🌥️ 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    if "ta_afternoon_list" not in st.session_state:
+        st.session_state["ta_afternoon_list"] = "\n".join(st.session_state.get("a_names_raw", []))
+
     afternoon_text = st.text_area(
-        label="",
-        value="\n".join(st.session_state.get("a_names_raw", [])),
+        label="🌇 오후 근무자",
         height=220,
-        label_visibility="collapsed",
         placeholder="오후 근무자 입력(줄바꿈으로 구분)",
         key="ta_afternoon_list",
     )
@@ -983,7 +1014,7 @@ with tab2:
             sud_base  = st.session_state.get("sudong_base_for_pm", prev_sudong)
             early_leave = st.session_state.get("early_leave", [])
 
-            # === 교양 / 수동 / 자동 배정 로직 동일 ===
+            # === 교양 / 수동 / 자동 배정 ===
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
@@ -1087,8 +1118,10 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-    # ✅ 맨 아래로 이동된 전일근무자 저장 버튼
-    st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
+    # ------------------------
+    # 💾 전일근무자 저장
+    # ------------------------
+    st.markdown("<h4 style='font-size:18px;'>💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
     st.caption("(열쇠, 5교시 교양, 1종수동, 1종자동)")
     if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
         data = st.session_state.get("pm_save_ready")
@@ -1097,3 +1130,4 @@ with tab2:
         else:
             save_json(PREV_FILE, data)
             st.success("전일근무.json 저장 완료 ✅")
+
