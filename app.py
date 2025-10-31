@@ -624,6 +624,7 @@ from PIL import Image
 
 # =====================================
 # 🌅 오전 근무 탭 — 완전본 (세로=위, 가로=옆 자동 전환)
+# Streamlit 1.33 이상 호환
 # =====================================
 with tab1:
     from io import BytesIO
@@ -632,15 +633,19 @@ with tab1:
 
     # ✅ 화면 폭 감지 (JS → Python)
     width = st_javascript("window.innerWidth") or 1000
+
+    # 폭 변화 감지 후 자동 rerun (가로↔세로 회전 시 즉시 반응)
     if "last_width" not in st.session_state:
         st.session_state["last_width"] = width
     elif abs(width - st.session_state["last_width"]) > 100:
         st.session_state["last_width"] = width
-        st.experimental_rerun()
+        st.rerun()
+
+    # 세로/가로 구분
     is_narrow = width < 700
 
     # =====================================
-    # 📸 이미지 업로드
+    # 📸 오전 근무표 업로드
     # =====================================
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png","jpg","jpeg"], key="m_upload")
@@ -679,9 +684,10 @@ with tab1:
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
+
+                # 이름 교정
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
-
                 for e in early:
                     e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
                 for l in late:
@@ -747,6 +753,11 @@ with tab1:
                 st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
             else:
                 st.info("📸 근무표를 업로드하면 미리보기 표시됩니다.")
+
+    # =====================================
+    # ⚙️ 이후 기존의 배정 / 저장 / 출력 로직 그대로 유지
+    # =====================================
+
 
     # =====================================
     # ⚙️ 이후 기존의 배정 / 저장 / 출력 로직 그대로 유지
