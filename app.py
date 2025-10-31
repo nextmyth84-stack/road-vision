@@ -717,7 +717,6 @@ with tab1:
     # ------------------------
     # 🚫 근무 제외자 / ☀️ 오전 근무자 입력 (세로 배치)
     # ------------------------
-    st.markdown("<h4 style='font-size:17px;'>🚫 근무 제외자 / ☀️ 오전 근무자</h4>", unsafe_allow_html=True)
 
     if "ta_excluded" not in st.session_state:
         st.session_state["ta_excluded"] = "\n".join(st.session_state.get("excluded_auto", []))
