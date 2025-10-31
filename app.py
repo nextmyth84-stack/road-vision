@@ -331,6 +331,7 @@ prev_key = prev_data.get("열쇠", "")
 prev_gyoyang5 = prev_data.get("교양_5교시", "")
 prev_sudong = prev_data.get("1종수동", "")
 prev_auto1 = prev_data.get("1종자동", "")
+
 # =====================================
 # 💄 사이드바 디자인 개선
 # =====================================
@@ -618,8 +619,6 @@ def render_result_with_repair_color(text: str) -> str:
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
     return f"<pre class='result-pre'>{esc}</pre>"
 
-from io import BytesIO
-from PIL import Image
 
 # =====================================
 # 🌅 오전 근무 탭 — 모바일 세로모드 최적화
@@ -662,60 +661,73 @@ with tab1:
             unsafe_allow_html=True,
         )
 
-    # ------------------------
-    # 🧠 GPT 인식 실행
-    # ------------------------
+    # --- OCR 버튼 + 설명 (가로 배치) ---
+    col_btn, col_desc = st.columns([1, 4])
+    with col_btn:
+        run_m = st.button(
+            "오전 GPT 인식",
+            key="btn_m_ocr",
+        )
+    with col_desc:
+        st.markdown(
+            """<div class='btn-desc'>
+            GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
+            </div>""",
+            unsafe_allow_html=True
+        )
+    # ✅ 빈 줄(여백) 추가
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    
     if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
-            with st.spinner("🧩 GPT 이미지 분석 중..."):
+            with st.spinner("🧩 GPT 이미지 분석 중...최소1분"):
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
-
-                fixed = [
-                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                    for n in names
-                ]
-                excluded_fixed = [
-                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                    for n in excluded
-                ]
-
+                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
+                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
                 for e in early:
-                    e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
                 for l in late:
-                    l["name"] = correct_name_v2(l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # 코스점검 교정 + 중복제거
+                # ✅ 코스점검 이름 교정 + 중복 제거
                 def _fix_course_records(course_records, employees, cutoff):
-                    out, seen = [], set()
+                    out = []
+                    seen = set()
                     for r in course_records or []:
                         nm_raw = r.get("name", "")
                         nm_fixed = correct_name_v2(nm_raw, employees, cutoff=cutoff)
-                        course_v = r.get("course")
-                        result_v = r.get("result")
-                        key = (normalize_name(nm_fixed), course_v, result_v)
+                        course = r.get("course")
+                        result = r.get("result")
+                        key = (normalize_name(nm_fixed), course, result)
                         if not normalize_name(nm_fixed) or key in seen:
                             continue
-                        out.append({"name": nm_fixed, "course": course_v, "result": result_v})
+                        out.append({"name": nm_fixed, "course": course, "result": result})
                         seen.add(key)
                     return out
 
-                course_fixed = _fix_course_records(course, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                course_fixed = _fix_course_records(
+                    course, 
+                    st.session_state["employee_list"], 
+                    cutoff=st.session_state["cutoff"]
+                )
 
-                # 결과 반영
+                # 결과 반영 + ✅ 입력창(text_area) 키들도 동기화
                 st.session_state.m_names_raw = fixed
-                st.session_state.excluded_auto = excluded_fixed
                 st.session_state.course_records = course_fixed
-                st.session_state.early_leave = [e for e in early if e.get("time")]
-                st.session_state.late_start = [l for l in late if l.get("time")]
+                st.session_state.excluded_auto = excluded_fixed
+                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
+                st.session_state.late_start = [l for l in late if l.get("time") is not None]
 
+                # ✅ 라벨 숨김 text_area 동기화
                 st.session_state["ta_morning_list"] = "\n".join(fixed)
                 st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
 
-                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명 / 제외자 {len(excluded_fixed)}명")
+                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
     # ------------------------
     # 🚫 근무 제외자 / ☀️ 오전 근무자 입력 (세로 배치)
