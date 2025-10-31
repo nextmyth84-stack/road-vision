@@ -628,18 +628,6 @@ with tab1:
     with col2:
         pass
 
-    # ✅ 업로드한 이미지 미리보기 (이 부분이 추가됨)
-    if m_file is not None:
-        try:
-            from PIL import Image
-            from io import BytesIO
-
-            img = Image.open(BytesIO(m_file.getvalue()))
-            st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
-            st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"이미지 표시 중 오류: {e}")
-            
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
@@ -708,25 +696,47 @@ with tab1:
 
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+# ==============================
+# 🚫 근무 제외자 + ☀️ 오전 근무자 + 이미지 미리보기
+# ==============================
+
+st.markdown("<h4 style='font-size:18px;'>🚫 근무 제외자 / ☀️ 오전 근무자</h4>", unsafe_allow_html=True)
+
+# 좌: 텍스트영역 2개 / 우: 이미지 미리보기
+col_left, col_right = st.columns([1.2, 1])  # 왼쪽 조금 넓게
+
+with col_left:
     excluded_text = st.text_area(
         label="",
         value="\n".join(st.session_state.get("excluded_auto", [])),
-        height=120,
-        label_visibility="collapsed",            # ✅ 라벨 숨김
+        height=100,
+        label_visibility="collapsed",
         placeholder="이름 입력되면 열쇠 제외",
         key="ta_excluded",
     )
 
-    st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
         label="",
         value="\n".join(st.session_state.get("m_names_raw", [])),
-        height=220,
-        label_visibility="collapsed",            # ✅ 라벨 숨김
+        height=180,
+        label_visibility="collapsed",
         placeholder="오전 근무자 입력(줄바꿈으로 구분)",
         key="ta_morning_list",
     )
+
+with col_right:
+    if m_file is not None:
+        try:
+            from PIL import Image
+            from io import BytesIO
+
+            img = Image.open(BytesIO(m_file.getvalue()))
+            st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
+        except Exception as e:
+            st.error(f"이미지 표시 오류: {e}")
+    else:
+        st.info("📸 오전 근무표를 업로드하면 미리보기 표시됩니다.")
+
 
     # ✅ 입력은 세션 키에서 파싱 (사용자 수정 반영)
     m_list = [x.strip() for x in st.session_state.get("ta_morning_list", "").splitlines() if x.strip()]
