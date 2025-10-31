@@ -706,6 +706,11 @@ with tab1:
         key="ta_excluded",
     )
 
+     # 이미지 미리보기 (오전근무자 위쪽에 표시)
+    if uploaded_img is not None:
+        st.image(uploaded_img, caption="업로드한 근무표", use_column_width=True)
+        st.markdown("---")  # 구분선
+
     st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
         label="",
@@ -935,6 +940,11 @@ with tab2:
                 st.session_state["ta_afternoon_list"] = "\n".join(fixed)
 
                 st.success(f"오후 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
+
+     # 이미지 미리보기 (오후근무자 위쪽에 표시)
+    if uploaded_img is not None:
+        st.image(uploaded_img, caption="업로드한 근무표", use_column_width=True)
+        st.markdown("---")  # 구분선
 
     st.markdown("<h4 style='font-size:18px;'>🌥️ 오후 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     afternoon_text = st.text_area(
