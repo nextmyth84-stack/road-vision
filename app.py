@@ -628,6 +628,18 @@ with tab1:
     with col2:
         pass
 
+    # ✅ 업로드한 이미지 미리보기 (이 부분이 추가됨)
+    if m_file is not None:
+        try:
+            from PIL import Image
+            from io import BytesIO
+
+            img = Image.open(BytesIO(m_file.getvalue()))
+            st.image(img, caption="오전 근무표 미리보기", use_column_width=True)
+            st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"이미지 표시 중 오류: {e}")
+            
     # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
@@ -705,11 +717,6 @@ with tab1:
         placeholder="이름 입력되면 열쇠 제외",
         key="ta_excluded",
     )
-
-     # 이미지 미리보기 (오전근무자 위쪽에 표시)
-    if uploaded_img is not None:
-        st.image(uploaded_img, caption="업로드한 근무표", use_column_width=True)
-        st.markdown("---")  # 구분선
 
     st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     morning_text = st.text_area(
