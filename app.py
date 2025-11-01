@@ -680,7 +680,14 @@ with tab1:
         )
         # ✅ 이미지 미리보기 추가
         if m_file is not None:
-            st.image(m_file, caption="오전 근무표 미리보기", use_column_width=True)
+            st.image(
+            m_file,
+            caption="오전 근무표 미리보기",
+            use_column_width=True,
+            output_format="JPEG",
+        )
+        st.markdown("<div style='margin-bottom:-10px'></div>", unsafe_allow_html=True)
+           
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     
