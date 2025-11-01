@@ -649,7 +649,7 @@ with tab1:
     st.markdown(
         """
         <p style='font-size:16px; color:#2563eb; margin-top:-8px; line-height:1.5;'>
-        ※ 사이드탭에서 전일 근무자 맞는지 확인하세요.<br>
+        ※ 사이드탭에서 전일 근무자 명단 확인 필수<br>
         ⚠️ 아침에는 초기화 될 수 있음
         </p>
         """,
