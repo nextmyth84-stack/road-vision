@@ -986,7 +986,7 @@ with tab2:
         value="\n".join(st.session_state.get("a_names_raw", [])),
         height=220,
         label_visibility="collapsed",
-        placeholder="오후 근무자 입력(줄바꿈으로 구분)",
+        placeholder="오후 근무자 입력(줄바꿈으로 구분)\n\n예:\n조정래\n이호석\n\n전산병행은 제외합니다.",
         key="ta_afternoon_list",
     )
     a_list = [x.strip() for x in st.session_state.get("ta_afternoon_list", "").splitlines() if x.strip()]
