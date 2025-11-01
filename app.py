@@ -659,9 +659,6 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
         m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png","jpg","jpeg"], key="m_upload")
-        # ✅ 이미지 미리보기 추가
-        if m_file is not None:
-            st.image(m_file, caption="오전 근무표 미리보기", use_column_width=True)
     with col2:
         pass
 
@@ -681,6 +678,20 @@ with tab1:
             </div>""",
             unsafe_allow_html=True
         )
+    # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
+    if m_file is not None:
+        m_b64 = base64.b64encode(m_file.read()).decode()
+        st.markdown(
+            f"""
+            <div style="max-height:500px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:4px; text-align:center;">
+                <img src="data:image/jpeg;base64,{m_b64}" style="max-width:100%; height:auto; cursor:zoom-in;">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        # 파일 포인터 초기화 (다시 읽기 위해)
+        m_file.seek(0)
+
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
     
