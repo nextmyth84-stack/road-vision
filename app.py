@@ -680,17 +680,24 @@ with tab1:
         )
     # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
     if m_file is not None:
-        m_b64 = base64.b64encode(m_file.read()).decode()
-        st.markdown(
-            f"""
-            <div style="max-height:500px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:4px; text-align:center;">
-                <img src="data:image/jpeg;base64,{m_b64}" style="max-width:100%; height:auto; cursor:zoom-in;">
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        # 파일 포인터 초기화 (다시 읽기 위해)
-        m_file.seek(0)
+    m_b64 = base64.b64encode(m_file.read()).decode()
+    st.components.v1.html(f"""
+    <div style="max-height:550px; overflow:auto; border:1px solid #e5e7eb;
+                border-radius:8px; padding:6px; background:#f8fafc; text-align:center;">
+        <img id="m_prev" src="data:image/jpeg;base64,{m_b64}" 
+             style="max-width:100%; height:auto; transition:transform 0.25s ease; cursor:zoom-in;"
+             onclick="
+                if(this.style.transform=='scale(2)'){
+                    this.style.transform='scale(1)';
+                    this.style.cursor='zoom-in';
+                }else{
+                    this.style.transform='scale(2)';
+                    this.style.cursor='zoom-out';
+                }
+             ">
+    </div>
+    """, height=560)
+    m_file.seek(0)
 
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
