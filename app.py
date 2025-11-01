@@ -730,7 +730,7 @@ with tab1:
         value="\n".join(st.session_state.get("excluded_auto", [])),
         height=120,
         label_visibility="collapsed",            # ✅ 라벨 숨김
-        placeholder="이름 입력되면 열쇠 제외",
+        placeholder="휴가자, 교육자 등 입력",
         key="ta_excluded",
     )
 
@@ -740,7 +740,7 @@ with tab1:
         value="\n".join(st.session_state.get("m_names_raw", [])),
         height=220,
         label_visibility="collapsed",            # ✅ 라벨 숨김
-        placeholder="오전 근무자 입력(줄바꿈으로 구분)",
+        placeholder="오전 근무자 입력(줄바꿈으로 구분)\n예: 권한솔\n김남균\n김성연\n전상병행은 입력 제외 후 수정하세요.",
         key="ta_morning_list",
     )
 
