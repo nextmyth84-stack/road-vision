@@ -642,7 +642,6 @@ def render_result_with_repair_color(text: str) -> str:
     esc = html.escape(text or "")
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
     return f"<pre class='result-pre'>{esc}</pre>"
-
 # =====================================
 # 🌅 오전 근무 탭
 # =====================================
@@ -663,7 +662,7 @@ with tab1:
     with col2:
         pass
 
-    # --- OCR 버튼 + 설명 (가로 배치) ---
+    # --- OCR 버튼 + 설명 ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_m = st.button("오전 GPT 인식", key="btn_m_ocr")
@@ -674,12 +673,13 @@ with tab1:
             실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""",
-            unsafe_allow_html=True,
+            unsafe_allow_html=True
         )
-
-    # ✅ 여백
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
+    # ==========================
+    # 🧩 GPT 인식 처리
+    # ==========================
     if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
@@ -688,24 +688,14 @@ with tab1:
                 names, course, excluded, early, late = gpt_extract(
                     m_file.read(), want_early=True, want_late=True, want_excluded=True
                 )
-                fixed = [
-                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                    for n in names
-                ]
-                excluded_fixed = [
-                    correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                    for n in excluded
-                ]
+                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
+                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
                 for e in early:
-                    e["name"] = correct_name_v2(
-                        e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"]
-                    )
+                    e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
                 for l in late:
-                    l["name"] = correct_name_v2(
-                        l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"]
-                    )
+                    l["name"] = correct_name_v2(l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # ✅ 코스점검 이름 교정 + 중복 제거
+                # 코스점검 교정
                 def _fix_course_records(course_records, employees, cutoff):
                     out, seen = [], set()
                     for r in course_records or []:
@@ -719,10 +709,9 @@ with tab1:
                         out.append({"name": nm_fixed, "course": course, "result": result})
                         seen.add(key)
                     return out
-
                 course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
 
-                # 결과 반영
+                # 결과 저장
                 st.session_state.m_names_raw = fixed
                 st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
@@ -731,11 +720,9 @@ with tab1:
                 st.session_state["ta_morning_list"] = "\n".join(fixed)
                 st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
 
-                st.success(
-                    f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건"
-                )
+                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-                # ✅ 인식 후 이미지 미리보기 저장
+                # ✅ 이미지 미리보기 세션 저장
                 import base64
                 img_base64 = base64.b64encode(m_file.getvalue()).decode()
                 st.session_state["m_file_preview"] = f"""
@@ -747,7 +734,9 @@ with tab1:
                     </div>
                 """
 
-    # ✅ 🚫제외자 + ☀️근무자 + 📸미리보기 나란히 배치
+    # ==========================
+    # 🚫 제외자 + ☀️ 근무자 + 📸 미리보기
+    # ==========================
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 / ☀️ 오전 근무자 / 📸 근무표 미리보기</h4>", unsafe_allow_html=True)
     col_left, col_right = st.columns([1, 2])
 
@@ -777,6 +766,8 @@ with tab1:
             st.components.v1.html(st.session_state["m_file_preview"], height=650)
         else:
             st.info("📸 이미지 업로드 후 인식하면 미리보기가 여기에 표시됩니다.")
+
+
 
     # ✅ 이후 기존 오전 배정 로직 그대로 유지
     m_list = [x.strip() for x in st.session_state.get("ta_morning_list", "").splitlines() if x.strip()]
