@@ -46,7 +46,7 @@ MODEL_NAME = "gpt-4o"
 # -----------------------
 @st.cache_resource
 def connect_dropbox():
-    token = st.secrets.get("DROPBOX_TOKEN")
+    token = st.secrets["general"].get("DROPBOX_TOKEN")
     if not token:
         st.error("⚠️ DROPBOX_TOKEN이 누락되었습니다.\nStreamlit Secrets에 추가해야 합니다.")
         st.stop()
