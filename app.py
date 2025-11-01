@@ -976,21 +976,21 @@ with tab2:
             실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""", unsafe_allow_html=True)
-        # ✅ 미리보기 이미지를 이 위치에 추가
-        if m_file is not None:
+       # ✅ 여기 아래에 오후 근무표 미리보기 추가
+        if a_file is not None:
             st.markdown(
                 f"""
                 <div style='margin-bottom:-22px'>
-                    <img src="data:image/jpeg;base64,{base64.b64encode(m_file.getvalue()).decode()}"
+                    <img src="data:image/jpeg;base64,{base64.b64encode(a_file.getvalue()).decode()}"
                          style="width:100%; border-radius:6px;"/>
                     <p style='font-size:13px; color:#64748b; margin-top:2px; margin-bottom:-2px;'>
-                        오전 근무표 미리보기
+                        오후 근무표 미리보기
                     </p>
                 </div>
                 """,
                 unsafe_allow_html=True
-            )    
-        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            )
+          st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     if run_a:
         if not a_file:
