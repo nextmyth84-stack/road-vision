@@ -642,6 +642,7 @@ def render_result_with_repair_color(text: str) -> str:
     esc = html.escape(text or "")
     esc = esc.replace("(정비중)", "<span class='repair-tag'>(정비중)</span>")
     return f"<pre class='result-pre'>{esc}</pre>"
+
 # =====================================
 # 🌅 오전 근무 탭
 # =====================================
@@ -678,7 +679,8 @@ with tab1:
             </div>""",
             unsafe_allow_html=True
         )
-   # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
+
+    # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
     if m_file is not None:
         img_bytes = m_file.read()  # 한 번만 읽기
         m_b64 = base64.b64encode(img_bytes).decode()
@@ -700,20 +702,17 @@ with tab1:
         </div>
         """, height=560)
 
-    # 이후 OCR 단계에서도 img_bytes 재사용 가능
-    # ex) names, course, excluded, early, late = gpt_extract(img_bytes, ...)
-
-
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    
+
     if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
         else:
             with st.spinner("🧩 GPT 이미지 분석 중..."):
+                # 👇 img_bytes 재활용 (다시 read()하지 않음)
                 names, course, excluded, early, late = gpt_extract(
-                    m_file.read(), want_early=True, want_late=True, want_excluded=True
+                    img_bytes, want_early=True, want_late=True, want_excluded=True
                 )
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
@@ -762,7 +761,7 @@ with tab1:
         label="",
         value="\n".join(st.session_state.get("excluded_auto", [])),
         height=120,
-        label_visibility="collapsed",            # ✅ 라벨 숨김
+        label_visibility="collapsed",
         placeholder="휴가자, 교육자 등 입력(줄바꿈으로 구분)\n\n예:\n안유미\n김주현\n김면정\n\n",
         key="ta_excluded",
     )
@@ -772,7 +771,7 @@ with tab1:
         label="",
         value="\n".join(st.session_state.get("m_names_raw", [])),
         height=220,
-        label_visibility="collapsed",            # ✅ 라벨 숨김
+        label_visibility="collapsed",
         placeholder="오전 근무자 입력(줄바꿈으로 구분)\n\n예:\n권한솔\n김남균\n김성연\n\n전산병행은 제외합니다.",
         key="ta_morning_list",
     )
@@ -815,13 +814,11 @@ with tab1:
                 except Exception:
                     pass
 
-
-            # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
+            # 🔑 열쇠 배정
             today_key = ""
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
                 prev_norm = normalize_name(prev_key)
-
                 if prev_norm in ko_norm:
                     start = ko_norm.index(prev_norm)
                     for step in range(1, len(key_order) + 1):
@@ -857,7 +854,7 @@ with tab1:
             sud_norms = {normalize_name(x) for x in sud_m}
             auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
 
-            # 🔄 1종 자동 차량 순번 (하루 1회)
+            # 🔄 1종 자동 차량 순번
             today_auto1 = ""
             if auto1_order:
                 if prev_auto1 in auto1_order:
@@ -874,15 +871,12 @@ with tab1:
 
             # === 출력 ===
             lines = [kst_result_header("오전"), ""]
-
             if today_key:
                 lines.append(f"열쇠: {today_key}")
                 lines.append("")
-
             if gy1: lines.append(f"1교시: {gy1}")
             if gy2: lines.append(f"2교시: {gy2}")
             if gy1 or gy2: lines.append("")
-
             if sud_m:
                 for nm in sud_m:
                     car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
@@ -893,19 +887,17 @@ with tab1:
                 lines.append("1종수동: (배정자 없음)")
                 if sudong_count >= 1:
                     lines.append("※ 수동 가능 인원이 0명입니다.")
-
             if st.session_state.get("today_auto1"):
                 lines.append("")
                 a1 = mark_car(st.session_state["today_auto1"], repair_1a)
                 lines.append(f"1종자동: {a1}")
                 lines.append("")
-
             if auto_m:
                 lines.append("2종자동:")
                 for nm in auto_m:
                     car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
                     lines.append(f" • {car} {nm}" if car else f" • {nm}")
-                    
+
             # 코스점검
             course_records = st.session_state.get("course_records", [])
             if course_records:
@@ -916,31 +908,25 @@ with tab1:
                     failed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "불합격"]
                     if passed: lines.append(f" • {c}코스 합격: {', '.join(passed)}")
                     if failed: lines.append(f" • {c}코스 불합격: {', '.join(failed)}")
-                    
+
             am_text = "\n".join(lines)
             st.markdown("#### 📋 오전 결과")
             st.code(am_text, language="text")
-            
-            # ✅ 오전 결과 저장 (덮어쓰기 + 시각 표시)
+
+            # ✅ 오전 결과 저장
             MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
             morning_data = {
                 "assigned_cars_1": st.session_state.get("morning_assigned_cars_1", []),
                 "assigned_cars_2": st.session_state.get("morning_assigned_cars_2", []),
                 "auto_names": st.session_state.get("morning_auto_names", []),
-
-                # 🔑 오후 순번 기준값 4종 반드시 저장
                 "today_key": st.session_state.get("today_key", ""),
                 "gy_base_for_pm": st.session_state.get("gyoyang_base_for_pm", ""),
                 "sud_base_for_pm": st.session_state.get("sudong_base_for_pm", ""),
                 "today_auto1": st.session_state.get("today_auto1", ""),
-
                 "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
             }
             save_json(MORNING_FILE, morning_data)
             st.info(f"✅ 오전 결과 저장 완료 (갱신 시각: {morning_data['timestamp']})")
-
-
-
             clipboard_copy_button("📋 결과 복사하기", am_text)
 
         except Exception as e:
