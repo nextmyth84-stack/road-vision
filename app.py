@@ -975,10 +975,12 @@ with tab2:
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
             실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
-            </div>""", unsafe_allow_html=True)
-            
-       # ✅ 여기 아래에 오후 근무표 미리보기 추가
-       if a_file is not None:
+            </div>""",
+            unsafe_allow_html=True
+        )
+
+        # ✅ 오후 근무표 미리보기 (간격 최소화)
+        if a_file is not None:
             st.markdown(
                 f"""
                 <div style='margin-bottom:-22px'>
@@ -991,7 +993,7 @@ with tab2:
                 """,
                 unsafe_allow_html=True
             )
-            
+
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     if run_a:
@@ -1051,7 +1053,7 @@ with tab2:
             sud_base  = st.session_state.get("sudong_base_for_pm", prev_sudong)
             early_leave = st.session_state.get("early_leave", [])
 
-            # 🌅 아침열쇠 담당자 제외 (기간 내이면 자동 제외)
+            # 🌅 아침열쇠 담당자 제외
             morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
             if morning_key:
                 try:
@@ -1062,7 +1064,6 @@ with tab2:
                         excluded_set.add(normalize_name(morning_key.get("name", "")))
                 except Exception:
                     pass
-
 
             # === 교양 / 수동 / 자동 배정 로직 동일 ===
             used = set()
@@ -1157,7 +1158,7 @@ with tab2:
             st.code(pm_result_text, language="text")
             clipboard_copy_button("📋 결과 복사하기", pm_result_text)
 
-            # ✅ 전일근무자 저장용 세션에 미리 보관
+            # ✅ 전일근무자 저장용 세션
             st.session_state["pm_save_ready"] = {
                 "열쇠": today_key,
                 "교양_5교시": gy5 or gy4 or gy3 or st.session_state.get("prev_gyoyang5",""),
@@ -1168,7 +1169,7 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-    # ✅ 맨 아래로 이동된 전일근무자 저장 버튼
+    # ✅ 전일 근무자 저장
     st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
     st.caption("배정이 제대로 됐으면 저장을 합니다.")
     if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
@@ -1178,3 +1179,4 @@ with tab2:
         else:
             save_json(PREV_FILE, data)
             st.success("전일근무.json 저장 완료 ✅")
+
