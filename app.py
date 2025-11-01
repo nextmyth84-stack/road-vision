@@ -395,6 +395,31 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
             "1종자동": prev_auto1,
         })
         st.sidebar.success("전일근무.json 저장 완료 ✅")
+# =====================================
+# 🌅 아침 열쇠 담당
+# =====================================
+MORNING_KEY_FILE = os.path.join(DATA_DIR, "아침열쇠.json")
+morning_key = load_json(MORNING_KEY_FILE, {})
+
+with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=True):
+    mk_name = st.text_input("아침열쇠 담당자 이름", morning_key.get("name", ""))
+    mk_start = st.date_input(
+        "시작일",
+        value=datetime.fromisoformat(morning_key.get("start"))
+        if morning_key.get("start")
+        else datetime.now().date(),
+    )
+    mk_end = st.date_input(
+        "종료일",
+        value=datetime.fromisoformat(morning_key.get("end"))
+        if morning_key.get("end")
+        else datetime.now().date(),
+    )
+
+    if st.button("💾 아침열쇠 저장", key="btn_morning_key_save"):
+        data = {"name": mk_name, "start": str(mk_start), "end": str(mk_end)}
+        save_json(MORNING_KEY_FILE, data)
+        st.success("아침열쇠 담당자 저장 완료 ✅")
 
 # =====================================
 # 📂 데이터 관리 (그룹) — 내부에 3개 메뉴 묶기
@@ -745,6 +770,19 @@ with tab1:
             repair_2a = st.session_state.get("repair_2a", [])
             auto1_order = st.session_state.get("auto1_order", [])
 
+            # 🌅 아침열쇠 담당자 제외 (기간 내이면 자동 제외)
+            morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
+            if morning_key:
+                try:
+                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+                    start = datetime.fromisoformat(morning_key.get("start", "1900-01-01")).date()
+                    end = datetime.fromisoformat(morning_key.get("end", "2999-12-31")).date()
+                    if start <= today <= end:
+                        excluded_set.add(normalize_name(morning_key.get("name", "")))
+                except Exception:
+                    pass
+
+
             # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
             today_key = ""
             if key_order:
@@ -975,6 +1013,19 @@ with tab2:
             gy_start  = st.session_state.get("gyoyang_base_for_pm", prev_gyoyang5) or (gyoyang_order[0] if gyoyang_order else "")
             sud_base  = st.session_state.get("sudong_base_for_pm", prev_sudong)
             early_leave = st.session_state.get("early_leave", [])
+
+            # 🌅 아침열쇠 담당자 제외 (기간 내이면 자동 제외)
+            morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
+            if morning_key:
+                try:
+                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+                    start = datetime.fromisoformat(morning_key.get("start", "1900-01-01")).date()
+                    end = datetime.fromisoformat(morning_key.get("end", "2999-12-31")).date()
+                    if start <= today <= end:
+                        excluded_set.add(normalize_name(morning_key.get("name", "")))
+                except Exception:
+                    pass
+
 
             # === 교양 / 수동 / 자동 배정 로직 동일 ===
             used = set()
