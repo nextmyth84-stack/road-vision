@@ -691,13 +691,13 @@ with tab1:
             <img id="m_prev" src="data:image/jpeg;base64,{m_b64}" 
                  style="max-width:100%; height:auto; transition:transform 0.25s ease; cursor:zoom-in;"
                  onclick="
-                    if(this.style.transform=='scale(2)'){
+                    if(this.style.transform=='scale(2)'){{
                         this.style.transform='scale(1)';
                         this.style.cursor='zoom-in';
-                    }else{
+                    }}else{{
                         this.style.transform='scale(2)';
                         this.style.cursor='zoom-out';
-                    }
+                    }}
                  ">
         </div>
         """, height=560)
