@@ -728,7 +728,7 @@ with tab1:
                 st.session_state["m_file_preview"] = f"""
                     <div style="overflow:auto; width:100%; height:650px; border:1px solid #ccc; text-align:center;">
                         <img src="data:image/jpeg;base64,{img_base64}"
-                             style="max-width:80%; height:auto; margin:auto;
+                             style="max-width:60%; height:auto; margin:auto;
                                     transform-origin:center center; cursor:zoom-in;
                                     transition:transform 0.2s ease;"
                              onclick="this.style.transform=this.style.transform?'':'scale(1.8)';
