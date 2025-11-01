@@ -655,29 +655,35 @@ with tab1:
         """,
         unsafe_allow_html=True
     )
-
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png", "jpg", "jpeg"], key="m_upload")
+        m_file = st.file_uploader("📸 오전 근무표 업로드", type=["png","jpg","jpeg"], key="m_upload")
+        # ✅ 이미지 미리보기 추가
+        if m_file is not None:
+            st.image(m_file, caption="오전 근무표 미리보기", use_column_width=True)
     with col2:
         pass
 
-    # OCR 실행 버튼
+    # --- OCR 버튼 + 설명 (가로 배치) ---
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
-        run_m = st.button("오전 GPT 인식", key="btn_m_ocr")
+        run_m = st.button(
+            "오전 GPT 인식",
+            key="btn_m_ocr",
+        )
     with col_desc:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.</b>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
+            이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""",
             unsafe_allow_html=True
         )
+    # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    # GPT 분석
+    
     if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
@@ -688,76 +694,234 @@ with tab1:
                 )
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
+                for e in early:
+                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                for l in late:
+                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # 세션 저장
+                # ✅ 코스점검 이름 교정 + 중복 제거
+                def _fix_course_records(course_records, employees, cutoff):
+                    out = []
+                    seen = set()
+                    for r in course_records or []:
+                        nm_raw = r.get("name", "")
+                        nm_fixed = correct_name_v2(nm_raw, employees, cutoff=cutoff)
+                        course = r.get("course")
+                        result = r.get("result")
+                        key = (normalize_name(nm_fixed), course, result)
+                        if not normalize_name(nm_fixed) or key in seen:
+                            continue
+                        out.append({"name": nm_fixed, "course": course, "result": result})
+                        seen.add(key)
+                    return out
+
+                course_fixed = _fix_course_records(
+                    course, 
+                    st.session_state["employee_list"], 
+                    cutoff=st.session_state["cutoff"]
+                )
+
+                # 결과 반영 + ✅ 입력창(text_area) 키들도 동기화
                 st.session_state.m_names_raw = fixed
+                st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
+                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
+                st.session_state.late_start = [l for l in late if l.get("time") is not None]
+
+                # ✅ 라벨 숨김 text_area 동기화
                 st.session_state["ta_morning_list"] = "\n".join(fixed)
                 st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
 
-                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
+                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-                # ✅ 이미지 미리보기 HTML (폭 제한 + 확대 기능)
-                import base64
-                img_base64 = base64.b64encode(m_file.getvalue()).decode()
-                preview_html = """
-                <div style='width:100%; height:650px; overflow:auto; border:1px solid #ccc;
-                            display:flex; justify-content:center; background:#fafafa;'>
-                    <img src="data:image/jpeg;base64,{img}"
-                         style="max-width:600px; height:auto; object-fit:contain;
-                                margin:10px; transform-origin:center center;
-                                cursor:zoom-in; transition:transform 0.25s ease;"
-                         onclick="if(this.style.transform==='scale(1.8)'){{
-                                      this.style.transform='';
-                                      this.style.cursor='zoom-in';
-                                  }} else {{
-                                      this.style.transform='scale(1.8)';
-                                      this.style.cursor='zoom-out';
-                                  }}">
-                </div>
-                """.format(img=img_base64)
-                st.session_state["m_file_preview"] = preview_html
+    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    excluded_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("excluded_auto", [])),
+        height=120,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="휴가자, 교육자 등 입력(줄바꿈으로 구분)\n\n예:\n안유미\n김주현\n김면정\n\n",
+        key="ta_excluded",
+    )
 
-    # =====================================
-    # 🚫 제외자 + ☀️ 근무자 + 📸 미리보기 나란히 배치
-    # =====================================
-    col_left, col_right = st.columns([1.1, 1.3])
+    st.markdown("<h4 style='font-size:18px;'>☀️ 오전 근무자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
+    morning_text = st.text_area(
+        label="",
+        value="\n".join(st.session_state.get("m_names_raw", [])),
+        height=220,
+        label_visibility="collapsed",            # ✅ 라벨 숨김
+        placeholder="오전 근무자 입력(줄바꿈으로 구분)\n\n예:\n권한솔\n김남균\n김성연\n\n전산병행은 제외합니다.",
+        key="ta_morning_list",
+    )
 
-    with col_left:
-        st.markdown("**🚫 근무 제외자 (실제와 비교 필수!)**")
-        excluded_text = st.text_area(
-            label="",
-            value="\n".join(st.session_state.get("excluded_auto", [])),
-            height=180,
-            label_visibility="collapsed",
-            placeholder="휴가자, 교육자 등 입력(줄바꿈으로 구분)",
-            key="ta_excluded",
-        )
-
-        st.markdown("**☀️ 오전 근무자 (실제와 비교 필수!)**")
-        morning_text = st.text_area(
-            label="",
-            value="\n".join(st.session_state.get("m_names_raw", [])),
-            height=420,
-            label_visibility="collapsed",
-            placeholder="오전 근무자 입력(줄바꿈으로 구분)",
-            key="ta_morning_list",
-        )
-
-    with col_right:
-        if st.session_state.get("m_file_preview"):
-            st.components.v1.html(st.session_state["m_file_preview"], height=650)
-        else:
-            st.info("📸 이미지 업로드 후 인식하면 미리보기가 여기에 표시됩니다.")
-
-
-
-    # ✅ 이후 기존 오전 배정 로직 그대로 유지
+    # ✅ 입력은 세션 키에서 파싱 (사용자 수정 반영)
     m_list = [x.strip() for x in st.session_state.get("ta_morning_list", "").splitlines() if x.strip()]
-    excluded_set = {normalize_name(x) for x in st.session_state.get("ta_excluded", "").splitlines() if x.strip()}
+    excluded_set = {
+        normalize_name(x)
+        for x in st.session_state.get("ta_excluded", "").splitlines()
+        if x.strip()
+    }
+
     early_leave = st.session_state.get("early_leave", [])
     late_start = st.session_state.get("late_start", [])
     m_norms = {normalize_name(x) for x in m_list} - excluded_set
+
+    st.markdown("<h4 style='font-size:18px;'>🚗 오전 근무 배정</h4>", unsafe_allow_html=True)
+    if st.button("📋 오전 배정 생성"):
+        try:
+            key_order     = st.session_state.get("key_order", [])
+            gyoyang_order = st.session_state.get("gyoyang_order", [])
+            sudong_order  = st.session_state.get("sudong_order", [])
+            veh1_map      = st.session_state.get("veh1", {})
+            veh2_map      = st.session_state.get("veh2", {})
+            sudong_count  = st.session_state.get("sudong_count", 1)
+            repair_1s = st.session_state.get("repair_1s", [])
+            repair_1a = st.session_state.get("repair_1a", [])
+            repair_2a = st.session_state.get("repair_2a", [])
+            auto1_order = st.session_state.get("auto1_order", [])
+
+            # 🌅 아침열쇠 담당자 제외 (기간 내이면 자동 제외)
+            morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
+            if morning_key:
+                try:
+                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+                    start = datetime.fromisoformat(morning_key.get("start", "1900-01-01")).date()
+                    end = datetime.fromisoformat(morning_key.get("end", "2999-12-31")).date()
+                    if start <= today <= end:
+                        excluded_set.add(normalize_name(morning_key.get("name", "")))
+                except Exception:
+                    pass
+
+
+            # 🔑 열쇠 (prev 위치 기준으로 다음 사람을 찾되, 제외자는 스킵)
+            today_key = ""
+            if key_order:
+                ko_norm = [normalize_name(x) for x in key_order]
+                prev_norm = normalize_name(prev_key)
+
+                if prev_norm in ko_norm:
+                    start = ko_norm.index(prev_norm)
+                    for step in range(1, len(key_order) + 1):
+                        cand = key_order[(start + step) % len(key_order)]
+                        if normalize_name(cand) not in excluded_set:
+                            today_key = cand
+                            break
+                else:
+                    for cand in key_order:
+                        if normalize_name(cand) not in excluded_set:
+                            today_key = cand
+                            break
+
+            st.session_state.today_key = today_key
+
+            # 🧑‍🏫 교양 1·2교시
+            gy1 = pick_next_from_cycle(gyoyang_order, prev_gyoyang5, m_norms)
+            if gy1 and not can_attend_period_morning(gy1, 1, late_start):
+                gy1 = pick_next_from_cycle(gyoyang_order, gy1, m_norms)
+            used_norm = {normalize_name(gy1)} if gy1 else set()
+            gy2 = pick_next_from_cycle(gyoyang_order, gy1 or prev_gyoyang5, m_norms - used_norm)
+            st.session_state.gyoyang_base_for_pm = gy2 if gy2 else prev_gyoyang5
+
+            # 🚚 1종 수동
+            sud_m, last = [], prev_sudong
+            for _ in range(sudong_count):
+                pick = pick_next_from_cycle(sudong_order, last, m_norms - {normalize_name(x) for x in sud_m})
+                if not pick: break
+                sud_m.append(pick); last = pick
+            st.session_state.sudong_base_for_pm = sud_m[-1] if sud_m else prev_sudong
+
+            # 🚗 2종 자동(사람)
+            sud_norms = {normalize_name(x) for x in sud_m}
+            auto_m = [x for x in m_list if normalize_name(x) in (m_norms - sud_norms)]
+
+            # 🔄 1종 자동 차량 순번 (하루 1회)
+            today_auto1 = ""
+            if auto1_order:
+                if prev_auto1 in auto1_order:
+                    idx = (auto1_order.index(prev_auto1) + 1) % len(auto1_order)
+                    today_auto1 = auto1_order[idx]
+                else:
+                    today_auto1 = auto1_order[0]
+            st.session_state.today_auto1 = today_auto1
+
+            # 오전 차량 기록
+            st.session_state.morning_assigned_cars_1 = [get_vehicle(x, veh1_map) for x in sud_m if get_vehicle(x, veh1_map)]
+            st.session_state.morning_assigned_cars_2 = [get_vehicle(x, veh2_map) for x in auto_m if get_vehicle(x, veh2_map)]
+            st.session_state.morning_auto_names = auto_m + sud_m
+
+            # === 출력 ===
+            lines = [kst_result_header("오전"), ""]
+
+            if today_key:
+                lines.append(f"열쇠: {today_key}")
+                lines.append("")
+
+            if gy1: lines.append(f"1교시: {gy1}")
+            if gy2: lines.append(f"2교시: {gy2}")
+            if gy1 or gy2: lines.append("")
+
+            if sud_m:
+                for nm in sud_m:
+                    car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
+                    lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
+                if sudong_count == 2 and len(sud_m) < 2:
+                    lines.append("※ 수동 가능 인원이 1명입니다.")
+            else:
+                lines.append("1종수동: (배정자 없음)")
+                if sudong_count >= 1:
+                    lines.append("※ 수동 가능 인원이 0명입니다.")
+
+            if st.session_state.get("today_auto1"):
+                lines.append("")
+                a1 = mark_car(st.session_state["today_auto1"], repair_1a)
+                lines.append(f"1종자동: {a1}")
+                lines.append("")
+
+            if auto_m:
+                lines.append("2종자동:")
+                for nm in auto_m:
+                    car = mark_car(get_vehicle(nm, veh2_map), repair_2a)
+                    lines.append(f" • {car} {nm}" if car else f" • {nm}")
+                    
+            # 코스점검
+            course_records = st.session_state.get("course_records", [])
+            if course_records:
+                lines.append("")
+                lines.append(" 코스점검 :")
+                for c in ["A", "B"]:
+                    passed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "합격"]
+                    failed = [r["name"] for r in course_records if r["course"] == f"{c}코스" and r["result"] == "불합격"]
+                    if passed: lines.append(f" • {c}코스 합격: {', '.join(passed)}")
+                    if failed: lines.append(f" • {c}코스 불합격: {', '.join(failed)}")
+                    
+            am_text = "\n".join(lines)
+            st.markdown("#### 📋 오전 결과")
+            st.code(am_text, language="text")
+            
+            # ✅ 오전 결과 저장 (덮어쓰기 + 시각 표시)
+            MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
+            morning_data = {
+                "assigned_cars_1": st.session_state.get("morning_assigned_cars_1", []),
+                "assigned_cars_2": st.session_state.get("morning_assigned_cars_2", []),
+                "auto_names": st.session_state.get("morning_auto_names", []),
+
+                # 🔑 오후 순번 기준값 4종 반드시 저장
+                "today_key": st.session_state.get("today_key", ""),
+                "gy_base_for_pm": st.session_state.get("gyoyang_base_for_pm", ""),
+                "sud_base_for_pm": st.session_state.get("sudong_base_for_pm", ""),
+                "today_auto1": st.session_state.get("today_auto1", ""),
+
+                "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
+            }
+            save_json(MORNING_FILE, morning_data)
+            st.info(f"✅ 오전 결과 저장 완료 (갱신 시각: {morning_data['timestamp']})")
+
+
+
+            clipboard_copy_button("📋 결과 복사하기", am_text)
+
+        except Exception as e:
+            st.error(f"오전 오류: {e}")
 
 # =====================================
 # 🌇 오후 근무 탭
