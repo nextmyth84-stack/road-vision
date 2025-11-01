@@ -676,7 +676,7 @@ with tab1:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""",
             unsafe_allow_html=True
@@ -963,7 +963,7 @@ with tab2:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b>
+            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""", unsafe_allow_html=True)
         st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
