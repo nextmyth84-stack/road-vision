@@ -1145,7 +1145,6 @@ with tab2:
     # ✅ 맨 아래로 이동된 전일근무자 저장 버튼
     st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
     st.caption("배정이 제대로 됐으면 저장을 합니다.")
-    st.caption("(열쇠, 5교시 교양, 1종수동, 1종자동)")
     if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
         data = st.session_state.get("pm_save_ready")
         if not data:
