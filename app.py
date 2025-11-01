@@ -646,6 +646,11 @@ def render_result_with_repair_color(text: str) -> str:
 # 🌅 오전 근무 탭
 # =====================================
 with tab1:
+    st.markdown(
+        "<p style='font-size:13px; color:#475569; margin-top:-8px;'>"
+        "※ 사이드탭에서 전일 근무자 맞는지 확인하세요.\n아침에 초기화 될 수 있음</p>",
+        unsafe_allow_html=True
+    )
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
