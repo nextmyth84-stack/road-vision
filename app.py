@@ -678,9 +678,11 @@ with tab1:
             </div>""",
             unsafe_allow_html=True
         )
-    # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
+   # ✅ 미리보기 이미지 (이동 및 확대/스크롤 가능)
     if m_file is not None:
-        m_b64 = base64.b64encode(m_file.read()).decode()
+        img_bytes = m_file.read()  # 한 번만 읽기
+        m_b64 = base64.b64encode(img_bytes).decode()
+
         st.components.v1.html(f"""
         <div style="max-height:550px; overflow:auto; border:1px solid #e5e7eb;
                     border-radius:8px; padding:6px; background:#f8fafc; text-align:center;">
@@ -697,7 +699,10 @@ with tab1:
                  ">
         </div>
         """, height=560)
-        m_file.seek(0)
+
+    # 이후 OCR 단계에서도 img_bytes 재사용 가능
+    # ex) names, course, excluded, early, late = gpt_extract(img_bytes, ...)
+
 
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
