@@ -4,7 +4,7 @@
 import streamlit as st
 from openai import OpenAI
 import base64, re, json, os, difflib, html, random
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta복
 from zoneinfo import ZoneInfo
 import dropbox  # ✅ Dropbox 연동 추가
 
@@ -317,12 +317,24 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     with c2:
         if st.button("📥 Dropbox 복원", key="btn_prev_load"):
             restored = dropbox_load_prev()
-            # UI 값 반영 후 리렌더
-            prev_key = restored.get("열쇠", "")
-            prev_gyoyang5 = restored.get("교양_5교시", "")
-            prev_sudong = restored.get("1종수동", "")
-            prev_auto1 = restored.get("1종자동", "")
-            st.experimental_rerun()
+            if restored:
+                prev_key = restored.get("열쇠", "")
+                prev_gyoyang5 = restored.get("교양_5교시", "")
+                prev_sudong = restored.get("1종수동", "")
+                prev_auto1 = restored.get("1종자동", "")
+
+                # ✅ 세션 상태 즉시 업데이트
+                st.session_state.update({
+                    "prev_key": prev_key,
+                    "prev_gyoyang5": prev_gyoyang5,
+                    "prev_sudong": prev_sudong,
+                    "prev_auto1": prev_auto1,
+                })
+
+                st.sidebar.success("☁️ Dropbox 복원 완료 ✅ (새로고침 없이 반영됨)")
+            else:
+                st.sidebar.warning("⚠️ Dropbox에서 데이터를 찾지 못했습니다.")
+
 
 # -----------------------
 # 🌅 아침 열쇠 담당
