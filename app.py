@@ -976,8 +976,9 @@ with tab2:
             실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
             이미지 품질이 안좋으면 인식이 안됩니다.
             </div>""", unsafe_allow_html=True)
+            
        # ✅ 여기 아래에 오후 근무표 미리보기 추가
-        if a_file is not None:
+       if a_file is not None:
             st.markdown(
                 f"""
                 <div style='margin-bottom:-22px'>
@@ -990,7 +991,8 @@ with tab2:
                 """,
                 unsafe_allow_html=True
             )
-          st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+            
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     if run_a:
         if not a_file:
