@@ -647,8 +647,12 @@ def render_result_with_repair_color(text: str) -> str:
 # =====================================
 with tab1:
     st.markdown(
-        "<p style='font-size:13px; color:#475569; margin-top:-8px;'>"
-        "※ 사이드탭에서 전일 근무자 맞는지 확인하세요.\n아침에 초기화 될 수 있음</p>",
+        """
+        <p style='font-size:13px; color:#475569; margin-top:-8px; line-height:1.5;'>
+        ※ 사이드탭에서 전일 근무자 맞는지 확인하세요.<br>
+        아침에 초기화 될 수 있음
+        </p>
+        """,
         unsafe_allow_html=True
     )
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
