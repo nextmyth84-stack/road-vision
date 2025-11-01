@@ -401,7 +401,7 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
 MORNING_KEY_FILE = os.path.join(DATA_DIR, "아침열쇠.json")
 morning_key = load_json(MORNING_KEY_FILE, {})
 
-with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=True):
+with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
     mk_name = st.text_input("아침열쇠 담당자 이름", morning_key.get("name", ""))
     mk_start = st.date_input(
         "시작일",
