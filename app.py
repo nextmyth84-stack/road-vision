@@ -16,6 +16,43 @@ def kst_result_header(period_label: str) -> str:
 
 st.set_page_config(layout="wide")
 st.markdown("""
+<style>
+/* 🌙 다크모드 자동 감지 */
+@media (prefers-color-scheme: dark) {
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* 사이드바 배경 */
+    section[data-testid="stSidebar"] {
+        background-color: #1e293b !important;
+        color: #e2e8f0 !important;
+    }
+
+    /* 입력창 */
+    textarea, input, select {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
+    }
+
+    /* 버튼 */
+    div.stButton > button {
+        background-color: #3b82f6 !important;
+        color: white !important;
+        border: none !important;
+    }
+
+    /* 설명 글씨 */
+    .btn-desc, .sidebar-subtitle, .stMarkdown, label {
+        color: #cbd5e1 !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
 <h3 style='text-align:center; color:#1e3a8a;'> &nbsp;&nbsp;&nbsp; 도로주행 근무 자동 배정 </h3>
 <p style='text-align:center; font-size:6px; color:#64748b; margin-top:-6px;'>
     Developed by <b>wook</b>
