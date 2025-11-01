@@ -722,17 +722,20 @@ with tab1:
 
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-                # ✅ 이미지 미리보기 세션 저장
+               # ✅ 이미지 미리보기 세션 저장 (폭 제한 버전)
                 import base64
                 img_base64 = base64.b64encode(m_file.getvalue()).decode()
                 st.session_state["m_file_preview"] = f"""
-                    <div style="overflow:auto; width:100%; height:650px; border:1px solid #ccc;">
+                    <div style="overflow:auto; width:100%; height:650px; border:1px solid #ccc; text-align:center;">
                         <img src="data:image/jpeg;base64,{img_base64}"
-                             style="width:100%; transform-origin:center center; cursor:zoom-in;"
+                             style="max-width:95%; height:auto; margin:auto;
+                                    transform-origin:center center; cursor:zoom-in;
+                                    transition:transform 0.2s ease;"
                              onclick="this.style.transform=this.style.transform?'':'scale(1.8)';
                                       this.style.cursor=this.style.cursor==='zoom-in'?'zoom-out':'zoom-in';">
                     </div>
                 """
+
 
     # ==========================
     # 🚫 제외자 + ☀️ 근무자 + 📸 미리보기
