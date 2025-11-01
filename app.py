@@ -655,6 +655,7 @@ with tab1:
         """,
         unsafe_allow_html=True
     )
+
     st.markdown("<h4 style='margin-top:6px;'>1️⃣ 오전 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
@@ -662,7 +663,7 @@ with tab1:
     with col2:
         pass
 
-    # --- OCR 버튼 + 설명 ---
+    # OCR 실행 버튼
     col_btn, col_desc = st.columns([1, 4])
     with col_btn:
         run_m = st.button("오전 GPT 인식", key="btn_m_ocr")
@@ -670,16 +671,13 @@ with tab1:
         st.markdown(
             """<div class='btn-desc'>
             GPT 인식 버튼을 누르고 <b>실제 근무자와 비교합니다.</b><br>
-            실제와 다르면 <b>꼭! 수정하세요.(근무자인식불가 OR 오타)</b><br>
-            이미지 품질이 안좋으면 인식이 안됩니다.
+            실제와 다르면 <b>꼭! 수정하세요.</b>
             </div>""",
             unsafe_allow_html=True
         )
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    # ==========================
-    # 🧩 GPT 인식 처리
-    # ==========================
+    # GPT 분석
     if run_m:
         if not m_file:
             st.warning("오전 이미지를 업로드하세요.")
@@ -690,82 +688,40 @@ with tab1:
                 )
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
-                for e in early:
-                    e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                for l in late:
-                    l["name"] = correct_name_v2(l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # 코스점검 교정
-                def _fix_course_records(course_records, employees, cutoff):
-                    out, seen = [], set()
-                    for r in course_records or []:
-                        nm_raw = r.get("name", "")
-                        nm_fixed = correct_name_v2(nm_raw, employees, cutoff=cutoff)
-                        course = r.get("course")
-                        result = r.get("result")
-                        key = (normalize_name(nm_fixed), course, result)
-                        if not normalize_name(nm_fixed) or key in seen:
-                            continue
-                        out.append({"name": nm_fixed, "course": course, "result": result})
-                        seen.add(key)
-                    return out
-                course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
-
-                # 결과 저장
+                # 세션 저장
                 st.session_state.m_names_raw = fixed
-                st.session_state.course_records = course_fixed
                 st.session_state.excluded_auto = excluded_fixed
-                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
-                st.session_state.late_start = [l for l in late if l.get("time") is not None]
                 st.session_state["ta_morning_list"] = "\n".join(fixed)
                 st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
 
-                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
+                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명")
 
+                # ✅ 이미지 미리보기 HTML (폭 제한 + 확대 기능)
                 import base64
                 img_base64 = base64.b64encode(m_file.getvalue()).decode()
+                preview_html = """
+                <div style='width:100%; height:650px; overflow:auto; border:1px solid #ccc;
+                            display:flex; justify-content:center; background:#fafafa;'>
+                    <img src="data:image/jpeg;base64,{img}"
+                         style="max-width:600px; height:auto; object-fit:contain;
+                                margin:10px; transform-origin:center center;
+                                cursor:zoom-in; transition:transform 0.25s ease;"
+                         onclick="if(this.style.transform==='scale(1.8)'){{
+                                      this.style.transform='';
+                                      this.style.cursor='zoom-in';
+                                  }} else {{
+                                      this.style.transform='scale(1.8)';
+                                      this.style.cursor='zoom-out';
+                                  }}">
+                </div>
+                """.format(img=img_base64)
+                st.session_state["m_file_preview"] = preview_html
 
-                st.session_state["m_file_preview"] = f"""
-                    <div style="
-                        width:100%;
-                        height:650px;
-                        overflow:auto;
-                        border:1px solid #ccc;
-                        display:flex;
-                        justify-content:center;
-                        align-items:flex-start;
-                        background:#fafafa;
-                    ">
-                        <img src="data:image/jpeg;base64,{img_base64}"
-                             style="
-                                max-width:800px;      /* ✅ 고정 폭 제한 */
-                                width:auto;
-                                height:auto;
-                                object-fit:contain;
-                                margin:10px;
-                                transform-origin:center center;
-                                cursor:zoom-in;
-                                transition:transform 0.25s ease;
-                             "
-                             onclick="
-                                if(this.style.transform==='scale(1.8)'){{    /* ← 이스케이프 */
-                                    this.style.transform='';
-                                    this.style.cursor='zoom-in';
-                                }} else {{
-                                    this.style.transform='scale(1.8)';
-                                    this.style.cursor='zoom-out';
-                                }}
-                             ">
-                    </div>
-                """
-
-
-
-    # ==========================
-    # 🚫 제외자 + ☀️ 근무자 + 📸 미리보기
-    # ==========================
-    st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 / ☀️ 오전 근무자 / 📸 근무표 미리보기</h4>", unsafe_allow_html=True)
-    col_left, col_right = st.columns([1, 2])
+    # =====================================
+    # 🚫 제외자 + ☀️ 근무자 + 📸 미리보기 나란히 배치
+    # =====================================
+    col_left, col_right = st.columns([1.1, 1.3])
 
     with col_left:
         st.markdown("**🚫 근무 제외자 (실제와 비교 필수!)**")
