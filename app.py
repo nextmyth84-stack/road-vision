@@ -680,13 +680,19 @@ with tab1:
         )
         # ✅ 이미지 미리보기 추가
         if m_file is not None:
-            st.image(
-            m_file,
-            caption="오전 근무표 미리보기",
-            use_column_width=True,
-            output_format="JPEG",
-        )
-        st.markdown("<div style='margin-bottom:-10px'></div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div style='margin-bottom:-22px'>
+                    <img src="data:image/jpeg;base64,{base64.b64encode(m_file.getvalue()).decode()}"
+                         style="width:100%; border-radius:6px;"/>
+                    <p style='font-size:13px; color:#64748b; margin-top:2px; margin-bottom:-2px;'>
+                        오전 근무표 미리보기
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
            
     # ✅ 빈 줄(여백) 추가
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
