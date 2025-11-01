@@ -730,7 +730,7 @@ with tab1:
         value="\n".join(st.session_state.get("excluded_auto", [])),
         height=120,
         label_visibility="collapsed",            # ✅ 라벨 숨김
-        placeholder="휴가자, 교육자 등 입력",
+        placeholder="휴가자, 교육자 등 입력(줄바꿈으로 구분)\n\n예:\n안유미\n김주현\n김면정\n\n",
         key="ta_excluded",
     )
 
