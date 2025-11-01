@@ -725,16 +725,41 @@ with tab1:
                # ✅ 이미지 미리보기 세션 저장 (폭 제한 버전)
                 import base64
                 img_base64 = base64.b64encode(m_file.getvalue()).decode()
+
                 st.session_state["m_file_preview"] = f"""
-                    <div style="overflow:auto; width:100%; height:650px; border:1px solid #ccc; text-align:center;">
+                    <div style="
+                        width:100%;
+                        height:650px;
+                        overflow:auto;
+                        border:1px solid #ccc;
+                        display:flex;
+                        justify-content:center;
+                        align-items:flex-start;
+                        background:#fafafa;
+                    ">
                         <img src="data:image/jpeg;base64,{img_base64}"
-                             style="max-width:60%; height:auto; margin:auto;
-                                    transform-origin:center center; cursor:zoom-in;
-                                    transition:transform 0.2s ease;"
-                             onclick="this.style.transform=this.style.transform?'':'scale(1.8)';
-                                      this.style.cursor=this.style.cursor==='zoom-in'?'zoom-out':'zoom-in';">
+                             style="
+                                max-width:800px;      /* ✅ 고정 폭 제한 */
+                                width:auto;
+                                height:auto;
+                                object-fit:contain;
+                                margin:10px;
+                                transform-origin:center center;
+                                cursor:zoom-in;
+                                transition:transform 0.25s ease;
+                             "
+                             onclick="
+                                if(this.style.transform==='scale(1.8)'){
+                                    this.style.transform='';
+                                    this.style.cursor='zoom-in';
+                                } else {
+                                    this.style.transform='scale(1.8)';
+                                    this.style.cursor='zoom-out';
+                                }
+                             ">
                     </div>
                 """
+
 
 
     # ==========================
