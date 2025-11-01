@@ -722,7 +722,6 @@ with tab1:
 
                 st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course)}건")
 
-               # ✅ 이미지 미리보기 세션 저장 (폭 제한 버전)
                 import base64
                 img_base64 = base64.b64encode(m_file.getvalue()).decode()
 
@@ -749,17 +748,16 @@ with tab1:
                                 transition:transform 0.25s ease;
                              "
                              onclick="
-                                if(this.style.transform==='scale(1.8)'){
+                                if(this.style.transform==='scale(1.8)'){{    /* ← 이스케이프 */
                                     this.style.transform='';
                                     this.style.cursor='zoom-in';
-                                } else {
+                                }} else {{
                                     this.style.transform='scale(1.8)';
                                     this.style.cursor='zoom-out';
-                                }
+                                }}
                              ">
                     </div>
                 """
-                
 
 
 
