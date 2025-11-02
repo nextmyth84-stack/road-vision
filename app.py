@@ -37,6 +37,7 @@ st.markdown("""
         font-size: 15px !important;
         text-align: center !important;
         line-height: 1.3;
+        height: 120px !important;
     }
 
     /* 버튼 */
