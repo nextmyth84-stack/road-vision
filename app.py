@@ -30,11 +30,13 @@ st.markdown("""
         color: #e2e8f0 !important;
     }
 
-    /* 입력창 */
-    textarea, input, select {
-        background-color: #334155 !important;
-        color: #f8fafc !important;
-        border: 1px solid #475569 !important;
+    textarea[data-testid="stTextArea"] {
+        width: 120px !important;       /* 이름 4자 정도 */
+        min-width: 120px !important;
+        max-width: 120px !important;
+        font-size: 15px !important;
+        text-align: center !important;
+        line-height: 1.3;
     }
 
     /* 버튼 */
