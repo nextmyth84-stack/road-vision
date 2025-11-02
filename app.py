@@ -30,14 +30,20 @@ st.markdown("""
         color: #e2e8f0 !important;
     }
 
-    textarea[data-testid="stTextArea"] {
-        width: 180px !important;       /* 이름 4자 정도 */
-        min-width: 180px !important;
-        max-width: 180px !important;
+   /* 왼쪽 좁은 박스 컨테이너 */
+    #narrow-col div[data-testid="stTextArea"] { 
+        width: 120px !important;           /* 컨테이너 자체 폭 */
+        min-width: 120px !important;
+        max-width: 120px !important;
+    }
+    #narrow-col div[data-testid="stTextArea"] textarea {
+        width: 118px !important;           /* 실제 textarea 폭 */
+        min-width: 118px !important;
+        max-width: 118px !important;
+        height: 120px !important;          /* 높이 고정 (필요 시 조절) */
         font-size: 15px !important;
         text-align: center !important;
         line-height: 1.3;
-        height: 120px !important;
     }
 
     /* 버튼 */
