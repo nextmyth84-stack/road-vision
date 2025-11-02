@@ -31,9 +31,9 @@ st.markdown("""
     }
 
     textarea[data-testid="stTextArea"] {
-        width: 60px !important;       /* 이름 4자 정도 */
-        min-width: 60px !important;
-        max-width: 60px !important;
+        width: 180px !important;       /* 이름 4자 정도 */
+        min-width: 180px !important;
+        max-width: 180px !important;
         font-size: 15px !important;
         text-align: center !important;
         line-height: 1.3;
