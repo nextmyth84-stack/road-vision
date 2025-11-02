@@ -1,50 +1,89 @@
 # =====================================
-# app.py — 도로주행 근무 자동 배정 v7.41+
+# app.py — 도로주행 근무 자동 배정 v7.41+ (Render 연동 완전본)
 # =====================================
 import streamlit as st
 from openai import OpenAI
-import base64, re, json, os, difflib, html, random  # [PATCH] html 추가
+import base64, re, json, os, difflib, html, random
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
+import requests  # ✅ Render 업로드용
 
+# -----------------------
+# ☁️ Render JSON 서버 설정
+# -----------------------
+RENDER_BASE = "https://roadvision-json.onrender.com"  # ← 네 Render 서버 주소
+UPLOAD_URL = f"{RENDER_BASE}/upload"
+DOWNLOAD_URL = f"{RENDER_BASE}/download/전일근무.json"
+LOCAL_FILE = "전일근무.json"
+
+def load_from_render():
+    """Render 서버에서 전일근무.json 자동 복원"""
+    try:
+        res = requests.get(DOWNLOAD_URL, timeout=10)
+        if res.ok:
+            data = res.json()
+            st.sidebar.success("☁️ Render에서 전일근무자 복원 완료")
+            with open(LOCAL_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return data
+        else:
+            st.sidebar.warning("⚠️ Render 서버에 저장된 전일근무.json이 없습니다.")
+    except Exception as e:
+        st.sidebar.warning(f"⚠️ Render 연결 실패: {e}")
+    return {"열쇠": "", "교양_5교시": "", "1종수동": "", "1종자동": ""}
+
+# -----------------------
+# 전일 근무자 로드 (Render 자동복원 포함)
+# -----------------------
+PREV_FILE = "전일근무.json"
+
+def load_prev_data():
+    """로컬 또는 Render 서버에서 전일근무자 불러오기"""
+    if os.path.exists(PREV_FILE):
+        try:
+            with open(PREV_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    # 로컬 없으면 Render에서 불러오기
+    return load_from_render()
+
+prev_data = load_prev_data()
+prev_key = prev_data.get("열쇠", "")
+prev_gyoyang5 = prev_data.get("교양_5교시", "")
+prev_sudong = prev_data.get("1종수동", "")
+prev_auto1 = prev_data.get("1종자동", "")
+
+# -----------------------
+# 기본 설정 및 스타일
+# -----------------------
 def kst_result_header(period_label: str) -> str:
-    """예: '25.10.21(화) 오전 교양순서 및 차량배정'"""
     dt = datetime.now(ZoneInfo("Asia/Seoul"))
     yoil = "월화수목금토일"[dt.weekday()]
     return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 교양순서 및 차량배정"
 
-
 st.set_page_config(layout="wide")
 st.markdown("""
 <style>
-/* 🌙 다크모드 자동 감지 */
 @media (prefers-color-scheme: dark) {
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #0f172a !important;
         color: #e2e8f0 !important;
     }
-
-    /* 사이드바 배경 */
     section[data-testid="stSidebar"] {
         background-color: #1e293b !important;
         color: #e2e8f0 !important;
     }
-
-    /* 입력창 */
     textarea, input, select {
         background-color: #334155 !important;
         color: #f8fafc !important;
         border: 1px solid #475569 !important;
     }
-
-    /* 버튼 */
     div.stButton > button {
         background-color: #3b82f6 !important;
         color: white !important;
         border: none !important;
     }
-
-    /* 설명 글씨 */
     .btn-desc, .sidebar-subtitle, .stMarkdown, label {
         color: #cbd5e1 !important;
     }
@@ -53,14 +92,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<h3 style='text-align:center; color:#1e3a8a;'> &nbsp;&nbsp;&nbsp; 도로주행 근무 자동 배정 </h3>
+<h3 style='text-align:center; color:#1e3a8a;'> 도로주행 근무 자동 배정 </h3>
 <p style='text-align:center; font-size:6px; color:#64748b; margin-top:-6px;'>
     Developed by <b>wook</b>
 </p>
 """, unsafe_allow_html=True)
 
 # -----------------------
-# OpenAI API 연결
+# OpenAI 연결
 # -----------------------
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
@@ -87,6 +126,7 @@ def save_json(file, data):
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         st.error(f"저장 실패: {e}")
+
 
 # -----------------------
 # 클립보드 복사 (버튼 UI, 모바일 호환)
@@ -416,22 +456,42 @@ div.stButton > button:hover { background-color: #1d4ed8; }
 
 st.sidebar.markdown("<h3 style='text-align:center; color:#1e3a8a;'>⚙️ 근무자 설정 </h3>", unsafe_allow_html=True)
 # =====================================
-# 🗓 전일 근무자 (1종자동 포함 저장)
+# 🗓 전일 근무자 (Render 업로드 통합)
 # =====================================
 with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     prev_key = st.text_input("🔑 전일 열쇠 담당", prev_key)
     prev_gyoyang5 = st.text_input("🧑‍🏫 전일 교양(5교시)", prev_gyoyang5)
     prev_sudong = st.text_input("🚚 전일 1종 수동", prev_sudong)
-    prev_auto1 = st.text_input("🚗 전일 1종 자동", prev_auto1)  # NEW
+    prev_auto1 = st.text_input("🚗 전일 1종 자동", prev_auto1)
 
     if st.button("💾 전일 근무자 저장", key="btn_prev_save"):
-        save_json(PREV_FILE, {
+        data = {
             "열쇠": prev_key,
             "교양_5교시": prev_gyoyang5,
             "1종수동": prev_sudong,
             "1종자동": prev_auto1,
-        })
-        st.sidebar.success("전일근무.json 저장 완료 ✅")
+        }
+
+        # ✅ 1️⃣ 로컬 저장
+        try:
+            with open(PREV_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            st.sidebar.success("전일근무.json 로컬 저장 완료 ✅")
+        except Exception as e:
+            st.sidebar.error(f"로컬 저장 실패: {e}")
+
+        # ✅ 2️⃣ Render 업로드
+        try:
+            res = requests.post(UPLOAD_URL, json={
+                "filename": "전일근무.json",
+                "content": data
+            }, timeout=10)
+            if res.ok:
+                st.sidebar.success("☁️ Render 업로드 완료")
+            else:
+                st.sidebar.warning(f"⚠️ Render 응답 오류 ({res.status_code})")
+        except Exception as e:
+            st.sidebar.error(f"Render 업로드 중 오류: {e}")
 # =====================================
 # 🌅 아침 열쇠 담당
 # =====================================
@@ -1206,7 +1266,7 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-    # ✅ 전일 근무자 저장
+
     st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
     st.caption("배정이 제대로 됐으면 저장을 합니다.")
     if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
@@ -1214,7 +1274,21 @@ with tab2:
         if not data:
             st.warning("❌ 먼저 ‘오후 근무 배정 생성’을 눌러주세요.")
         else:
-            save_json(PREV_FILE, data)
-            st.success("전일근무.json 저장 완료 ✅")
+            try:
+                with open(PREV_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                st.success("전일근무.json 로컬 저장 완료 ✅")
+            except Exception as e:
+                st.error(f"로컬 저장 실패: {e}")
 
-fps
+            try:
+                res = requests.post(UPLOAD_URL, json={
+                    "filename": "전일근무.json",
+                    "content": data
+                }, timeout=10)
+                if res.ok:
+                    st.success("☁️ Render 업로드 완료")
+                else:
+                    st.warning(f"⚠️ Render 응답 오류 ({res.status_code})")
+            except Exception as e:
+                st.error(f"Render 업로드 중 오류: {e}")
