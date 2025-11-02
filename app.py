@@ -30,20 +30,11 @@ st.markdown("""
         color: #e2e8f0 !important;
     }
 
-   /* 왼쪽 좁은 박스 컨테이너 */
-    #narrow-col div[data-testid="stTextArea"] { 
-        width: 120px !important;           /* 컨테이너 자체 폭 */
-        min-width: 120px !important;
-        max-width: 120px !important;
-    }
-    #narrow-col div[data-testid="stTextArea"] textarea {
-        width: 118px !important;           /* 실제 textarea 폭 */
-        min-width: 118px !important;
-        max-width: 118px !important;
-        height: 120px !important;          /* 높이 고정 (필요 시 조절) */
-        font-size: 15px !important;
-        text-align: center !important;
-        line-height: 1.3;
+    /* 입력창 */
+    textarea, input, select {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border: 1px solid #475569 !important;
     }
 
     /* 버튼 */
@@ -1226,3 +1217,4 @@ with tab2:
             save_json(PREV_FILE, data)
             st.success("전일근무.json 저장 완료 ✅")
 
+fps
