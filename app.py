@@ -11,7 +11,7 @@ import requests  # ✅ Render 업로드용
 # -----------------------
 # ☁️ Render JSON 서버 설정
 # -----------------------
-RENDER_BASE = "https://roadvision-json.onrender.com"  # ← 네 Render 서버 주소
+RENDER_BASE = "https://roadvision-json-server.onrender.com/"  # ← 네 Render 서버 주소
 UPLOAD_URL = f"{RENDER_BASE}/upload"
 DOWNLOAD_URL = f"{RENDER_BASE}/download/전일근무.json"
 LOCAL_FILE = "전일근무.json"
