@@ -33,37 +33,25 @@ def render_download(filename: str):
         pass
     return False
 
-def render_upload(filename, data):
+def render_upload(filename: str, content):
+    """로컬 저장 후 Render 서버에도 업로드."""
     try:
-        # 1️⃣ 로컬 저장
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        # 로컬 저장
+        local_path = filename
+        if filename not in {"전일근무.json", "오전결과.json"}:
+            local_path = os.path.join(DATA_DIR, filename)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        with open(local_path, "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False, indent=2)
 
-        # 2️⃣ Render secrets 안전 접근
-        token = st.secrets.get("render", {}).get("TOKEN", "")
-        upload_url = st.secrets.get("render", {}).get("UPLOAD_URL", "")
-
-        if not token or not upload_url:
-            st.sidebar.info("🔸 Render 설정 없음 → 로컬 저장만 수행됨")
-            return True  # 로컬 저장 성공은 True 처리
-
-        # 3️⃣ Render 업로드
-        with open(filename, "rb") as f:
-            res = requests.post(
-                upload_url,
-                headers={"Authorization": f"Bearer {token}"},
-                files={"file": f},
-                timeout=10
-            )
-
-        if res.status_code == 200:
-            return True
-        else:
-            st.sidebar.warning(f"Render 업로드 실패 [{res.status_code}]")
-            return False
-
-    except Exception as e:
-        st.sidebar.error(f"Render 업로드 오류: {e}")
+        # 원격 업로드
+        res = requests.post(
+            UPLOAD_URL,
+            json={"filename": filename, "content": content},
+            timeout=10
+        )
+        return res.ok
+    except Exception:
         return False
 
 
