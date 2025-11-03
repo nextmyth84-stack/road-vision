@@ -6,7 +6,7 @@ from openai import OpenAI
 import base64, re, json, os, difflib, html, random, requests
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
-from datetime import datetime
+
 
 
 # -----------------------
@@ -51,6 +51,16 @@ def render_upload(filename: str, content):
         return res.ok
     except Exception:
         return False
+
+# -----------------------
+# 로컬 JSON 저장 함수 (오전결과 전용)
+# -----------------------
+def save_json(path, content):
+    """로컬에만 JSON 저장 (Render 업로드 없음)"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(content, f, ensure_ascii=False, indent=2)
+
 
 
 # -----------------------
@@ -329,7 +339,7 @@ repair_union = sorted(set(repair_saved["1종수동"] + repair_saved["1종자동"
 # -----------------------
 # 전일 근무자 로드 (Render 우선 복원)
 # -----------------------
-PREV_FILE = "전일근무.json"
+PREV_FILE = os.path.join(DATA_DIR, "전일근무.json")
 if not os.path.exists(PREV_FILE):
     render_download("전일근무.json")
 prev_data = load_json(PREV_FILE, {"열쇠": "", "교양_5교시": "", "1종수동": "", "1종자동": ""})
