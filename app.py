@@ -39,22 +39,31 @@ def render_upload(filename, data):
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        # 2️⃣ Render 업로드
-        res = requests.post(
-            "https://api.render.com/your-endpoint",
-            files={"file": open(filename, "rb")},
-            headers={"Authorization": f"Bearer {st.secrets['render']['TOKEN']}"}
-        )
+        # 2️⃣ Render secrets 안전 접근
+        token = st.secrets.get("render", {}).get("TOKEN", "")
+        upload_url = st.secrets.get("render", {}).get("UPLOAD_URL", "")
 
-        # 3️⃣ 성공 여부 반환
+        if not token or not upload_url:
+            st.sidebar.info("🔸 Render 설정 없음 → 로컬 저장만 수행됨")
+            return True  # 로컬 저장 성공은 True 처리
+
+        # 3️⃣ Render 업로드
+        with open(filename, "rb") as f:
+            res = requests.post(
+                upload_url,
+                headers={"Authorization": f"Bearer {token}"},
+                files={"file": f},
+                timeout=10
+            )
+
         if res.status_code == 200:
             return True
         else:
-            print("Render 응답:", res.status_code, res.text)
+            st.sidebar.warning(f"Render 업로드 실패 [{res.status_code}]")
             return False
 
     except Exception as e:
-        st.error(f"Render 업로드 오류: {e}")
+        st.sidebar.error(f"Render 업로드 오류: {e}")
         return False
 
 
