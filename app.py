@@ -396,7 +396,10 @@ with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
     if st.button("💾 아침열쇠 저장", key="btn_morning_key_save"):
         data = {"name": mk_name, "start": str(mk_start), "end": str(mk_end)}
         ok = render_upload("아침열쇠.json", data)
-        st.success("아침열쇠 저장 완료 (Render 동기화)") if ok else st.warning("아침열쇠 Render 업로드 실패")
+        if ok:
+            st.success("아침열쇠 저장 완료 (Render 동기화)")
+        else:
+            st.warning("아침열쇠 Render 업로드 실패")
 
 # =====================================
 # 📂 데이터 관리
