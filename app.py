@@ -17,23 +17,19 @@ UPLOAD_URL = f"{RENDER_BASE}/upload"          # POST {"filename": "...", "conten
 DOWNLOAD_URL = f"{RENDER_BASE}/download"      # GET  /download/<filename>
 
 def render_download(filename: str):
-    """Render 서버에서 filename JSON을 받아 로컬에 저장."""
     try:
         res = requests.get(f"{DOWNLOAD_URL}/{filename}", timeout=10)
         if res.ok:
             data = res.json()
-            # 로컬 저장 경로 결정
-            local_path = filename
-            if filename not in {"전일근무.json", "오전결과.json"}:
-                # data/ 밑 파일이면 데이터 폴더에 저장
-                local_path = os.path.join(DATA_DIR, filename)
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            local_path = os.path.join(DATA_DIR, filename)  # ✅ 무조건 DATA_DIR
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
             with open(local_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        print("render_download 실패:", e)
     return False
+
 
 def render_upload(filename: str, content):
     """로컬 저장 후 Render 서버에도 업로드."""
