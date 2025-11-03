@@ -6,6 +6,8 @@ from openai import OpenAI
 import base64, re, json, os, difflib, html, random, requests
 from datetime import datetime
 from zoneinfo import ZoneInfo  # Python 3.9+
+from datetime import datetime
+
 
 # -----------------------
 # ☁️ Render JSON 서버 설정
@@ -854,7 +856,7 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    import os, datetime
+    
     print(datetime.datetime.fromtimestamp(os.path.getmtime("오전결과.json")))
 
    # ✅ 오전결과 자동 복원 (Render→로컬 이미 적용됨)
