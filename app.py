@@ -458,7 +458,11 @@ with st.sidebar.expander("📂 데이터 관리", expanded=False):
             okv2 = render_upload("2종차량표.json", veh2_new)
             veh1_map = load_json(files["veh1"], veh1_new)
             veh2_map = load_json(files["veh2"], veh2_new)
-            st.success("차량표 저장 완료 ✅ (Render 동기화)") if okv1 and okv2 else st.warning("차량표 Render 업로드 실패")
+            if okv1 and okv2:
+                st.success("차량표 저장 완료 ✅ (Render 동기화)")
+            else:
+                st.warning("차량표 Render 업로드 실패")
+
 
     # 👥 전체 근무자
     with st.expander("👥 전체 근무자", expanded=False):
@@ -468,7 +472,10 @@ with st.sidebar.expander("📂 데이터 관리", expanded=False):
             d = [x.strip() for x in t_emp.splitlines() if x.strip()]
             ok = render_upload("전체근무자.json", d)
             employee_list = load_json(files["employees"], d)
-            st.success("근무자 명단 저장 완료 ✅ (Render 동기화)") if ok else st.warning("근무자 명단 Render 업로드 실패")
+            if ok:
+                st.success("근무자 명단 저장 완료 ✅ (Render 동기화)")
+            else:
+                st.warning("근무자 Render 업로드 실패")
 
 # =====================================
 # ⚙️ 추가 설정 + 정비차량
@@ -509,6 +516,10 @@ with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
         st.session_state["repair_2a"] = payload["2종자동"]
         st.session_state["repair_cars"] = sorted(set(payload["1종수동"] + payload["1종자동"] + payload["2종자동"]), key=car_num_key)
         st.success("정비 차량 저장 완료 ✅ (Render 동기화)") if ok else st.warning("정비 차량 Render 업로드 실패")
+        if ok:
+            st.success("정비 차량 저장 완료 ✅ (Render 동기화)")
+        else:
+            st.warning("정비차량 Render 업로드 실패")
 
     st.markdown(
         f"""<div class="repair-box">
@@ -534,7 +545,11 @@ with st.sidebar.expander("📝 메모장", expanded=False):
     memo_input = st.text_area("", memo_text, height=140, placeholder="예: 10월 27일 - 5호차 브레이크 경고등 점등")
     if st.button("💾 메모 저장", key="btn_save_memo"):
         ok = render_upload("메모장.json", {"memo": memo_input})
-        st.success("메모 저장 완료 ✅ (Render 동기화)") if ok else st.warning("메모 Render 업로드 실패")
+        if ok:
+            st.success("메모 저장 완료 ✅ (Render 동기화)")
+        else:
+            st.warning("메모장 Render 업로드 실패")
+
 
 cutoff = st.sidebar.slider("OCR 오타교정 컷오프 (낮을수록 공격적 교정)", 0.4, 0.9, 0.6, 0.05)
 st.sidebar.markdown("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
