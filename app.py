@@ -1108,4 +1108,7 @@ if os.path.exists(PREV_FILE):
 else:
     st.warning("⚠️ 전일근무.json 파일이 없습니다.")
 
+st.write("현재 DATA_DIR:", DATA_DIR)
+st.write("MORNING_FILE:", MORNING_FILE)
+st.write("파일 존재 여부:", os.path.exists(MORNING_FILE))
 
