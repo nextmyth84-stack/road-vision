@@ -547,15 +547,6 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-# =====================================
-# ⚙️ OCR 오타 교정 컷오프
-# =====================================
-cutoff = st.sidebar.slider(
-    "OCR 오타교정 컷오프 (낮을수록 공격적 교정)",
-    0.4, 0.9, 0.6, 0.05
-)
-st.session_state["cutoff"] = cutoff
-
 
 # === 🛠 정비 차량 목록 ===
 opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)
@@ -622,6 +613,15 @@ with st.sidebar.expander("📝 메모장", expanded=False):
             st.success("메모 저장 완료 ✅ (Render 동기화)")
         else:
             st.warning("메모장 Render 업로드 실패")
+
+# =====================================
+# ⚙️ OCR 오타 교정 컷오프
+# =====================================
+cutoff = st.sidebar.slider(
+    "OCR 오타교정 컷오프 (낮을수록 공격적 교정)",
+    0.4, 0.9, 0.6, 0.05
+)
+st.session_state["cutoff"] = cutoff
 
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
 
