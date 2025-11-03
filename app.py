@@ -33,26 +33,30 @@ def render_download(filename: str):
         pass
     return False
 
-def render_upload(filename: str, content):
-    """로컬 저장 후 Render 서버에도 업로드."""
+def render_upload(filename, data):
     try:
-        # 로컬 저장
-        local_path = filename
-        if filename not in {"전일근무.json", "오전결과.json"}:
-            local_path = os.path.join(DATA_DIR, filename)
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with open(local_path, "w", encoding="utf-8") as f:
-            json.dump(content, f, ensure_ascii=False, indent=2)
+        # 1️⃣ 로컬 저장
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
-        # 원격 업로드
+        # 2️⃣ Render 업로드
         res = requests.post(
-            UPLOAD_URL,
-            json={"filename": filename, "content": content},
-            timeout=10
+            "https://api.render.com/your-endpoint",
+            files={"file": open(filename, "rb")},
+            headers={"Authorization": f"Bearer {st.secrets['render']['TOKEN']}"}
         )
-        return res.ok
-    except Exception:
+
+        # 3️⃣ 성공 여부 반환
+        if res.status_code == 200:
+            return True
+        else:
+            print("Render 응답:", res.status_code, res.text)
+            return False
+
+    except Exception as e:
+        st.error(f"Render 업로드 오류: {e}")
         return False
+
 
 # -----------------------
 # 기본 UI 설정/스타일
