@@ -856,9 +856,6 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    st.write("현재 DATA_DIR:", DATA_DIR)
-    st.write("MORNING_FILE:", MORNING_FILE)
-    st.write("파일 존재 여부:", os.path.exists(MORNING_FILE))
 
     print(datetime.fromtimestamp(os.path.getmtime("오전결과.json")))
    # ✅ 오전결과 자동 복원 (Render→로컬 이미 적용됨)
@@ -1097,5 +1094,10 @@ with tab2:
                 st.success("전일근무.json 저장 완료 (Render 동기화)")
             else:
                 st.warning("Render 업로드 실패(로컬은 저장됨)")
+
+    st.write("현재 DATA_DIR:", DATA_DIR)
+    st.write("MORNING_FILE:", MORNING_FILE)
+    st.write("파일 존재 여부:", os.path.exists(MORNING_FILE))
+
 
 
