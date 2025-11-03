@@ -375,10 +375,10 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
     if st.button("💾 전일 근무자 저장", key="btn_prev_save"):
         payload = {"열쇠": prev_key, "교양_5교시": prev_gyoyang5, "1종수동": prev_sudong, "1종자동": prev_auto1}
         ok = render_upload("전일근무.json", payload)
-    if ok:
-        st.sidebar.success("전일근무.json 저장 완료 (Render 동기화)")
-    else:
-        st.sidebar.warning("Render 업로드 실패(로컬은 저장됨)")
+        if ok:
+            st.sidebar.success("전일근무.json 저장 완료 (Render 동기화)")
+        else:
+            st.sidebar.warning("Render 업로드 실패(로컬은 저장됨)")
 
 # =====================================
 # 🌅 아침 열쇠 담당
