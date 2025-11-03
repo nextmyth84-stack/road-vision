@@ -856,10 +856,7 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    
-   print(datetime.fromtimestamp(os.path.getmtime("오전결과.json")))
-
-
+    print(datetime.fromtimestamp(os.path.getmtime("오전결과.json")))
    # ✅ 오전결과 자동 복원 (Render→로컬 이미 적용됨)
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
     if not os.path.exists(MORNING_FILE):
