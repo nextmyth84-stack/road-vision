@@ -515,7 +515,6 @@ with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
         st.session_state["repair_1a"] = payload["1종자동"]
         st.session_state["repair_2a"] = payload["2종자동"]
         st.session_state["repair_cars"] = sorted(set(payload["1종수동"] + payload["1종자동"] + payload["2종자동"]), key=car_num_key)
-        st.success("정비 차량 저장 완료 ✅ (Render 동기화)") if ok else st.warning("정비 차량 Render 업로드 실패")
         if ok:
             st.success("정비 차량 저장 완료 ✅ (Render 동기화)")
         else:
