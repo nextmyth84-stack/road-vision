@@ -268,7 +268,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
 # -----------------------
 # JSON 기반 순번 / 차량 / 근무자 관리
 # -----------------------
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR = "/tmp/data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
 files = {
