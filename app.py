@@ -1086,4 +1086,7 @@ with tab2:
             st.warning("❌ 먼저 ‘오후 근무 배정 생성’을 눌러주세요.")
         else:
             ok = render_upload("전일근무.json", data)
-            st.success("전일근무.json 저장 완료 ✅ (Render 동기화)") if ok else st.warning("전일근무.json Render 업로드 실패(로컬 저장은 완료)")
+            if ok:
+                st.success("전일근무.json 저장 완료 ✅ (Render 동기화)")
+            else:
+                st.warning("전일근무.json Render 업로드 실패(로컬 저장은 완료)")
