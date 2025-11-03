@@ -837,7 +837,7 @@ with tab1:
             st.markdown("#### 📋 오전 결과"); st.code(am_text, language="text"); clipboard_copy_button("📋 결과 복사하기", am_text)
 
             # ✅ 오전 결과 저장 + Render 업로드
-            MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
+            MORNING_FILE = "오전결과.json"
             morning_data = {
                 "assigned_cars_1": st.session_state.get("morning_assigned_cars_1", []),
                 "assigned_cars_2": st.session_state.get("morning_assigned_cars_2", []),
