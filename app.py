@@ -1108,24 +1108,5 @@ with tab2:
             else:
                 st.warning("Render 업로드 실패(로컬은 저장됨)")
 
-    # -----------------------------
-# 전일근무.json 존재 여부 + 내용 확인
-# -----------------------------
-PREV_FILE = "전일근무.json"
 
-st.write("현재 DATA_DIR:", DATA_DIR)
-st.write("전일근무 파일 경로:", PREV_FILE)
-st.write("파일 존재 여부:", os.path.exists(PREV_FILE))
-
-if os.path.exists(PREV_FILE):
-    with open(PREV_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    st.write("📋 전일근무자 데이터:")
-    st.json(data)  # Streamlit에서 JSON 구조 보기 좋게 출력
-else:
-    st.warning("⚠️ 전일근무.json 파일이 없습니다.")
-
-st.write("현재 DATA_DIR:", DATA_DIR)
-st.write("MORNING_FILE:", MORNING_FILE)
-st.write("파일 존재 여부:", os.path.exists(MORNING_FILE))
 
