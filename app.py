@@ -832,6 +832,8 @@ with tab1:
                 st.info(f"✅ 오전 결과 저장 완료 (로컬 저장만): {morning_data['timestamp']}")
             except Exception as e:
                 st.error(f"오전결과 로컬 저장 실패: {e}")
+        except Exception as e:   # ✅ 이 줄이 반드시 필요함
+            st.error(f"오전 오류: {e}")
 
 # =====================================
 # 🌇 오후 근무 탭
