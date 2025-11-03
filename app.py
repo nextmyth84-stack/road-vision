@@ -547,10 +547,15 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-# cutoff 완전 숨김 (UI 없이 세션에만 보관)
-if "cutoff" not in st.session_state:
-    st.session_state["cutoff"] = 0.6
-# 필요 시 코드에서 st.session_state["cutoff"] 사용
+# =====================================
+# ⚙️ OCR 오타 교정 컷오프
+# =====================================
+cutoff = st.sidebar.slider(
+    "OCR 오타교정 컷오프 (낮을수록 공격적 교정)",
+    0.4, 0.9, 0.6, 0.05
+)
+st.session_state["cutoff"] = cutoff
+
 
 # === 🛠 정비 차량 목록 ===
 opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)
