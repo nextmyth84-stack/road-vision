@@ -1078,8 +1078,10 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
+    # ✅ 전일 근무자 저장
     st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
     st.caption("배정이 제대로 됐으면 저장을 합니다.")
+
     if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
         data = st.session_state.get("pm_save_ready")
         if not data:
@@ -1087,6 +1089,8 @@ with tab2:
         else:
             ok = render_upload("전일근무.json", data)
             if ok:
-                st.success("전일근무.json 저장 완료 ✅ (Render 동기화)")
+                st.success("전일근무.json 저장 완료 (Render 동기화)")
             else:
-                st.warning("전일근무.json Render 업로드 실패(로컬 저장은 완료)")
+                st.warning("Render 업로드 실패(로컬은 저장됨)")
+
+
