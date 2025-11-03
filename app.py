@@ -855,11 +855,12 @@ with tab1:
 # =====================================
 with tab2:
 
-    # ✅ 오전결과 자동 복원 (Render→로컬 이미 적용됨)
+   # ✅ 오전결과 자동 복원 (Render→로컬 이미 적용됨)
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
     if not os.path.exists(MORNING_FILE):
         render_download("오전결과.json")
     morning_cache = load_json(MORNING_FILE, {})
+
     if morning_cache:
         st.session_state["morning_assigned_cars_1"] = morning_cache.get("assigned_cars_1", [])
         st.session_state["morning_assigned_cars_2"] = morning_cache.get("assigned_cars_2", [])
@@ -868,8 +869,18 @@ with tab2:
         st.session_state["gyoyang_base_for_pm"]    = morning_cache.get("gy_base_for_pm", "")
         st.session_state["sudong_base_for_pm"]     = morning_cache.get("sud_base_for_pm", "")
         st.session_state["today_auto1"]            = morning_cache.get("today_auto1", "")
+
+        # ✅ 오전결과.json 내 timestamp 표시
         ts = morning_cache.get("timestamp")
-        if ts: st.caption(f"🕒 오전 결과 복원 완료 (저장 시각: {ts})")
+        if ts:
+            st.caption(f"🕒 오전 결과 복원 완료 (저장 시각: {ts})")
+
+    # ✅ 실제 파일 수정시각 표시 (오전 이후 저장 시 반영됨)
+    if os.path.exists(MORNING_FILE):
+        saved_time = datetime.fromtimestamp(os.path.getmtime(MORNING_FILE)).strftime("%Y-%m-%d %H:%M:%S")
+        st.caption(f"📁 오전결과.json 최신 저장시간: {saved_time}")
+    else:
+        st.caption("⚠️ 오전결과.json 파일 없음")
 
     st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
