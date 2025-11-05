@@ -287,8 +287,10 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         # OpenAI API 요청 URL
         url = "https://api.openai.com/v1/images/generations"
         
+        API_KEY = st.secrets["general"]["OPENAI_API_KEY"]
+
         headers = {
-            "Authorization": f"Bearer {YOUR_API_KEY}",  # 여기에 본인의 OpenAI API 키를 넣어주세요.
+            "Authorization": f"Bearer {API_KEY}",
         }
 
         # 이미지 파일을 multipart/form-data로 보내는 방식
