@@ -265,6 +265,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
+    
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
@@ -318,7 +319,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         early_leave = js.get("early_leave", []) if want_early else []
         late_start = js.get("late_start", []) if want_late else []
 
-        # 숫자 캐스팅
+        # 숫자 변환
         def to_float(x):
             try:
                 return float(x)
@@ -330,9 +331,11 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
             l["time"] = to_float(l.get("time"))
 
         return names, course_records, excluded, early_leave, late_start
+
     except Exception as e:
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
+
 
 
 # -----------------------
