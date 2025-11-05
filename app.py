@@ -285,7 +285,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
         "4) '지각/10시 출근/외출' 등 표기에서 오전 시작시간(예:10 또는 10.5)을 late_start 로.\n"
         "5) '조퇴' 표기에서 오후 시간(13/14.5/16 등)을 early_leave 로.\n"
-        "반드시 JSON 형태로 출력합니다."
         "JSON 예시: {\n"
         "  \"names\": [\"김성연(B합)\",\"김병욱(A불)\"],\n"
         "  \"excluded\": [\"안유미\"],\n"
