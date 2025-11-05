@@ -288,10 +288,13 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
                 {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
                 {"role": "user", "content": [
                     {"type": "text", "text": user},
+                    # 이미지 파일을 바이너리 데이터로 바로 전달 (JSON 직렬화 안 함)
                     {"type": "image_file", "image_file": {"file_name": "roadtest.jpg", "data": img_bytes}},
                 ]}
             ],
+            response_format={"type": "json_object"},
         )
+        
         raw_msg = res.choices[0].message
         raw = raw_msg["content"] if isinstance(raw_msg, dict) else raw_msg.content
 
@@ -335,6 +338,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     except Exception as e:
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
+
 
 
 
