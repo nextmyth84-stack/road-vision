@@ -86,8 +86,6 @@ except Exception:
     st.stop()
 MODEL_NAME = "gpt-4o"
 
-
-
 # -----------------------
 # JSON 유틸
 # -----------------------
@@ -257,8 +255,6 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # -----------------------
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
-
-
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
     """
     반환: names(괄호 제거), course_records, excluded, early_leave, late_start
@@ -267,7 +263,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
-    
+    b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
@@ -284,83 +280,58 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     )
 
     try:
-        # OpenAI API 요청 URL
-        url = "https://api.openai.com/v1/images/generations"
-        
-        API_KEY = st.secrets["general"]["OPENAI_API_KEY"]
-
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-        }
-
-        # 이미지 파일을 multipart/form-data로 보내는 방식
-        files = {
-            'file': ('roadtest.jpg', img_bytes, 'image/jpeg')  # 이미지 파일과 바이너리 데이터를 'file'로 전달
-        }
-
-        data = {
-            "model": "gpt-4o",
-            "messages": [
+        res = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
                 {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
-                {"role": "user", "content": user}
-            ]
-        }
+                {"role": "user", "content": [
+                    {"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                ]}
+            ],
+        )
+        raw_msg = res.choices[0].message
+        raw = raw_msg["content"] if isinstance(raw_msg, dict) else raw_msg.content
 
-        # 이미지 파일과 데이터를 멀티파트로 전송
-        response = requests.post(url, headers=headers, files=files, data=data)
+        try:
+            js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))
+        except Exception:
+            js = {}
 
-        # 응답 처리
-        if response.status_code == 200:
-            res_data = response.json()
-            raw = res_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        raw_names = js.get("names", [])
+        names, course_records = [], []
+        for n in raw_names:
+            m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
+            if m:
+                name = m.group(1).strip()
+                detail = re.sub(r"[^A-Za-z가-힣]", "", m.group(2)).upper()
+                course = "A" if "A" in detail else ("B" if "B" in detail else None)
+                result = "합격" if "합" in detail else ("불합격" if "불" in detail else None)
+                if course and result:
+                    course_records.append({"name": name, "course": f"{course}코스", "result": result})
+                names.append(name)
+            else:
+                names.append((n or "").strip())
 
+        excluded = js.get("excluded", []) if want_excluded else []
+        early_leave = js.get("early_leave", []) if want_early else []
+        late_start = js.get("late_start", []) if want_late else []
+
+        # 숫자 캐스팅
+        def to_float(x):
             try:
-                js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))  # 응답에서 JSON 파싱
-            except Exception:
-                js = {}
+                return float(x)
+            except:
+                return None
+        for e in early_leave:
+            e["time"] = to_float(e.get("time"))
+        for l in late_start:
+            l["time"] = to_float(l.get("time"))
 
-            # 추출된 데이터 처리
-            raw_names = js.get("names", [])
-            names, course_records = [], []
-            for n in raw_names:
-                m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
-                if m:
-                    name = m.group(1).strip()
-                    detail = re.sub(r"[^A-Za-z가-힣]", "", m.group(2)).upper()
-                    course = "A" if "A" in detail else ("B" if "B" in detail else None)
-                    result = "합격" if "합" in detail else ("불합격" if "불" in detail else None)
-                    if course and result:
-                        course_records.append({"name": name, "course": f"{course}코스", "result": result})
-                    names.append(name)
-                else:
-                    names.append((n or "").strip())
-
-            excluded = js.get("excluded", []) if want_excluded else []
-            early_leave = js.get("early_leave", []) if want_early else []
-            late_start = js.get("late_start", []) if want_late else []
-
-            # 숫자 변환
-            def to_float(x):
-                try:
-                    return float(x)
-                except:
-                    return None
-            for e in early_leave:
-                e["time"] = to_float(e.get("time"))
-            for l in late_start:
-                l["time"] = to_float(l.get("time"))
-
-            return names, course_records, excluded, early_leave, late_start
-
-        else:
-            st.error(f"API 호출 실패: {response.status_code} - {response.text}")
-            return []
-
+        return names, course_records, excluded, early_leave, late_start
     except Exception as e:
         st.error(f"OCR 실패: {e}")
-        return []
-
-
+        return [], [], [], [], []
 
 
 # -----------------------
@@ -734,54 +705,46 @@ with tab1:
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-   # 오전 GPT 인식 버튼 처리
-if run_m:
-    if not m_file:
-        st.warning("오전 이미지를 업로드하세요.")
-    else:
-        with st.spinner("🧩 GPT 이미지 분석 중..."):
-            # 이미지 파일을 바이너리 데이터로 읽음
-            img_bytes = m_file.read()  # 바이너리 데이터로 읽기
-            
-            # gpt_extract 함수 호출 (이미지 파일을 바이너리로 전달)
-            names, course, excluded, early, late = gpt_extract(
-                img_bytes, want_early=True, want_late=True, want_excluded=True
-            )
+    if run_m:
+        if not m_file:
+            st.warning("오전 이미지를 업로드하세요.")
+        else:
+            with st.spinner("🧩 GPT 이미지 분석 중..."):
+                names, course, excluded, early, late = gpt_extract(
+                    m_file.read(), want_early=True, want_late=True, want_excluded=True
+                )
+                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
+                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
+                for e in early:
+                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                for l in late:
+                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-            # OCR 교정
-            fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
-            excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
-            for e in early:
-                e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-            for l in late:
-                l["name"] = correct_name_v2(l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+                # 코스 레코드 교정 + 중복 제거
+                def _fix_course_records(course_records, employees, cutoff):
+                    out, seen = [], set()
+                    for r in course_records or []:
+                        nm_fixed = correct_name_v2(r.get("name",""), employees, cutoff=cutoff)
+                        course = r.get("course"); result = r.get("result")
+                        key = (normalize_name(nm_fixed), course, result)
+                        if not normalize_name(nm_fixed) or key in seen:
+                            continue
+                        out.append({"name": nm_fixed, "course": course, "result": result})
+                        seen.add(key)
+                    return out
 
-            # 코스 레코드 교정 + 중복 제거
-            def _fix_course_records(course_records, employees, cutoff):
-                out, seen = [], set()
-                for r in course_records or []:
-                    nm_fixed = correct_name_v2(r.get("name", ""), employees, cutoff=cutoff)
-                    course = r.get("course")
-                    result = r.get("result")
-                    key = (normalize_name(nm_fixed), course, result)
-                    if not normalize_name(nm_fixed) or key in seen:
-                        continue
-                    out.append({"name": nm_fixed, "course": course, "result": result})
-                    seen.add(key)
-                return out
+                course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
 
-            course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
+                # 세션 반영
+                st.session_state.m_names_raw = fixed
+                st.session_state.course_records = course_fixed
+                st.session_state.excluded_auto = excluded_fixed
+                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
+                st.session_state.late_start = [l for l in late if l.get("time") is not None]
+                st.session_state["ta_morning_list"] = "\n".join(fixed)
+                st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
 
-            # 세션 반영
-            st.session_state.m_names_raw = fixed
-            st.session_state.course_records = course_fixed
-            st.session_state.excluded_auto = excluded_fixed
-            st.session_state.early_leave = [e for e in early if e.get("time") is not None]
-            st.session_state.late_start = [l for l in late if l.get("time") is not None]
-            st.session_state["ta_morning_list"] = "\n".join(fixed)
-            st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
-
-            st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course_fixed)}건")
+                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course_fixed)}건")
 
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area(
