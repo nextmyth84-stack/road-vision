@@ -257,6 +257,8 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # -----------------------
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
+
+
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
     """
     반환: names(괄호 제거), course_records, excluded, early_leave, late_start
@@ -282,62 +284,79 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     )
 
     try:
-        res = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
-                {"role": "user", "content": [
-                    {"type": "text", "text": user},
-                    # 이미지 파일을 바이너리 데이터로 바로 전달 (JSON 직렬화 안 함)
-                    {"type": "image_file", "image_file": {"file_name": "roadtest.jpg", "data": img_bytes}},
-                ]}
-            ],
-            response_format={"type": "json_object"},
-        )
+        # OpenAI API 요청 URL
+        url = "https://api.openai.com/v1/images/generations"
         
-        raw_msg = res.choices[0].message
-        raw = raw_msg["content"] if isinstance(raw_msg, dict) else raw_msg.content
+        headers = {
+            "Authorization": f"Bearer {YOUR_API_KEY}",  # 여기에 본인의 OpenAI API 키를 넣어주세요.
+        }
 
-        try:
-            js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))
-        except Exception:
-            js = {}
+        # 이미지 파일을 multipart/form-data로 보내는 방식
+        files = {
+            'file': ('roadtest.jpg', img_bytes, 'image/jpeg')  # 이미지 파일과 바이너리 데이터를 'file'로 전달
+        }
 
-        raw_names = js.get("names", [])
-        names, course_records = [], []
-        for n in raw_names:
-            m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
-            if m:
-                name = m.group(1).strip()
-                detail = re.sub(r"[^A-Za-z가-힣]", "", m.group(2)).upper()
-                course = "A" if "A" in detail else ("B" if "B" in detail else None)
-                result = "합격" if "합" in detail else ("불합격" if "불" in detail else None)
-                if course and result:
-                    course_records.append({"name": name, "course": f"{course}코스", "result": result})
-                names.append(name)
-            else:
-                names.append((n or "").strip())
+        data = {
+            "model": "gpt-4o",
+            "messages": [
+                {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
+                {"role": "user", "content": user}
+            ]
+        }
 
-        excluded = js.get("excluded", []) if want_excluded else []
-        early_leave = js.get("early_leave", []) if want_early else []
-        late_start = js.get("late_start", []) if want_late else []
+        # 이미지 파일과 데이터를 멀티파트로 전송
+        response = requests.post(url, headers=headers, files=files, data=data)
 
-        # 숫자 변환
-        def to_float(x):
+        # 응답 처리
+        if response.status_code == 200:
+            res_data = response.json()
+            raw = res_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
             try:
-                return float(x)
-            except:
-                return None
-        for e in early_leave:
-            e["time"] = to_float(e.get("time"))
-        for l in late_start:
-            l["time"] = to_float(l.get("time"))
+                js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))  # 응답에서 JSON 파싱
+            except Exception:
+                js = {}
 
-        return names, course_records, excluded, early_leave, late_start
+            # 추출된 데이터 처리
+            raw_names = js.get("names", [])
+            names, course_records = [], []
+            for n in raw_names:
+                m = re.search(r"([가-힣]+)\s*\(([^)]*)\)", n)
+                if m:
+                    name = m.group(1).strip()
+                    detail = re.sub(r"[^A-Za-z가-힣]", "", m.group(2)).upper()
+                    course = "A" if "A" in detail else ("B" if "B" in detail else None)
+                    result = "합격" if "합" in detail else ("불합격" if "불" in detail else None)
+                    if course and result:
+                        course_records.append({"name": name, "course": f"{course}코스", "result": result})
+                    names.append(name)
+                else:
+                    names.append((n or "").strip())
+
+            excluded = js.get("excluded", []) if want_excluded else []
+            early_leave = js.get("early_leave", []) if want_early else []
+            late_start = js.get("late_start", []) if want_late else []
+
+            # 숫자 변환
+            def to_float(x):
+                try:
+                    return float(x)
+                except:
+                    return None
+            for e in early_leave:
+                e["time"] = to_float(e.get("time"))
+            for l in late_start:
+                l["time"] = to_float(l.get("time"))
+
+            return names, course_records, excluded, early_leave, late_start
+
+        else:
+            st.error(f"API 호출 실패: {response.status_code} - {response.text}")
+            return []
 
     except Exception as e:
         st.error(f"OCR 실패: {e}")
-        return [], [], [], [], []
+        return []
 
 
 
