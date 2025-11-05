@@ -255,6 +255,19 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
 # -----------------------
 # OCR (이름/코스/제외자/지각/조퇴)
 # -----------------------
+
+from PIL import Image, ImageEnhance, ImageFilter
+import io
+
+def enhance_image(img_bytes):
+    """흑백 변환 + 대비 강화 + 샤프닝으로 OCR 인식률 향상"""
+    img = Image.open(io.BytesIO(img_bytes)).convert("L")   # 흑백화
+    img = ImageEnhance.Contrast(img).enhance(2.0)          # 대비 강화 (1.0=기본)
+    img = img.filter(ImageFilter.SHARPEN)                  # 선명도 향상
+    output = io.BytesIO()
+    img.save(output, format="JPEG", quality=95)
+    return output.getvalue()
+
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
     """
     반환: names(괄호 제거), course_records, excluded, early_leave, late_start
@@ -710,9 +723,11 @@ with tab1:
             st.warning("오전 이미지를 업로드하세요.")
         else:
             with st.spinner("🧩 GPT 이미지 분석 중..."):
+                enhanced = enhance_image(m_file.read())  # 🔹 이미지 전처리 추가
                 names, course, excluded, early, late = gpt_extract(
-                    m_file.read(), want_early=True, want_late=True, want_excluded=True
+                    enhanced, want_early=True, want_late=True, want_excluded=True
                 )
+
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
                 for e in early:
@@ -972,9 +987,11 @@ with tab2:
             st.warning("오후 이미지를 업로드하세요.")
         else:
             with st.spinner("🧩 GPT 이미지 분석 중..."):
+                enhanced = enhance_image(a_file.read())
                 names, _, excluded, early, late = gpt_extract(
-                    a_file.read(), want_early=True, want_late=True, want_excluded=True
+                    enhanced, want_early=True, want_late=True, want_excluded=True
                 )
+
                 fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
                 excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
                 for e in early:
