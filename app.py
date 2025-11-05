@@ -713,46 +713,54 @@ with tab1:
 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    if run_m:
-        if not m_file:
-            st.warning("오전 이미지를 업로드하세요.")
-        else:
-            with st.spinner("🧩 GPT 이미지 분석 중..."):
-                names, course, excluded, early, late = gpt_extract(
-                    m_file.read(), want_early=True, want_late=True, want_excluded=True
-                )
-                fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
-                excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
-                for e in early:
-                    e["name"] = correct_name_v2(e.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
-                for l in late:
-                    l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+   # 오전 GPT 인식 버튼 처리
+if run_m:
+    if not m_file:
+        st.warning("오전 이미지를 업로드하세요.")
+    else:
+        with st.spinner("🧩 GPT 이미지 분석 중..."):
+            # 이미지 파일을 바이너리 데이터로 읽음
+            img_bytes = m_file.read()  # 바이너리 데이터로 읽기
+            
+            # gpt_extract 함수 호출 (이미지 파일을 바이너리로 전달)
+            names, course, excluded, early, late = gpt_extract(
+                img_bytes, want_early=True, want_late=True, want_excluded=True
+            )
 
-                # 코스 레코드 교정 + 중복 제거
-                def _fix_course_records(course_records, employees, cutoff):
-                    out, seen = [], set()
-                    for r in course_records or []:
-                        nm_fixed = correct_name_v2(r.get("name",""), employees, cutoff=cutoff)
-                        course = r.get("course"); result = r.get("result")
-                        key = (normalize_name(nm_fixed), course, result)
-                        if not normalize_name(nm_fixed) or key in seen:
-                            continue
-                        out.append({"name": nm_fixed, "course": course, "result": result})
-                        seen.add(key)
-                    return out
+            # OCR 교정
+            fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in names]
+            excluded_fixed = [correct_name_v2(n, st.session_state["employee_list"], cutoff=st.session_state["cutoff"]) for n in excluded]
+            for e in early:
+                e["name"] = correct_name_v2(e.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
+            for l in late:
+                l["name"] = correct_name_v2(l.get("name", ""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
+            # 코스 레코드 교정 + 중복 제거
+            def _fix_course_records(course_records, employees, cutoff):
+                out, seen = [], set()
+                for r in course_records or []:
+                    nm_fixed = correct_name_v2(r.get("name", ""), employees, cutoff=cutoff)
+                    course = r.get("course")
+                    result = r.get("result")
+                    key = (normalize_name(nm_fixed), course, result)
+                    if not normalize_name(nm_fixed) or key in seen:
+                        continue
+                    out.append({"name": nm_fixed, "course": course, "result": result})
+                    seen.add(key)
+                return out
 
-                # 세션 반영
-                st.session_state.m_names_raw = fixed
-                st.session_state.course_records = course_fixed
-                st.session_state.excluded_auto = excluded_fixed
-                st.session_state.early_leave = [e for e in early if e.get("time") is not None]
-                st.session_state.late_start = [l for l in late if l.get("time") is not None]
-                st.session_state["ta_morning_list"] = "\n".join(fixed)
-                st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
+            course_fixed = _fix_course_records(course, st.session_state["employee_list"], st.session_state["cutoff"])
 
-                st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course_fixed)}건")
+            # 세션 반영
+            st.session_state.m_names_raw = fixed
+            st.session_state.course_records = course_fixed
+            st.session_state.excluded_auto = excluded_fixed
+            st.session_state.early_leave = [e for e in early if e.get("time") is not None]
+            st.session_state.late_start = [l for l in late if l.get("time") is not None]
+            st.session_state["ta_morning_list"] = "\n".join(fixed)
+            st.session_state["ta_excluded"] = "\n".join(excluded_fixed)
+
+            st.success(f"오전 인식 완료 → 근무자 {len(fixed)}명, 제외자 {len(excluded_fixed)}명, 코스 {len(course_fixed)}건")
 
     st.markdown("<h4 style='font-size:16px;'>🚫 근무 제외자 (실제와 비교 필수!)</h4>", unsafe_allow_html=True)
     excluded_text = st.text_area(
