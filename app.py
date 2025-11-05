@@ -263,6 +263,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
+    b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
@@ -280,21 +281,17 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
 
     try:
         res = client.chat.completions.create(
-            model="gpt-4o",
+            model=MODEL_NAME,
             messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": user_prompt},
-                        {"type": "image_file", "image_file": {"file_name": "roadtest.jpg", "data": img_bytes}},
-                    ],
-                }
+                {"role": "system", "content": "도로주행 근무표에서 이름과 메타데이터를 JSON으로 추출"},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
+                ]}
             ],
-            response_format={"type": "json_object"},
         )
-
-        js = json.loads(res.choices[0].message.content)
-        
+        raw_msg = res.choices[0].message
+        raw = raw_msg["content"] if isinstance(raw_msg, dict) else raw_msg.content
 
         try:
             js = json.loads(re.search(r"\{[\s\S]*\}", raw).group(0))
