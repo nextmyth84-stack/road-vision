@@ -279,7 +279,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
-        "표의 구조를 인식해, 각 행에 있는 '업무명','업무시간','성명' 정보를 기반으로 판단합니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
         "2) 이름 옆 괄호의 'A-합','B-불','A합','B불'은 코스점검 결과.\n"
         "3) 상단/별도 표기된 '휴가,교육,출장,공가,연가,연차,돌봄' 섹션의 이름을 'excluded' 로 추출.\n"
