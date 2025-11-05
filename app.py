@@ -87,6 +87,26 @@ except Exception:
 MODEL_NAME = "gpt-4o"
 
 # -----------------------
+# 🔍 OpenAI SDK 버전 확인 (image_file 지원 여부)
+# -----------------------
+import openai
+from packaging import version
+
+try:
+    current_ver = version.parse(openai.__version__)
+    min_required = version.parse("1.12.0")
+    if current_ver < min_required:
+        st.warning(
+            f"⚠️ 현재 OpenAI SDK 버전 {openai.__version__} 은 image_file 입력을 지원하지 않습니다.\n"
+            f"업데이트 필요: pip install --upgrade openai (권장 버전 ≥ 1.12.0)"
+        )
+    else:
+        st.sidebar.caption(f"✅ OpenAI SDK {openai.__version__} (image_file 지원됨)")
+except Exception as e:
+    st.warning(f"OpenAI 버전 확인 실패: {e}")
+
+
+# -----------------------
 # JSON 유틸
 # -----------------------
 def load_json(file, default=None):
