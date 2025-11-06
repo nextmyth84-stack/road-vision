@@ -524,7 +524,7 @@ except Exception:
     pass
 
 # 로드
-key_order     = load_json(files[\"열쇠\"])
+key_order     = load_json(files["열쇠"])
 gyoyang_order = load_json(files["교양"])
 sudong_order  = load_json(files["1종"])
 veh1_map      = load_json(files["veh1"])
