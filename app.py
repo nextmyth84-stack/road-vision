@@ -223,11 +223,11 @@ def pick_active_morning_key(today_date=None):
     return actives  # could be multiple
 
 with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
-    st.markdown(\"\"\"\
+    st.markdown("""
 - 여러 명을 기간별로 등록할 수 있습니다.
 - 형식: 한 줄에 `이름,시작일,종료일` (예: 김남균,2025-11-01,2025-11-14)
 - 오늘 날짜가 포함된 항목은 자동으로 제외 대상에 반영됩니다.
-\"\"\", unsafe_allow_html=False)
+""", unsafe_allow_html=False)
     existing = _load_morning_key_entries()
     lines = []
     for row in existing:
