@@ -358,7 +358,7 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
     img_bytes = enhance_image(img_bytes)
-        b64 = base64.b64encode(img_bytes).decode()
+    b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
