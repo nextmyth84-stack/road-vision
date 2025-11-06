@@ -909,12 +909,12 @@ with tab1:
                         excluded_set.add(normalize_name(morning_key.get("name","")))
                 except Exception:
                     pass    
-# 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
-try:
-    for _nm in pick_active_morning_key():
-        excluded_set.add(normalize_name(_nm))
-except Exception:
-    pass
+        # 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
+        try:
+            for _nm in pick_active_morning_key():
+                excluded_set.add(normalize_name(_nm))
+        except Exception:
+            pass
 
     # 🔑 열쇠
             today_key = ""
