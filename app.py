@@ -15,6 +15,45 @@ RENDER_BASE = "https://roadvision-json-server.onrender.com/"
 UPLOAD_URL = f"{RENDER_BASE}/upload"
 DOWNLOAD_URL = f"{RENDER_BASE}/download/전일근무.json"
 
+
+# ===== Render JSON helpers (generic) =====
+def render_download_file(filename: str):
+    """
+    Download a JSON file from Render: /download/<filename>
+    Returns parsed JSON on success, else None.
+    """
+    try:
+        url = f"{RENDER_BASE}/download/{filename}"
+        res = requests.get(url, timeout=10)
+        if res.ok:
+            return res.json()
+    except Exception as e:
+        # non-fatal
+        pass
+    return None
+
+def render_try_restore_many(file_map: dict):
+    """
+    file_map: {local_path: remote_filename}
+    If local missing, try to pull from Render.
+    """
+    restored = []
+    for local_path, remote_name in file_map.items():
+        try:
+            lp = Path(local_path)
+            if not lp.exists():
+                data = render_download_file(remote_name)
+                if data is not None:
+                    lp.parent.mkdir(parents=True, exist_ok=True)
+                    with lp.open("w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=2)
+                    restored.append(remote_name)
+        except Exception:
+            continue
+    if restored:
+        st.sidebar.info("☁️ Render에서 복원: " + ", ".join(restored))
+
+
 def render_upload(filename, data):
     """Render 서버 업로드 함수"""
     try:
@@ -41,7 +80,7 @@ def render_download():
 # -----------------------
 # 기본 설정 및 스타일
 # -----------------------
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
 @media (prefers-color-scheme: dark) {
@@ -144,28 +183,71 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
             st.sidebar.warning("전일근무 Render 업로드 실패")
 
 # =====================================
-# 🌅 아침 열쇠 담당
+# 🌅 아침 열쇠 담당 (multi-schedule)
 # =====================================
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# ===== Morning Key (multi-schedule support) =====
 MORNING_KEY_FILE = os.path.join(DATA_DIR, "아침열쇠.json")
-morning_key = load_json(MORNING_KEY_FILE, {})
+
+def _load_morning_key_entries():
+    data = load_json(MORNING_KEY_FILE, {})
+    # backward compatible: single dict {"name":..., "start":..., "end":...}
+    if isinstance(data, dict) and data.get("name"):
+        return [data]
+    if isinstance(data, list):
+        return data
+    return []
+
+def _save_morning_key_entries(entries):
+    save_json(MORNING_KEY_FILE, entries)
+    try:
+        render_upload("아침열쇠.json", entries)
+    except Exception:
+        pass
+
+def pick_active_morning_key(today_date=None):
+    from datetime import date
+    today = today_date or datetime.now(ZoneInfo("Asia/Seoul")).date()
+    actives = []
+    for row in _load_morning_key_entries():
+        nm = (row or {}).get("name","").strip()
+        try:
+            s = datetime.fromisoformat((row or {}).get("start","1900-01-01")).date()
+            e = datetime.fromisoformat((row or {}).get("end","2999-12-31")).date()
+        except Exception:
+            s, e = today, today
+        if nm and s <= today <= e:
+            actives.append(nm)
+    return actives  # could be multiple
 
 with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
-    mk_name = st.text_input("아침열쇠 담당자 이름", morning_key.get("name", ""))
-    mk_start = st.date_input("시작일", value=datetime.now().date())
-    mk_end = st.date_input("종료일", value=datetime.now().date())
+    st.markdown(\"\"\"\
+- 여러 명을 기간별로 등록할 수 있습니다.
+- 형식: 한 줄에 `이름,시작일,종료일` (예: 김남균,2025-11-01,2025-11-14)
+- 오늘 날짜가 포함된 항목은 자동으로 제외 대상에 반영됩니다.
+\"\"\", unsafe_allow_html=False)
+    existing = _load_morning_key_entries()
+    lines = []
+    for row in existing:
+        lines.append(f"{row.get('name','')},{row.get('start','')},{row.get('end','')}")
+    txt = st.text_area("아침열쇠 스케줄", value="\n".join(lines), height=120)
 
-    if st.button("💾 아침열쇠 저장", key="btn_morning_key_save"):
-        data = {"name": mk_name, "start": str(mk_start), "end": str(mk_end)}
-        save_json(MORNING_KEY_FILE, data)
-        ok = render_upload("아침열쇠.json", data)
-        if ok:
-            st.success("아침열쇠 저장 완료 (Render 동기화)")
-        else:
-            st.warning("아침열쇠 Render 업로드 실패")
+    if st.button("💾 아침열쇠 저장(다중)", key="btn_morning_key_save_multi"):
+        entries = []
+        for line in txt.splitlines():
+            line=line.strip()
+            if not line: continue
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 3:
+                entries.append({"name": parts[0], "start": parts[1], "end": parts[2]})
+        _save_morning_key_entries(entries)
+        st.success("아침열쇠 다중 스케줄 저장 완료 (Render 동기화)")
+
 # -----------------------
 # 클립보드 복사 버튼 (모바일 호환)
+ (모바일 호환)
 # -----------------------
 def clipboard_copy_button(label, text):
     btn_id = f"btn_{abs(hash(label+str(text)))}"
@@ -276,7 +358,8 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
     - early_leave = [{"name":"김OO","time":14.5}, ...]
     - late_start = [{"name":"김OO","time":10.0}, ...]
     """
-    b64 = base64.b64encode(img_bytes).decode()
+    img_bytes = enhance_image(img_bytes)
+        b64 = base64.b64encode(img_bytes).decode()
     user = (
         "이 이미지는 운전면허시험 근무표입니다.\n"
         "1) '학과','기능','초소','PC'는 제외하고 도로주행 근무자만 추출.\n"
@@ -422,8 +505,27 @@ for k, path in files.items():
         except Exception as e:
             st.error(f"{path} 초기화 실패: {e}")
 
+# ===== Optional: Bulk restore JSONs from Render if missing =====
+try:
+    render_try_restore_many({
+        files["열쇠"]: "열쇠순번.json",
+        files["교양"]: "교양순번.json",
+        files["1종"]: "1종순번.json",
+        files["1종자동"]: "1종자동순번.json",
+        files["veh1"]: "1종차량표.json",
+        files["veh2"]: "2종차량표.json",
+        files["employees"]: "전체근무자.json",
+        files["repair"]: "정비차량.json",
+        files["memo"]: "메모장.json",
+        os.path.join(DATA_DIR, "오전결과.json"): "오전결과.json",
+        MORNING_KEY_FILE: "아침열쇠.json",
+        PREV_FILE: "전일근무.json",
+    })
+except Exception:
+    pass
+
 # 로드
-key_order     = load_json(files["열쇠"])
+key_order     = load_json(files[\"열쇠\"])
 gyoyang_order = load_json(files["교양"])
 sudong_order  = load_json(files["1종"])
 veh1_map      = load_json(files["veh1"])
@@ -807,9 +909,15 @@ with tab1:
                     if start <= today <= end:
                         excluded_set.add(normalize_name(morning_key.get("name","")))
                 except Exception:
-                    pass
+                    pass    
+# 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
+try:
+    for _nm in pick_active_morning_key():
+        excluded_set.add(normalize_name(_nm))
+except Exception:
+    pass
 
-            # 🔑 열쇠
+    # 🔑 열쇠
             today_key = ""
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
@@ -1045,9 +1153,15 @@ with tab2:
                     if start <= today <= end:
                         excluded_set.add(normalize_name(morning_key.get("name","")))
                 except Exception:
-                    pass
+                    pass    
+# 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
+try:
+    for _nm in pick_active_morning_key():
+        excluded_set.add(normalize_name(_nm))
+except Exception:
+    pass
 
-            # 교양 3·4·5교시
+    # 교양 3·4·5교시
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
