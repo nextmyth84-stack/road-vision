@@ -80,7 +80,7 @@ def render_download():
 # -----------------------
 # 기본 설정 및 스타일
 # -----------------------
-st.set_page_config(layout="wide", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
 <style>
 @media (prefers-color-scheme: dark) {
