@@ -247,7 +247,6 @@ with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
 
 # -----------------------
 # 클립보드 복사 버튼 (모바일 호환)
- (모바일 호환)
 # -----------------------
 def clipboard_copy_button(label, text):
     btn_id = f"btn_{abs(hash(label+str(text)))}"
