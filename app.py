@@ -682,13 +682,9 @@ with st.sidebar.expander("📝 메모장", expanded=False):
             st.warning("메모장 Render 업로드 실패")
 
 # =====================================
-# ⚙️ OCR 오타 교정 컷오프
+# ⚙️ OCR 오타 교정 컷오프 (사이드바 숨김)
 # =====================================
-cutoff = st.sidebar.slider(
-    "OCR 오타교정 컷오프 (낮을수록 공격적 교정)",
-    0.4, 0.9, 0.6, 0.05
-)
-st.session_state["cutoff"] = cutoff
+st.session_state["cutoff"] = 0.6  # 내부 기본값 유지 (UI 표시 제거)
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
 
 # 세션 최신화
