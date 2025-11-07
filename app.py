@@ -1,81 +1,71 @@
+
 # =====================================
-# app.py — 도로주행 근무 자동 배정 v7.70 (Render Sync + Full Logic)
+# app.py — 도로주행 근무 자동 배정 v7.76 (Render Full Sync + Multi Morning-Key)
 # =====================================
 import streamlit as st
 from openai import OpenAI
-import base64, re, json, os, difflib, random, html
+import base64, re, json, os, difflib, html, io, requests, random
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import requests
+from PIL import Image, ImageEnhance, ImageFilter
 
 # -----------------------
 # ☁️ Render JSON 서버 설정
 # -----------------------
 RENDER_BASE = "https://roadvision-json-server.onrender.com/"
-UPLOAD_URL = f"{RENDER_BASE}/upload"
-DOWNLOAD_URL = f"{RENDER_BASE}/download/전일근무.json"
-
-
-# ===== Render JSON helpers (generic) =====
-def render_download_file(filename: str):
-    """
-    Download a JSON file from Render: /download/<filename>
-    Returns parsed JSON on success, else None.
-    """
-    try:
-        url = f"{RENDER_BASE}/download/{filename}"
-        res = requests.get(url, timeout=10)
-        if res.ok:
-            return res.json()
-    except Exception as e:
-        # non-fatal
-        pass
-    return None
-
-def render_try_restore_many(file_map: dict):
-    """
-    file_map: {local_path: remote_filename}
-    If local missing, try to pull from Render.
-    """
-    restored = []
-    for local_path, remote_name in file_map.items():
-        try:
-            lp = Path(local_path)
-            if not lp.exists():
-                data = render_download_file(remote_name)
-                if data is not None:
-                    lp.parent.mkdir(parents=True, exist_ok=True)
-                    with lp.open("w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                    restored.append(remote_name)
-        except Exception:
-            continue
-    if restored:
-        st.sidebar.info("☁️ Render에서 복원: " + ", ".join(restored))
-
 
 def render_upload(filename, data):
-    """Render 서버 업로드 함수"""
+    """Render 서버 업로드"""
     try:
-        res = requests.post(UPLOAD_URL, json={"filename": filename, "content": data}, timeout=10)
+        res = requests.post(f"{RENDER_BASE}/upload", json={"filename": filename, "content": data}, timeout=10)
         return res.ok
     except Exception as e:
-        st.warning(f"Render 업로드 실패: {e}")
+        st.sidebar.warning(f"Render 업로드 실패: {e}")
         return False
 
-def render_download():
-    """전일근무.json 자동 복원"""
+def render_download_file(filename, save_as=None):
+    """Render 서버에서 지정된 JSON 파일 복원"""
     try:
-        res = requests.get(DOWNLOAD_URL, timeout=10)
+        res = requests.get(f"{RENDER_BASE}/download/{filename}", timeout=10)
         if res.ok:
             data = res.json()
-            with open("전일근무.json", "w", encoding="utf-8") as f:
+            local_path = save_as or os.path.join("data", filename)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            with open(local_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
-            st.sidebar.success("☁️ Render에서 전일근무자 복원 완료")
-            return data
+            st.sidebar.success(f"☁️ {filename} 복원 완료")
+            return True
+        else:
+            st.sidebar.warning(f"Render 응답 실패: {filename}")
     except Exception as e:
-        st.sidebar.warning(f"Render 복원 실패: {e}")
-    return {"열쇠": "", "교양_5교시": "", "1종수동": "", "1종자동": ""}
+        st.sidebar.warning(f"{filename} 복원 실패: {e}")
+    return False
+
+def render_restore_all():
+    """Render 서버에서 주요 JSON 전체 복원"""
+    target_files = [
+        "전일근무.json",
+        "아침열쇠.json",
+        "열쇠순번.json",
+        "교양순번.json",
+        "1종순번.json",
+        "1종자동순번.json",
+        "1종차량표.json",
+        "2종차량표.json",
+        "전체근무자.json",
+        "정비차량.json",
+        "메모장.json",
+        "오전결과.json"
+    ]
+    restored = []
+    for fname in target_files:
+        ok = render_download_file(fname)
+        if ok:
+            restored.append(fname)
+    if restored:
+        st.sidebar.info("☁️ Render 복원: " + ", ".join(restored))
+    else:
+        st.sidebar.warning("Render 복원 실패 또는 파일 없음.")
 
 # -----------------------
 # 기본 설정 및 스타일
@@ -121,7 +111,7 @@ Developed by <b>wook</b>
 try:
     client = OpenAI(api_key=st.secrets["general"]["OPENAI_API_KEY"])
 except Exception:
-    st.error("⚠️ OPENAI_API_KEY 설정 필요")
+    st.error("⚠️ OPENAI_API_KEY 설정 필요 (st.secrets['general']['OPENAI_API_KEY'])")
     st.stop()
 MODEL_NAME = "gpt-4o"
 
@@ -139,19 +129,21 @@ def load_json(file, default=None):
 
 def save_json(file, data):
     try:
+        os.makedirs(os.path.dirname(file), exist_ok=True)
         with open(file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         st.error(f"저장 실패: {e}")
 
 # -----------------------
-# 전일 근무자 불러오기
+# 전일 근무자 불러오기 (기본 값)
 # -----------------------
 PREV_FILE = "전일근무.json"
-if os.path.exists(PREV_FILE):
-    prev_data = load_json(PREV_FILE, {})
-else:
-    prev_data = render_download()
+prev_data = load_json(PREV_FILE, None)
+if prev_data is None:
+    # Render에서 우선 복원 시도
+    render_download_file("전일근무.json", save_as=PREV_FILE)
+    prev_data = load_json(PREV_FILE, {"열쇠":"", "교양_5교시":"", "1종수동":"", "1종자동":""})
 
 prev_key = prev_data.get("열쇠", "")
 prev_gyoyang5 = prev_data.get("교양_5교시", "")
@@ -188,12 +180,10 @@ with st.sidebar.expander("🗓 전일 근무자", expanded=True):
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# ===== Morning Key (multi-schedule support) =====
 MORNING_KEY_FILE = os.path.join(DATA_DIR, "아침열쇠.json")
 
 def _load_morning_key_entries():
     data = load_json(MORNING_KEY_FILE, {})
-    # backward compatible: single dict {"name":..., "start":..., "end":...}
     if isinstance(data, dict) and data.get("name"):
         return [data]
     if isinstance(data, list):
@@ -208,7 +198,6 @@ def _save_morning_key_entries(entries):
         pass
 
 def pick_active_morning_key(today_date=None):
-    from datetime import date
     today = today_date or datetime.now(ZoneInfo("Asia/Seoul")).date()
     actives = []
     for row in _load_morning_key_entries():
@@ -220,13 +209,13 @@ def pick_active_morning_key(today_date=None):
             s, e = today, today
         if nm and s <= today <= e:
             actives.append(nm)
-    return actives  # could be multiple
+    return actives
 
 with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
     st.markdown("""
 - 여러 명을 기간별로 등록할 수 있습니다.
 - 형식: 한 줄에 `이름,시작일,종료일` (예: 김남균,2025-11-01,2025-11-14)
-- 오늘 날짜가 포함된 항목은 자동으로 제외 대상에 반영됩니다.
+- 오늘 날짜가 포함된 항목은 자동 제외 대상에 반영됩니다.
 """, unsafe_allow_html=False)
     existing = _load_morning_key_entries()
     lines = []
@@ -246,7 +235,7 @@ with st.sidebar.expander("🌅 아침 열쇠 담당", expanded=False):
         st.success("아침열쇠 다중 스케줄 저장 완료 (Render 동기화)")
 
 # -----------------------
-# 클립보드 복사 버튼 (모바일 호환)
+# 클립보드 복사 버튼
 # -----------------------
 def clipboard_copy_button(label, text):
     btn_id = f"btn_{abs(hash(label+str(text)))}"
@@ -274,12 +263,10 @@ def clipboard_copy_button(label, text):
     """
     st.components.v1.html(html_js, height=52)
 
-
 # -----------------------
-# 이름 정규화 / 차량 / 교정 / 순번
+# 이름 정규화 / 보정 / 차량
 # -----------------------
 def normalize_name(s):
-    """괄호·공백·특수문자 제거 → 순수 한글 이름"""
     return re.sub(r"[^가-힣]", "", re.sub(r"\(.*?\)", "", s or ""))
 
 def get_vehicle(name, veh_map):
@@ -290,27 +277,21 @@ def get_vehicle(name, veh_map):
     return ""
 
 def _norm_car_id(s: str) -> str:
-    """차량 아이디 비교용 정규화: 공백 제거"""
-    if not s:
-        return ""
+    if not s: return ""
     return re.sub(r"\s+", "", str(s)).strip()
 
 def mark_car(car, repair_cars):
-    """차량아이디 표기 + (정비중) 태그"""
-    if not car:
-        return ""
+    if not car: return ""
     car_norm = _norm_car_id(car)
     repairs_norm = {_norm_car_id(x) for x in (repair_cars or [])}
     return f"{car}{' (정비중)' if car_norm in repairs_norm else ''}"
 
 def car_num_key(car_id: str):
-    """차량 번호 내 숫자 기준 정렬 키"""
     m = re.search(r"(\d+)", car_id or "")
     return int(m.group(1)) if m else 10**9
 
 def pick_next_from_cycle(cycle, last, allowed_norms: set):
-    if not cycle:
-        return None
+    if not cycle: return None
     cycle_norm = [normalize_name(x) for x in cycle]
     last_norm = normalize_name(last)
     start = (cycle_norm.index(last_norm) + 1) % len(cycle) if last_norm in cycle_norm else 0
@@ -321,7 +302,6 @@ def pick_next_from_cycle(cycle, last, allowed_norms: set):
     return None
 
 def correct_name_v2(name, employee_list, cutoff=0.6):
-    """전체 근무자와 유사도 비교로 OCR 오타 교정"""
     name_norm = normalize_name(name)
     if not name_norm:
         return name
@@ -332,22 +312,16 @@ def correct_name_v2(name, employee_list, cutoff=0.6):
             best_score, best = score, cand
     return best if best and best_score >= cutoff else name
 
-
 # -----------------------
-# OCR (이름/코스/제외자/지각/조퇴)
+# OCR 유틸 (전처리 + GPT 호출)
 # -----------------------
-
-from PIL import Image, ImageEnhance, ImageFilter
-import io
-
 def enhance_image(img_bytes):
-    """흑백 변환 + 대비 강화 + 샤프닝으로 OCR 인식률 향상"""
-    img = Image.open(io.BytesIO(img_bytes)).convert("L")   # 흑백화
-    img = ImageEnhance.Contrast(img).enhance(2.0)          # 대비 강화 (1.0=기본)
-    img = img.filter(ImageFilter.SHARPEN)                  # 선명도 향상
-    output = io.BytesIO()
-    img.save(output, format="JPEG", quality=95)
-    return output.getvalue()
+    img = Image.open(io.BytesIO(img_bytes)).convert("L")
+    img = ImageEnhance.Contrast(img).enhance(2.0)
+    img = img.filter(ImageFilter.SHARPEN)
+    out = io.BytesIO()
+    img.save(out, format="JPEG", quality=95)
+    return out.getvalue()
 
 def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=False):
     """
@@ -412,7 +386,6 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         early_leave = js.get("early_leave", []) if want_early else []
         late_start = js.get("late_start", []) if want_late else []
 
-        # 숫자 캐스팅
         def to_float(x):
             try:
                 return float(x)
@@ -428,12 +401,10 @@ def gpt_extract(img_bytes, want_early=False, want_late=False, want_excluded=Fals
         st.error(f"OCR 실패: {e}")
         return [], [], [], [], []
 
-
 # -----------------------
 # 교양 시간 제한 규칙
 # -----------------------
 def can_attend_period_morning(name_pure: str, period:int, late_list):
-    """오전 교양: 1=9:00~10:30, 2=10:30~12:00. 10시 이후 출근자는 1교시 불가."""
     tmap = {1: 9.0, 2: 10.5}
     nn = normalize_name(name_pure)
     for e in late_list or []:
@@ -445,7 +416,6 @@ def can_attend_period_morning(name_pure: str, period:int, late_list):
     return True
 
 def can_attend_period_afternoon(name_pure: str, period:int, early_list):
-    """오후 교양: 3=13:00, 4=14:30, 5=16:00. 해당 시각 이전 조퇴면 해당 교시 불가."""
     tmap = {3: 13.0, 4: 14.5, 5: 16.0}
     nn = normalize_name(name_pure)
     for e in early_list or []:
@@ -456,7 +426,6 @@ def can_attend_period_afternoon(name_pure: str, period:int, early_list):
             return t > tmap[period]
     return True
 
-
 # -----------------------
 # KST 날짜 헤더
 # -----------------------
@@ -464,6 +433,7 @@ def kst_result_header(period_label: str) -> str:
     dt = datetime.now(ZoneInfo("Asia/Seoul"))
     yoil = "월화수목금토일"[dt.weekday()]
     return f"{dt.strftime('%y.%m.%d')}({yoil}) {period_label} 교양순서 및 차량배정"
+
 # -----------------------
 # JSON 기반 파일 구성
 # -----------------------
@@ -484,7 +454,7 @@ for k, v in files.items():
     files[k] = os.path.join(DATA_DIR, v)
 
 default_data = {
-    "열쇠": ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조윤영","조정래"],
+    "열쇠": ["권한솔","김남균","김면정","김성연","김지은","안유미","윤여헌","윤원실","이나래","이호석","조정래"],
     "교양": ["권한솔","김남균","김면정","김병욱","김성연","김주현","김지은","안유미","이호석","조정래"],
     "1종":  ["권한솔","김남균","김성연","김주현","이호석","조정래"],
     "veh1": {"2호":"조정래","5호":"권한솔","7호":"김남균","8호":"이호석","9호":"김주현","10호":"김성연"},
@@ -504,24 +474,11 @@ for k, path in files.items():
         except Exception as e:
             st.error(f"{path} 초기화 실패: {e}")
 
-# ===== Optional: Bulk restore JSONs from Render if missing =====
+# ===== Render 서버에서 전체 JSON 복원 =====
 try:
-    render_try_restore_many({
-        files["열쇠"]: "열쇠순번.json",
-        files["교양"]: "교양순번.json",
-        files["1종"]: "1종순번.json",
-        files["1종자동"]: "1종자동순번.json",
-        files["veh1"]: "1종차량표.json",
-        files["veh2"]: "2종차량표.json",
-        files["employees"]: "전체근무자.json",
-        files["repair"]: "정비차량.json",
-        files["memo"]: "메모장.json",
-        os.path.join(DATA_DIR, "오전결과.json"): "오전결과.json",
-        MORNING_KEY_FILE: "아침열쇠.json",
-        PREV_FILE: "전일근무.json",
-    })
-except Exception:
-    pass
+    render_restore_all()
+except Exception as e:
+    st.sidebar.warning(f"Render 전체 복원 오류: {e}")
 
 # 로드
 key_order     = load_json(files["열쇠"])
@@ -599,7 +556,6 @@ with st.sidebar.expander("📂 데이터 관리", expanded=False):
             ok3 = render_upload("1종순번.json", data3)
             ok4 = render_upload("1종자동순번.json", data4)
 
-            # 재로드 + 세션 반영
             key_order[:]     = load_json(files["열쇠"])
             gyoyang_order[:] = load_json(files["교양"])
             sudong_order[:]  = load_json(files["1종"])
@@ -661,8 +617,6 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ 추가 설정")
 sudong_count = st.sidebar.radio("1종 수동 인원 수", [1, 2], index=0)
 
-
-# === 🛠 정비 차량 목록 ===
 opt_1s = sorted(list((veh1_map or {}).keys()), key=car_num_key)
 opt_1a = sorted(list((st.session_state.get("auto1_order") or auto1_order or [])), key=car_num_key)
 opt_2a = sorted(list((veh2_map or {}).keys()), key=car_num_key)
@@ -715,7 +669,6 @@ with st.sidebar.expander("🛠 정비 차량 목록", expanded=False):
 # 📝 메모장
 memo_data = load_json(files["memo"], {"memo": ""})
 memo_text = memo_data.get("memo", "")
-
 with st.sidebar.expander("📝 메모장", expanded=False):
     st.markdown("<div class='sidebar-subtitle'>운영 메모 / 특이사항 기록</div>", unsafe_allow_html=True)
     memo_input = st.text_area("", memo_text, height=140, placeholder="예: 10/27 - 5호차 브레이크 경고등 점등")
@@ -736,7 +689,6 @@ cutoff = st.sidebar.slider(
     0.4, 0.9, 0.6, 0.05
 )
 st.session_state["cutoff"] = cutoff
-
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
 
 # 세션 최신화
@@ -750,6 +702,7 @@ st.session_state.update({
     "repair_cars": repair_union,
     "auto1_order": auto1_order,
 })
+
 # -----------------------
 # 탭 UI
 # -----------------------
@@ -824,7 +777,7 @@ with tab1:
             st.warning("오전 이미지를 업로드하세요.")
         else:
             with st.spinner("🧩 GPT 이미지 분석 중..."):
-                enhanced = enhance_image(m_file.read())  # 🔹 이미지 전처리 추가
+                enhanced = enhance_image(m_file.read())
                 names, course, excluded, early, late = gpt_extract(
                     enhanced, want_early=True, want_late=True, want_excluded=True
                 )
@@ -836,7 +789,6 @@ with tab1:
                 for l in late:
                     l["name"] = correct_name_v2(l.get("name",""), st.session_state["employee_list"], cutoff=st.session_state["cutoff"])
 
-                # 코스 레코드 교정 + 중복 제거
                 def _fix_course_records(course_records, employees, cutoff):
                     out, seen = [], set()
                     for r in course_records or []:
@@ -898,25 +850,24 @@ with tab1:
             repair_1a     = st.session_state.get("repair_1a", [])
             repair_2a     = st.session_state.get("repair_2a", [])
             auto1_order   = st.session_state.get("auto1_order", [])
-            # 아침열쇠 제외(기간)
-            morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
-            if morning_key:
-                try:
-                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
-                    start = datetime.fromisoformat(morning_key.get("start", "1900-01-01")).date()
-                    end   = datetime.fromisoformat(morning_key.get("end", "2999-12-31")).date()
-                    if start <= today <= end:
-                        excluded_set.add(normalize_name(morning_key.get("name","")))
-                except Exception:
-                    pass    
-            # 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
+
+            # 아침열쇠 제외 (단일/다중 모두 지원)
             try:
+                # legacy 단일 형식
+                morning_key_single = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
+                if isinstance(morning_key_single, dict) and morning_key_single:
+                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+                    start = datetime.fromisoformat(morning_key_single.get("start", "1900-01-01")).date()
+                    end   = datetime.fromisoformat(morning_key_single.get("end", "2999-12-31")).date()
+                    if start <= today <= end:
+                        excluded_set.add(normalize_name(morning_key_single.get("name","")))
+                # 다중 스케줄
                 for _nm in pick_active_morning_key():
                     excluded_set.add(normalize_name(_nm))
             except Exception:
                 pass
 
-    # 🔑 열쇠
+            # 🔑 열쇠
             today_key = ""
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
@@ -1030,12 +981,13 @@ with tab1:
             save_json(MORNING_FILE, morning_data)
             ok_m = render_upload("오전결과.json", morning_data)
             if ok_m:
-                st.info(f"✅ 오전 결과 저장 완료 (Render 동기화)")
+                st.info("✅ 오전 결과 저장 완료 (Render 동기화)")
             else:
                 st.warning("오전결과 Render 업로드 실패 (로컬은 저장됨)")
 
         except Exception as e:
             st.error(f"오전 오류: {e}")
+
 # =====================================
 # 🌇 오후 근무 탭
 # =====================================
@@ -1044,6 +996,11 @@ with tab2:
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
     if os.path.exists(MORNING_FILE):
         morning_cache = load_json(MORNING_FILE, {})
+    else:
+        render_download_file("오전결과.json", save_as=MORNING_FILE)
+        morning_cache = load_json(MORNING_FILE, {})
+
+    if morning_cache:
         st.session_state["morning_assigned_cars_1"] = morning_cache.get("assigned_cars_1", [])
         st.session_state["morning_assigned_cars_2"] = morning_cache.get("assigned_cars_2", [])
         st.session_state["morning_auto_names"] = morning_cache.get("auto_names", [])
@@ -1052,8 +1009,9 @@ with tab2:
         st.session_state["sudong_base_for_pm"] = morning_cache.get("sud_base_for_pm", "")
         st.session_state["today_auto1"] = morning_cache.get("today_auto1", "")
         ts = morning_cache.get("timestamp")
-        if ts:
-            st.caption(f"🕒 오전 결과 복원 완료 (저장 시각: {ts})")
+        if ts: st.caption(f"🕒 오전 결과 복원 완료 (저장 시각: {ts})")
+    else:
+        st.caption("🕒 오전 결과 파일 없음")
 
     st.markdown("<h4 style='margin-top:6px;'>2️⃣ 오후 근무표 업로드 & OCR</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
@@ -1142,25 +1100,21 @@ with tab2:
             sud_base      = st.session_state.get("sudong_base_for_pm", prev_sudong)
             early_leave   = st.session_state.get("early_leave", [])
 
-            # 아침열쇠 제외(기간)
-            morning_key = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
-            if morning_key:
-                try:
-                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
-                    start = datetime.fromisoformat(morning_key.get("start", "1900-01-01")).date()
-                    end   = datetime.fromisoformat(morning_key.get("end", "2999-12-31")).date()
-                    if start <= today <= end:
-                        excluded_set.add(normalize_name(morning_key.get("name","")))
-                except Exception:
-                    pass    
-        # 아침열쇠 활동자 자동 제외(기간 반영, 다중 지원)
+            # 아침열쇠 제외 (단일/다중 모두 지원)
             try:
+                morning_key_single = load_json(os.path.join(DATA_DIR, "아침열쇠.json"), {})
+                if isinstance(morning_key_single, dict) and morning_key_single:
+                    today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+                    start = datetime.fromisoformat(morning_key_single.get("start", "1900-01-01")).date()
+                    end   = datetime.fromisoformat(morning_key_single.get("end", "2999-12-31")).date()
+                    if start <= today <= end:
+                        excluded_set.add(normalize_name(morning_key_single.get("name","")))
                 for _nm in pick_active_morning_key():
                     excluded_set.add(normalize_name(_nm))
             except Exception:
                 pass
 
-    # 교양 3·4·5교시
+            # 교양 3·4·5교시
             used = set()
             gy3 = gy4 = gy5 = None
             last_ptr = gy_start
@@ -1202,7 +1156,7 @@ with tab2:
                 for nm in sud_a:
                     car = mark_car(get_vehicle(nm, veh1_map), repair_1s)
                     lines.append(f"1종수동: {car} {nm}" if car else f"1종수동: {nm}")
-                    lines.append("")
+                lines.append("")
 
             if st.session_state.get("today_auto1"):
                 a1 = mark_car(st.session_state["today_auto1"], repair_1a)
