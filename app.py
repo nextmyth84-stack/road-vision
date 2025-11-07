@@ -42,7 +42,7 @@ def render_download_file(filename, save_as=None):
     return False
 
 def render_restore_all():
-    """Render 서버에서 주요 JSON 전체 복원"""
+    """Render 서버에서 주요 JSON 전체 복원 (결과는 사이드바 맨 아래 한 줄만 표시)"""
     target_files = [
         "전일근무.json",
         "아침열쇠.json",
@@ -59,11 +59,17 @@ def render_restore_all():
     ]
     restored = []
     for fname in target_files:
-        ok = render_download_file(fname)
-        if ok:
-            restored.append(fname)
-    # 메시지 출력은 여기서 하지 않음
-    return restored
+        try:
+            res = requests.get(f"{RENDER_BASE}/download/{fname}", timeout=10)
+            if res.ok:
+                data = res.json()
+                local_path = os.path.join("data", fname)
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                with open(local_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                restored.append(fname)
+        except Exception:
+            continue
 
 # -----------------------
 # 기본 설정 및 스타일
