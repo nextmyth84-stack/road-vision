@@ -691,11 +691,13 @@ with st.sidebar.expander("📝 메모장", expanded=False):
 # =====================================
 st.session_state["cutoff"] = 0.6  # 내부 기본값 유지 (UI 표시 제거)
 
-if restored_list:
-    st.sidebar.info("☁️ Render 복원 완료: " + ", ".join(restored_list))
-else:
-    st.sidebar.warning("Render 복원 실패 또는 파일 없음.")
-
+# ✅ 사이드바 맨 아래에 한 줄만 출력
+if restored:
+    st.sidebar.markdown(
+        f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:18px;'>"
+        f"☁️ {len(restored)}개 파일 복원 완료</p>",
+        unsafe_allow_html=True,
+    )
 
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
 
