@@ -42,7 +42,7 @@ def render_download_file(filename, save_as=None):
     return False
 
 def render_restore_all():
-    """Render 서버에서 주요 JSON 전체 복원 (결과는 사이드바 맨 아래 한 줄만 표시)"""
+    """Render 서버에서 주요 JSON 전체 복원 (사이드바 맨 아래로 메시지 이동)"""
     target_files = [
         "전일근무.json",
         "아침열쇠.json",
@@ -57,6 +57,7 @@ def render_restore_all():
         "메모장.json",
         "오전결과.json"
     ]
+
     restored = []
     for fname in target_files:
         try:
@@ -71,13 +72,21 @@ def render_restore_all():
         except Exception:
             continue
 
-    # ✅ 사이드바 맨 아래에 한 줄만 출력
-    if restored:
-        st.sidebar.markdown(
-            f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:18px;'>"
-            f"☁️ {len(restored)}개 파일 복원 완료</p>",
-            unsafe_allow_html=True,
-        )
+    # ✅ 복원 메시지를 사이드바 가장 아래쪽에 배치
+    with st.sidebar:
+        st.markdown("<hr style='margin-top:12px; margin-bottom:8px;'>", unsafe_allow_html=True)
+        if restored:
+            st.markdown(
+                f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:6px;'>"
+                f"☁️ {len(restored)}개 파일 복원 완료</p>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                "<p style='font-size:13px; color:#ef4444; text-align:center; margin-top:6px;'>"
+                "⚠️ Render 복원 실패 또는 서버 응답 없음</p>",
+                unsafe_allow_html=True,
+            )
 
 
 # -----------------------
