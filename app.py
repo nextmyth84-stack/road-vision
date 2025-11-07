@@ -42,7 +42,7 @@ def render_download_file(filename, save_as=None):
     return False
 
 def render_restore_all():
-    """Render 서버에서 주요 JSON 전체 복원 (사이드바 맨 아래로 메시지 이동)"""
+    """Render 서버에서 주요 JSON 전체 복원"""
     target_files = [
         "전일근무.json",
         "아침열쇠.json",
@@ -57,7 +57,6 @@ def render_restore_all():
         "메모장.json",
         "오전결과.json"
     ]
-
     restored = []
     for fname in target_files:
         try:
@@ -72,21 +71,9 @@ def render_restore_all():
         except Exception:
             continue
 
-    # ✅ 복원 메시지를 사이드바 가장 아래쪽에 배치
-    with st.sidebar:
-        st.markdown("<hr style='margin-top:12px; margin-bottom:8px;'>", unsafe_allow_html=True)
-        if restored:
-            st.markdown(
-                f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:6px;'>"
-                f"☁️ {len(restored)}개 파일 복원 완료</p>",
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                "<p style='font-size:13px; color:#ef4444; text-align:center; margin-top:6px;'>"
-                "⚠️ Render 복원 실패 또는 서버 응답 없음</p>",
-                unsafe_allow_html=True,
-            )
+    # 🔹 메시지 출력 삭제, 대신 결과만 반환
+    return restored
+
 
 
 # -----------------------
@@ -708,6 +695,21 @@ with st.sidebar.expander("📝 메모장", expanded=False):
 # ⚙️ OCR 오타 교정 컷오프 (사이드바 숨김)
 # =====================================
 st.session_state["cutoff"] = 0.6  # 내부 기본값 유지 (UI 표시 제거)
+
+# ====== Render 복원 후 메시지 (데이터 관리 아래쪽에 표시) ======
+restored_files = render_restore_all()
+if restored_files:
+    st.sidebar.markdown(
+        f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:12px;'>"
+        f"☁️ {len(restored_files)}개 파일 복원 완료</p>",
+        unsafe_allow_html=True,
+    )
+else:
+    st.sidebar.markdown(
+        "<p style='font-size:13px; color:#ef4444; text-align:center; margin-top:12px;'>"
+        "⚠️ Render 복원 실패 또는 서버 응답 없음</p>",
+        unsafe_allow_html=True,
+    )
 
 
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
