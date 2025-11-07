@@ -62,10 +62,8 @@ def render_restore_all():
         ok = render_download_file(fname)
         if ok:
             restored.append(fname)
-    if restored:
-        st.sidebar.info("☁️ Render 복원: " + ", ".join(restored))
-    else:
-        st.sidebar.warning("Render 복원 실패 또는 파일 없음.")
+    # 메시지 출력은 여기서 하지 않음
+    return restored
 
 # -----------------------
 # 기본 설정 및 스타일
@@ -476,8 +474,9 @@ for k, path in files.items():
 
 # ===== Render 서버에서 전체 JSON 복원 =====
 try:
-    render_restore_all()
+    restored_list = render_restore_all()
 except Exception as e:
+    restored_list = []
     st.sidebar.warning(f"Render 전체 복원 오류: {e}")
 
 # 로드
@@ -685,6 +684,13 @@ with st.sidebar.expander("📝 메모장", expanded=False):
 # ⚙️ OCR 오타 교정 컷오프 (사이드바 숨김)
 # =====================================
 st.session_state["cutoff"] = 0.6  # 내부 기본값 유지 (UI 표시 제거)
+
+if restored_list:
+    st.sidebar.info("☁️ Render 복원 완료: " + ", ".join(restored_list))
+else:
+    st.sidebar.warning("Render 복원 실패 또는 파일 없음.")
+
+
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
 
 # 세션 최신화
