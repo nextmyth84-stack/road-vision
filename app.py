@@ -147,7 +147,12 @@ def save_json(file, data):
 # -----------------------
 # 전일 근무자 불러오기 (기본 값)
 # -----------------------
-PREV_FILE = "전일근무.json"
+# ✅ 데이터 폴더 경로 (다른 JSON들과 동일)
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# ✅ 전일근무.json 경로 통일
+PREV_FILE = os.path.join(DATA_DIR, "전일근무.json")
 prev_data = load_json(PREV_FILE, None)
 if prev_data is None:
     # Render에서 우선 복원 시도
