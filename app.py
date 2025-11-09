@@ -900,16 +900,23 @@ with tab1:
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
                 prev_norm = normalize_name(prev_key)
+                # 전체 근무자 로드
+                all_norms = {normalize_name(x) for x in (st.session_state.get("employee_list") or [])}
+                # 제외자 제거
+                valid_norms = all_norms - excluded_set
+
                 if prev_norm in ko_norm:
                     start_idx = ko_norm.index(prev_norm)
                     for step in range(1, len(key_order)+1):
                         cand = key_order[(start_idx + step) % len(key_order)]
-                        if normalize_name(cand) not in excluded_set:
-                            today_key = cand; break
+                        if normalize_name(cand) in valid_norms:
+                            today_key = cand
+                            break
                 else:
                     for cand in key_order:
-                        if normalize_name(cand) not in excluded_set:
-                            today_key = cand; break
+                        if normalize_name(cand) in valid_norms:
+                            today_key = cand
+                            break
             st.session_state.today_key = today_key
 
             # 🧑‍🏫 교양 1·2교시
