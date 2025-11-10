@@ -702,19 +702,19 @@ with st.sidebar.expander("📝 메모장", expanded=False):
 st.session_state["cutoff"] = 0.6  # 내부 기본값 유지 (UI 표시 제거)
 
 # ====== Render 복원 후 메시지 (데이터 관리 아래쪽에 표시) ======
-restored_files = render_restore_all()
-if restored_files:
-    st.sidebar.markdown(
-        f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:12px;'>"
-        f"☁️ {len(restored_files)}개 파일 복원 완료</p>",
-        unsafe_allow_html=True,
-    )
-else:
-    st.sidebar.markdown(
-        "<p style='font-size:13px; color:#ef4444; text-align:center; margin-top:12px;'>"
-        "⚠️ Render 복원 실패 또는 서버 응답 없음</p>",
-        unsafe_allow_html=True,
-    )
+#restored_files = render_restore_all()
+#if restored_files:
+#    st.sidebar.markdown(
+#        f"<p style='font-size:13px; color:#22c55e; text-align:center; margin-top:12px;'>"
+#        f"☁️ {len(restored_files)}개 파일 복원 완료</p>",
+#        unsafe_allow_html=True,
+#    )
+#else:
+#    st.sidebar.markdown(
+#        "<p style='font-size:13px; color:#ef4444; text-align:center; margin-top:12px;'>"
+#        "⚠️ Render 복원 실패 또는 서버 응답 없음</p>",
+#        unsafe_allow_html=True,
+#    )
 
 
 st.sidebar.caption("<p style='text-align:center; font-size:8px; color:#94a3b8;'>powered by <b>wook</b></p>", unsafe_allow_html=True)
