@@ -895,28 +895,28 @@ with tab1:
             except Exception:
                 pass
 
-            # 🔑 열쇠
+            # 🔑 열쇠 — 열쇠순번자 중에서 제외자만 빼고 순번 순환
             today_key = ""
             if key_order:
                 ko_norm = [normalize_name(x) for x in key_order]
                 prev_norm = normalize_name(prev_key)
-                # 전체 근무자 로드
-                all_norms = {normalize_name(x) for x in (st.session_state.get("employee_list") or [])}
-                # 제외자 제거
-                valid_norms = all_norms - excluded_set
+
+                # 열쇠순번자 중 제외자 제거
+                valid_keys = [x for x in key_order if normalize_name(x) not in excluded_set]
 
                 if prev_norm in ko_norm:
                     start_idx = ko_norm.index(prev_norm)
-                    for step in range(1, len(key_order)+1):
+                    for step in range(1, len(key_order) + 1):
                         cand = key_order[(start_idx + step) % len(key_order)]
-                        if normalize_name(cand) in valid_norms:
+                        if normalize_name(cand) in {normalize_name(v) for v in valid_keys}:
                             today_key = cand
                             break
-                else:
-                    for cand in key_order:
-                        if normalize_name(cand) in valid_norms:
-                            today_key = cand
-                            break
+                 else:
+                    # 전일 담당자가 순번표에 없을 경우
+                    for cand in valid_keys:
+                        today_key = cand
+                        break
+
             st.session_state.today_key = today_key
 
             # 🧑‍🏫 교양 1·2교시
