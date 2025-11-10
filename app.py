@@ -911,7 +911,7 @@ with tab1:
                         if normalize_name(cand) in {normalize_name(v) for v in valid_keys}:
                             today_key = cand
                             break
-                 else:
+                else:
                     # 전일 담당자가 순번표에 없을 경우
                     for cand in valid_keys:
                         today_key = cand
