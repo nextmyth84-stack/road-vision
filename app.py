@@ -1034,14 +1034,6 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-
-    # 🔒 pm_assigned_time 을 UI 키로 등록해 rerun 시에도 절대 삭제/초기화되지 않게 함
-    _ = st.text_input(
-        "pm_time_hidden",
-        value=st.session_state.get("pm_assigned_time", ""),
-        key="pm_assigned_time",
-        label_visibility="collapsed"
-    )
    
     if "pm_assigned_time" not in st.session_state:
         st.session_state["pm_assigned_time"] = ""
@@ -1283,22 +1275,32 @@ with tab2:
             render_upload("전일근무.json", prev_data)
             st.success("전일근무자 자동 저장 완료 ✅ (Render 동기화)")
             
-            # 오후 배정 생성 버튼 이벤트 내부
-            st.session_state["pm_assigned_time"] = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M")
+            # ⏱ 오후 배정 생성 시각 파일에 저장
+            pm_timestamp = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M")
+            save_json(os.path.join(DATA_DIR, "오후결과.json"), {
+            "timestamp": pm_timestamp
+            })
 
 
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-    if st.session_state.get("pm_assigned_time"):
-        st.markdown(
-            f"""
-            <p style='text-align:left;
-                      color:#9ca3b8;
-                      font-size:11px;
-                      margin-top:18px;'>
-                🕒 오후 근무 배정 완료: {st.session_state["pm_assigned_time"]}
-            </p>
-            """,
-            unsafe_allow_html=True
-        )
+    # =====================================
+    # 🌇 마지막 오후 배정 시각 표시 (오후 탭 맨 아래)
+    # =====================================
+    PM_FILE = os.path.join(DATA_DIR, "오후결과.json")
+    if os.path.exists(PM_FILE):
+        pm_cache = load_json(PM_FILE, {})
+        pm_ts = pm_cache.get("timestamp")
+        if pm_ts:
+           st.markdown(
+                f"""
+                <p style='text-align:left;
+                          color:#9ca3af;
+                          font-size:11px;
+                          margin-top:18px;'>
+                    🕒 오후 근무 배정 완료: {pm_ts}
+                </p>
+                """,
+                unsafe_allow_html=True
+    )
