@@ -754,6 +754,12 @@ def render_result_with_repair_color(text: str) -> str:
     return f"<pre class='result-pre'>{esc}</pre>"
 
 # =====================================
+# 🔒 세션 상태 보호 (오전/오후 탭 선언 바로 위)
+# =====================================
+if "pm_assigned_time" not in st.session_state:
+    st.session_state["pm_assigned_time"] = None
+
+# =====================================
 # 🌅 오전 근무 탭
 # =====================================
 with tab1:
@@ -1028,9 +1034,7 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    if "pm_assigned_time" not in st.session_state:
-        st.session_state["pm_assigned_time"] = None
-
+    
     # ✅ 오전결과 자동 복원
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
     if os.path.exists(MORNING_FILE):
@@ -1275,15 +1279,15 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-if "pm_assigned_time" in st.session_state:
-    st.markdown(
-        f"""
-        <p style='text-align:left;
-                  color:#9ca3af;
-                  font-size:13px;
-                  margin-top:18px;'>
-            🕒 오후 근무 배정 완료: {st.session_state["pm_assigned_time"]}
-        </p>
-        """,
-        unsafe_allow_html=True
-    )
+    if st.session_state.get("pm_assigned_time"):
+        st.markdown(
+            f"""
+            <p style='text-align:left;
+                      color:#9ca3b8;
+                      font-size:11px;
+                      margin-top:18px;'>
+                🕒 오후 근무 배정 완료: {st.session_state["pm_assigned_time"]}
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
