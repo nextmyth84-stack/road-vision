@@ -1268,9 +1268,6 @@ with tab2:
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-        except Exception as e:
-            st.error(f"오후 오류: {e}")
-
 #    st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
 #    st.caption("배정이 제대로 됐으면 저장을 합니다.")
 #    if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
