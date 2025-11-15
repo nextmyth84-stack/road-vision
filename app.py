@@ -1277,7 +1277,7 @@ if "pm_assigned_time" in st.session_state:
         f"""
         <p style='text-align:left;
                   color:#9ca3af;
-                  font-size:11px;
+                  font-size:15px;
                   margin-top:18px;'>
             🕒 오후 근무 배정 완료: {st.session_state["pm_assigned_time"]}
         </p>
