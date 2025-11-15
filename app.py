@@ -1264,6 +1264,14 @@ with tab2:
             save_json(files["전일근무"], prev_data)
             render_upload("전일근무.json", prev_data)
             st.success("전일근무자 자동 저장 완료 ✅ (Render 동기화)")
+            
+            # ✅ 전일근무자 자동 저장 완료 후 아래 추가
+            timestamp_now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M")
+            st.markdown(
+                f"<p style='text-align:center; color:#60a5fa; font-size:14px; margin-top:16px;'>"
+                f"🌇 오후 근무 배정 완료 시각: <b>{timestamp_now}</b></p>",
+                unsafe_allow_html=True,
+            )
 
         except Exception as e:
             st.error(f"오후 오류: {e}")
