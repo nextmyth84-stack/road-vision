@@ -1034,6 +1034,14 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
+
+    # 🔒 pm_assigned_time 을 UI 키로 등록해 rerun 시에도 절대 삭제/초기화되지 않게 함
+    _ = st.text_input(
+        "pm_time_hidden",
+        value=st.session_state.get("pm_assigned_time", ""),
+        key="pm_assigned_time",
+        label_visibility="collapsed"
+    )
    
     if "pm_assigned_time" not in st.session_state:
         st.session_state["pm_assigned_time"] = ""
