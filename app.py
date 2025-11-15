@@ -1029,7 +1029,7 @@ with tab1:
 # =====================================
 with tab2:
     if "pm_assigned_time" not in st.session_state:
-    st.session_state["pm_assigned_time"] = None
+        st.session_state["pm_assigned_time"] = None
 
     # ✅ 오전결과 자동 복원
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
