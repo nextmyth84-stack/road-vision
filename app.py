@@ -1256,7 +1256,7 @@ with tab2:
             # ✅ 자동 전일근무자 저장 추가
             prev_data = {
                 "열쇠": st.session_state["pm_save_ready"]["열쇠"],
-                "교양": st.session_state["pm_save_ready"]["교양_5교시"],
+                "교양_5교시": st.session_state["pm_save_ready"]["교양_5교시"],
                 "1종수동": st.session_state["pm_save_ready"]["1종수동"],
                 "1종자동": st.session_state["pm_save_ready"]["1종자동"],
                 "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
