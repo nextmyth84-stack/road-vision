@@ -463,6 +463,7 @@ files = {
     "1종자동": "1종자동순번.json",
     "repair": "정비차량.json",
     "memo": "메모장.json",
+    "전일근무": "전일근무.json",
 }
 for k, v in files.items():
     files[k] = os.path.join(DATA_DIR, v)
