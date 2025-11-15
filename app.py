@@ -1034,7 +1034,10 @@ with tab1:
 # 🌇 오후 근무 탭
 # =====================================
 with tab2:
-    
+   
+    if "pm_assigned_time" not in st.session_state:
+        st.session_state["pm_assigned_time"] = ""
+
     # ✅ 오전결과 자동 복원
     MORNING_FILE = os.path.join(DATA_DIR, "오전결과.json")
     if os.path.exists(MORNING_FILE):
