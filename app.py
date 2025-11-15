@@ -1251,24 +1251,39 @@ with tab2:
                 "1종수동": (sud_a[-1] if sud_a else st.session_state.get("prev_sudong","")),
                 "1종자동": (st.session_state.get("today_auto1") or st.session_state.get("prev_auto1",""))
             }
+            
+            # ✅ 자동 전일근무자 저장 추가
+            prev_data = {
+                "열쇠": st.session_state["pm_save_ready"]["열쇠"],
+                "교양": st.session_state["pm_save_ready"]["교양_5교시"],
+                "1종수동": st.session_state["pm_save_ready"]["1종수동"],
+                "1종자동": st.session_state["pm_save_ready"]["1종자동"],
+                "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M"),
+            }
+            save_json(files["전일근무"], prev_data)
+            render_upload("전일근무.json", prev_data)
+            st.success("전일근무자 자동 저장 완료 ✅ (Render 동기화)")
 
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-    st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
-    st.caption("배정이 제대로 됐으면 저장을 합니다.")
-    if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
-        data = st.session_state.get("pm_save_ready")
-        if not data:
-            st.warning("❌ 먼저 ‘오후 근무 배정 생성’을 누르세요.")
-        else:
-            try:
-                with open(PREV_FILE, "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                ok = render_upload("전일근무.json", data)
-                if ok:
-                    st.success("전일근무.json 저장 완료 ✅ (Render 동기화)")
-                else:
-                    st.warning("전일근무 Render 업로드 실패 (로컬은 저장됨)")
-            except Exception as e:
-                st.error(f"전일근무 저장 실패: {e}")
+        except Exception as e:
+            st.error(f"오후 오류: {e}")
+
+#    st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
+#    st.caption("배정이 제대로 됐으면 저장을 합니다.")
+#    if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
+#        data = st.session_state.get("pm_save_ready")
+#        if not data:
+#            st.warning("❌ 먼저 ‘오후 근무 배정 생성’을 누르세요.")
+#        else:
+#            try:
+#                with open(PREV_FILE, "w", encoding="utf-8") as f:
+#                    json.dump(data, f, ensure_ascii=False, indent=2)
+#                ok = render_upload("전일근무.json", data)
+#                if ok:
+#                    st.success("전일근무.json 저장 완료 ✅ (Render 동기화)")
+#                else:
+#                   st.warning("전일근무 Render 업로드 실패 (로컬은 저장됨)")
+#            except Exception as e:
+#                st.error(f"전일근무 저장 실패: {e}")
