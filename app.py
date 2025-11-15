@@ -1265,31 +1265,22 @@ with tab2:
             render_upload("전일근무.json", prev_data)
             st.success("전일근무자 자동 저장 완료 ✅ (Render 동기화)")
             
-            # ✅ 전일근무자 자동 저장 완료 후 아래 추가
-            timestamp_now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M")
-            st.markdown(
-                f"<p style='text-align:center; color:#60a5fa; font-size:14px; margin-top:16px;'>"
-                f"🌇 오후 근무 배정 완료 시각: <b>{timestamp_now}</b></p>",
-                unsafe_allow_html=True,
-            )
+            # 오후 배정 생성 버튼 이벤트 내부
+            st.session_state["pm_assigned_time"] = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%y.%m.%d %H:%M")
+
 
         except Exception as e:
             st.error(f"오후 오류: {e}")
 
-#    st.markdown("<h4 style='font-size:18px;'> 💾 전일 근무자 저장</h4>", unsafe_allow_html=True)
-#    st.caption("배정이 제대로 됐으면 저장을 합니다.")
-#    if st.button("💾 전일근무자 저장", key="btn_save_prev_pm"):
-#        data = st.session_state.get("pm_save_ready")
-#        if not data:
-#            st.warning("❌ 먼저 ‘오후 근무 배정 생성’을 누르세요.")
-#        else:
-#            try:
-#                with open(PREV_FILE, "w", encoding="utf-8") as f:
-#                    json.dump(data, f, ensure_ascii=False, indent=2)
-#                ok = render_upload("전일근무.json", data)
-#                if ok:
-#                    st.success("전일근무.json 저장 완료 ✅ (Render 동기화)")
-#                else:
-#                   st.warning("전일근무 Render 업로드 실패 (로컬은 저장됨)")
-#            except Exception as e:
-#                st.error(f"전일근무 저장 실패: {e}")
+if "pm_assigned_time" in st.session_state:
+    st.markdown(
+        f"""
+        <p style='text-align:left;
+                  color:#9ca3af;
+                  font-size:11px;
+                  margin-top:18px;'>
+            🕒 오후 근무 배정 완료: {st.session_state["pm_assigned_time"]}
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
