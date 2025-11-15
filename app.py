@@ -1297,7 +1297,7 @@ with tab2:
                 f"""
                 <p style='text-align:left;
                           color:#9ca3af;
-                          font-size:13px;
+                          font-size:15px;
                           margin-top:18px;'>
                     🕒 오후 근무 배정 완료: {pm_ts}
                 </p>
